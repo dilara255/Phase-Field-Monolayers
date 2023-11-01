@@ -1,4 +1,4 @@
-#include "PFM_API"
+#include "PFM_API.hpp"
 
 int main() {
 	PFM::linkingTest();	

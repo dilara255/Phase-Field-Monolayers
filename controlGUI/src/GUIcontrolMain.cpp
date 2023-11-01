@@ -1,6 +1,6 @@
-#include "PFM_API"
+#include "guiTests.hpp"
 
 int main() {
-	PFM::linkingTest();	
-	return 0;
+
+	return !PFM_GUI_TESTS::guiLinkingAndDependencyTests();
 }

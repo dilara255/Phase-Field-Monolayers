@@ -4,6 +4,8 @@
 workspace "PFM"
 
 	startproject "controlCL"
+	defines { "F_V2_API=", "F_AUX_API=", "F_CLIENTAPP", "PFM_API=" } -- using static libs
+
 
 	toolset("clang")
 	flags { "MultiProcessorCompile", "Verbose" }
@@ -26,13 +28,14 @@ workspace "PFM"
 	filter {}
 
 	cfgDir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+	guiCfgRelPath = "../res/guiCfg/imgui.ini"
 
 	binDir = "bin/" .. cfgDir .. "/%{prj.name}"
 	binIntDir = "bin-int/" .. cfgDir .. "/%{prj.name}"
 
 	IncludeDir = {}
-	IncludeDir["F_VIZ2D_API"] = "%{wks.location}/depend/fViz2D/API"
-	IncludeDir["F_AUX_API"]   = "%{wks.location}/depend/fAux/API"
+	IncludeDir["F_AUX"]   = "%{wks.location}/depend/fAux/include/"
+	IncludeDir["F_VIZ2D"] = "%{wks.location}/depend/fViz2D/include/"
 	IncludeDir["PFM_SIMUL"]   = "%{wks.location}/simulation/API"
 
 	LibDir = {}
@@ -49,6 +52,7 @@ project "simulation"
 	staticruntime "off"
 	pic "on"
 
+	undefines "F_CLIENTAPP"
 	defines "F_PFM_SIMUL"
 	defines "AS_BUILD_LIB"
 
@@ -68,7 +72,8 @@ project "simulation"
 
 	includedirs {
 		"%{prj.name}/include",
-		"%{IncludeDir.F_AUX_API}"
+		"%{prj.name}/API",
+		"%{IncludeDir.F_AUX}"
 	}
 
 	filter "architecture:x86_64"
@@ -102,7 +107,7 @@ project "controlCL"
 	defines "AS_BUILD_APP"
 
 	links ("simulation")
-	links (%{LibDir.F_AUX)
+	links ("%{LibDir.F_AUX}/fAux")
 
 	targetdir (binDir)
 	objdir (binIntDir)
@@ -119,7 +124,7 @@ project "controlCL"
 	includedirs
 	{
 		"%{prj.name}/include",
-		"%{IncludeDir.F_AUX_API}",
+		"%{IncludeDir.F_AUX}",
 		"%{IncludeDir.PFM_SIMUL}"	
 	}
 
@@ -152,8 +157,8 @@ project "controlGUI"
 	defines "AS_BUILD_APP"
 
 	links ("simulation")
-	links (%{LibDir.F_AUX)
-	links (%{LibDir.F_VIZ2D)
+	links ("%{LibDir.F_AUX}/fAux")
+	links ("%{LibDir.F_VIZ2D}/fViz2D")
 
 	targetdir (binDir)
 	objdir (binIntDir)
@@ -170,8 +175,8 @@ project "controlGUI"
 	includedirs
 	{
 		"%{prj.name}/include",
-		"%{IncludeDir.F_AUX_API}",
-		"%{IncludeDir.F_VIZ2D_API}",
+		"%{IncludeDir.F_AUX}",
+		"%{IncludeDir.F_VIZ2D}",
 		"%{IncludeDir.PFM_SIMUL}"	
 	}
 
@@ -192,4 +197,4 @@ project "controlGUI"
 		optimize "on"
 	filter {}
 	
-	postbuildcommands{ ("{COPYFILE} ../res/imgui.ini ../bin/" .. cfgDir .."/controlGUI/") }
+	postbuildcommands{ ("{COPYFILE} " .. guiCfgRelPath .. " ../bin/" .. cfgDir .."/controlGUI/") }

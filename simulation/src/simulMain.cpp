@@ -1,4 +1,4 @@
-#include "PFM_API"
+#include "PFM_API.hpp"
 #include "simulMain.hpp"
 
 namespace PFM {
