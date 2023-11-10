@@ -1,4 +1,4 @@
-# Phase-Field-Monolayers
+# Phase-Field-Monolayers (wip)
 
 A simulation of cell monolayers using the **phase-field model**.
 
@@ -7,6 +7,11 @@ Main contents:
 - **controlCL** is thin, command-line only control application.
 - **controlGUI** is a control application with a GUI that allows some real-time control and tinkering with the simulation. Mainly meant for exploration and testing.
 - **controlScripts** are scripts which call controlCL, to automate batches of simulations and possibly some post-processing.
+
+## Current state:
+
+Minimal data and control classes, plus project structure and integration with the dependencies.
+- Next minor: minimal implementation of an actual phase field model.
 
 ## Dependencies and requirements:
 
