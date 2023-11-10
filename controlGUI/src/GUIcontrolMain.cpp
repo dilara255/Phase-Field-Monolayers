@@ -9,8 +9,8 @@
 #include "guiControlMain.hpp"
 
 #define RUN_GUI_TESTS 0
-#define RUN_SIM_DATACTRL_TESTS 0
-#define RUN_SINGLE_LAYER_SIM 1
+#define RUN_SIM_DATACTRL_TESTS 1
+#define RUN_SINGLE_LAYER_SIM 0
 
 int main() {
 
