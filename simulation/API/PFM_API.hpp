@@ -7,6 +7,8 @@
 
 namespace PFM {
 
+	enum class simFuncEnum { DATA_CONTROL_TEST, SINGLE_LAYER_SIM, TOTAL_SIM_FUNCS};
+
 	//If anything fails, returns NULL. Otherwise, returns the field to be used by the simulation
 	PFM_API PeriodicDoublesLattice2D* initializeSimulation(PFM::fieldDimensions_t dimensions, 
 		                                                                uint32_t numberCells);
@@ -18,8 +20,9 @@ namespace PFM {
 	PFM_API bool saveFieldToFile();
 	
 	//If <= 0, will run until manually stopped
-	PFM_API void runForSteps(int stepsToRun);
-
+	//If the simulation is already running or the simFuncEnum is bad, will do nothing (*no warning*)
+	PFM_API void runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun);
+	
 	//Returns NULL in case no field is active or the simulation hasn't been initialized
 	PFM_API PeriodicDoublesLattice2D* getActiveFieldPtr();
 }

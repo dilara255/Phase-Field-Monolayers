@@ -2,9 +2,11 @@
 
 #include <memory>
 #include <thread>
+#include <functional>
 
 #include "fAux/API/prng.hpp"
 
+#include "PFM_API.hpp"
 #include "PFM_data.hpp"
 
 #define CELL_SEED_VAL 1
@@ -12,9 +14,24 @@
 
 namespace PFM {
 
-    //Holds the data and references necessary to control the simulation
-    //TODO: probably should be a singleton : )
+    //*******************SimulationFunctions*************************
+    //These are the definitions of the possible simulation functions:
+    class SimulationControl;
+    typedef void SimulationSteps_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr);
+    
+    //WARNING: these should always be kept in synch with PFM::simFuncEnum (@PFM_API.hpp)
+    SimulationSteps_fn dataAndControllerTest_fn;
+    SimulationSteps_fn singleLayerSim_fn;
+    static SimulationSteps_fn* simFunctionsPtrs_arr[(int)simFuncEnum::TOTAL_SIM_FUNCS] = {
+        &dataAndControllerTest_fn, &singleLayerSim_fn
+    };
+    //***************************************************************
+
+
+    //********************SimulationControl**************************
+    //This class holds the data and references necessary to control the simulation
     class SimulationControl {
+    //TODO: probably should be a singleton : )
 
     public:
         bool isInitialized() const;
@@ -27,8 +44,8 @@ namespace PFM {
 
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
-        //Does nothing in case the simulation is already running.
-        void runForSteps(int steps);
+        //Does nothing in case the simulation is already running or a bad simFuncEnum is passed.
+        void runForSteps(int steps, simFuncEnum simulationToRun);
         //Asks the controller to stop and waits for confirmation (in MS_TO_WAIT ms sleep cycles)
         //When the simulation actually stops, its thread is joined. Does nothing if the simulation isn't running.
         //Returns the amount of steps ran
@@ -61,6 +78,5 @@ namespace PFM {
         std::unique_ptr<PeriodicDoublesLattice2D> m_activeLattice_ptr = NULL;
         std::thread m_stepsThread;
     };
-
-    void stepSimulation(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning);
+    //***************************************************************
 }

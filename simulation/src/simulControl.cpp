@@ -1,4 +1,5 @@
 #include "PFM_API.hpp"
+#include "PFM_tests.hpp"
 #include "simulControl.hpp"
 
 #include "fAux/API/timeHelpers.hpp"
@@ -114,13 +115,14 @@ bool PFM::SimulationControl::checkIfShouldStop() {
 	return m_shouldStop;
 }
 
-void PFM::SimulationControl::runForSteps(int steps) {
+void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationToRun) {
 	if(controller.isSimulationRunning()) { return; }
+	if((int)simulationToRun >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) { return; }
 
 	m_stepsToRun = steps;
 	m_isRunning = true;
 
-	m_stepsThread = std::thread(PFM::stepSimulation, this, &m_stepsRan, &m_isRunning);
+	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_stepsRan, &m_isRunning);
 	m_stepsThread.detach();
 }
 
@@ -164,8 +166,8 @@ bool PFM::saveFieldToFile() {
 	return controller.saveFieldToFile();
 }
 	
-void PFM::runForSteps(int stepsToRun) {
-	controller.runForSteps(stepsToRun);
+void PFM::runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun) {
+	controller.runForSteps(stepsToRun, simulationToRun);
 }
 
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {

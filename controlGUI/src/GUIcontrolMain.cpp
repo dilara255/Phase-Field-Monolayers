@@ -3,19 +3,31 @@
 #include "fAux/API/timeHelpers.hpp"
 
 #include "PFM_API.hpp"
+#include "PFM_tests.hpp"
 
 #include "guiTests.hpp"
 #include "guiControlMain.hpp"
 
-#define RUN_GUI_TESTS 0
+#define RUN_GUI_TESTS 1
+#define RUN_SIM_DATACTRL_TESTS 1
+#define RUN_SINGLE_LAYER_SIM 1
 
 int main() {
 
-	if(RUN_GUI_TESTS) { return !PFM_GUI_TESTS::guiLinkingAndDependencyTests(); }
-	else { return !PFM_GUI::runSimulation(); }
+	bool result = true;
+
+	if(RUN_GUI_TESTS) { result &= PFM_GUI_TESTS::guiLinkingAndDependencyTests(); }
+	if(RUN_SIM_DATACTRL_TESTS) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::DATA_CONTROL_TEST); }
+	if(RUN_SINGLE_LAYER_SIM) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_SIM); }
+
+	if(result) { LOG_INFO("All ok"); }
+	else { LOG_ERROR("Errors found"); }
+
+	GETCHAR_FORCE_PAUSE;
+	return !result; //0 for ok
 }
 
-bool PFM_GUI::runSimulation() {
+bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	LOG_DEBUG("Will run the simulation and display on the GUI");
 
@@ -30,19 +42,21 @@ bool PFM_GUI::runSimulation() {
 		
 	IMG::floats2Dfield_t floatField = IMG::createFloats2Dfield(width, height);
 	
+	F_V2::rendererRetCode_st retCode = F_V2::rendererRetCode_st::STILL_RUNNING;
+
 	//These are just for compatibility with the test version of fViz2D
 	//TODO: update fViz2D version and get rid of this : )
 	COLOR::rgbaF_t clear = COLOR::CLEAR;
 	COLOR::rgbaF_t tint = COLOR::FULL_WHITE;
-	bool works = false;
+	//****************************************************************
 
-	F_V2::rendererRetCode_st retCode = F_V2::rendererRetCode_st::STILL_RUNNING;
+	bool works = false;
 
 	LOG_DEBUG("Starting renderer...");
 	std::thread renderThread = F_V2::spawnRendererOnNewThreadF(&works, &floatField, &clear, &tint, &retCode);
 
-	LOG_DEBUG("Will run the simulation...");
-	PFM::runForSteps(-1);
+	LOG_INFO("Will run the simulation");
+	PFM::runForSteps(-1, simulationFunctionToRun);
 
 	size_t elements = floatField.size.getTotalElements();
 
@@ -54,7 +68,9 @@ bool PFM_GUI::runSimulation() {
 		AZ::hybridBusySleepForMicros(std::chrono::microseconds(1000));
 	}
 
-	LOG_TRACE("Simulation ended. Will stop the thread");
+	LOG_INFO("Simulation ended");
+		
+	LOG_TRACE("Will stop the thread");
 
 	renderThread.join();
 	LOG_DEBUG("Render thread joined");
@@ -72,9 +88,9 @@ bool PFM_GUI::runSimulation() {
 
 	bool result = (retCode == F_V2::rendererRetCode_st::OK && works);
 	if (result) { LOG_INFO("OK"); }
-	else { LOG_ERROR("Expected a different number of steps"); }
+	else { LOG_ERROR("Renderer or user-reported error"); }
 
 	GETCHAR_FORCE_PAUSE;
 
-	return !result;
+	return result;
 }

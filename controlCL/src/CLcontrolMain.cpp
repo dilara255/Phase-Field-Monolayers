@@ -5,14 +5,25 @@
 #include "PFM_tests.hpp"
 #include "CLcontrolMain.hpp"
 
-#define RUN_CLI_TESTS 0
+#define RUN_CLI_TESTS 1
+#define RUN_SIM_DATACTRL_TESTS 1
+#define RUN_SINGLE_LAYER_SIM 1
 
 int main() {
-	if(RUN_CLI_TESTS) { PFM::linkingTest();	return 0;}
-	else { return !PFM_CLI::runSimulation(); }
+	bool result = true;
+
+	if(RUN_CLI_TESTS) { PFM::linkingTest(); }
+	if(RUN_SIM_DATACTRL_TESTS) { result &= PFM_CLI::runSimulation(PFM::simFuncEnum::DATA_CONTROL_TEST); }
+	if(RUN_SINGLE_LAYER_SIM) { result &= PFM_CLI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_SIM); }
+
+	if(result) { LOG_INFO("All ok"); }
+	else { LOG_ERROR("Errors found"); }
+
+	GETCHAR_FORCE_PAUSE;
+	return !result; //0 for ok
 }
 
-bool PFM_CLI::runSimulation() {
+bool PFM_CLI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	LOG_DEBUG("Will run the simulation from the CLI and save the results as an image");
 
@@ -27,7 +38,7 @@ bool PFM_CLI::runSimulation() {
 
 	LOG_INFO("Simulation initialized");
 		
-	PFM::runForSteps(stepsToRun);
+	PFM::runForSteps(stepsToRun, simulationFunctionToRun);
 
 	LOG_TRACE("Simulation running");
 
@@ -52,6 +63,6 @@ bool PFM_CLI::runSimulation() {
 
 	GETCHAR_FORCE_PAUSE;
 
-	return !result;
+	return result;
 
 }
