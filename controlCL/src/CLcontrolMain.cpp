@@ -5,8 +5,8 @@
 #include "PFM_tests.hpp"
 #include "CLcontrolMain.hpp"
 
-#define RUN_CLI_TESTS 1
-#define RUN_SIM_DATACTRL_TESTS 1
+#define RUN_CLI_TESTS 0
+#define RUN_SIM_DATACTRL_TESTS 0
 #define RUN_SINGLE_LAYER_SIM 1
 
 int main() {

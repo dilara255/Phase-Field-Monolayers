@@ -32,10 +32,13 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 	std::vector<double> initialData;
 	size_t elements = dimensions.totalElements();
 	initialData.reserve(elements);
+
 	//The data to be used on initialization:
+	int cellSpacing = elements;
+	if(numberCells > 1) { cellSpacing /= numberCells; }
 	for (size_t i = 0; i < elements; i++) {
 		//To "seed" numberCells equally spaced cells with initialValue, and all others with zero:
-		initialData.push_back(cellSeedValue * ( (i/numberCells) == (i/(double)numberCells) ) );
+		initialData.push_back(cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
 	}
 
 	m_activeLattice_ptr = 
