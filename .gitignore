@@ -8,3 +8,5 @@ bin-int/
 *.filters
 *.sln
 *.make
+*.pgm
+*.bin
