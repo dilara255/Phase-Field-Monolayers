@@ -9,7 +9,7 @@
 #include "PFM_API.hpp"
 #include "PFM_data.hpp"
 
-#define CELL_SEED_VAL 1
+#define CELL_SEED_VAL (1.0)
 #define MS_TO_WAIT 10
 
 namespace PFM {
