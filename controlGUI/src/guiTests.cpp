@@ -7,6 +7,7 @@
 #include "fViz2D/API/FV2_API.hpp"
 
 #include "PFM_API.hpp"
+#include "PFM_tests.hpp"
 
 #include "guiTests.hpp"
 

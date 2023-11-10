@@ -1,0 +1,66 @@
+#pragma once
+
+#include <memory>
+#include <thread>
+
+#include "fAux/API/prng.hpp"
+
+#include "PFM_data.hpp"
+
+#define CELL_SEED_VAL 1
+#define MS_TO_WAIT 10
+
+namespace PFM {
+
+    //Holds the data and references necessary to control the simulation
+    //TODO: probably should be a singleton : )
+    class SimulationControl {
+
+    public:
+        bool isInitialized() const;
+        PeriodicDoublesLattice2D* getFieldPtr() const; //TODO: does this really work with const in the front?
+        
+        //If not yet initialized, initializes and creates a new field
+        //Otherwise, destroys the old field, reinitializes and creates a new field with "dimensions"
+        void reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
+                                                  double cellSeedValue = CELL_SEED_VAL);
+
+        //Spawns a new thread which will run the simulation.
+        //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
+        //Does nothing in case the simulation is already running.
+        void runForSteps(int steps);
+        //Asks the controller to stop and waits for confirmation (in MS_TO_WAIT ms sleep cycles)
+        //When the simulation actually stops, its thread is joined. Does nothing if the simulation isn't running.
+        //Returns the amount of steps ran
+        int stop();
+
+        //Returns false in case the field was unitialized or unallocated
+        bool saveFieldToFile() const;
+
+        bool isSimulationRunning() const;
+        bool checkIfShouldStop();
+
+        int stepsAlreadyRan() const;
+        void resetStepsAlreadyRan();
+
+    private:
+            
+        void releaseField();
+        void stepsEnded();
+        //Asks the controller to stop, but otherwise keeps going. *Use with caution*.
+        //WARNING: When the simulation actually stops, its thread is STILL HANGING. Does nothing not running.
+        void nonBlockingStop();
+
+        int m_cells = 0;
+        bool m_shouldStop = false;
+        bool m_isRunning = false;
+        int m_stepsRan = 0;
+        int m_stepsToRun = 0;
+        bool m_hasInitialized = false;
+        uint64_t m_initialSeed = DEFAULT_PRNG_SEED0;
+        std::unique_ptr<PeriodicDoublesLattice2D> m_activeLattice_ptr = NULL;
+        std::thread m_stepsThread;
+    };
+
+    void stepSimulation(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning);
+}
