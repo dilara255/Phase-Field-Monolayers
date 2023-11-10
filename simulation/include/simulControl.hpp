@@ -77,6 +77,7 @@ namespace PFM {
         uint64_t m_initialSeed = DEFAULT_PRNG_SEED0;
         std::unique_ptr<PeriodicDoublesLattice2D> m_activeLattice_ptr = NULL;
         std::thread m_stepsThread;
+        PFM::simFuncEnum m_lastSimulFuncUsed = PFM::simFuncEnum::TOTAL_SIM_FUNCS;
     };
     //***************************************************************
 }

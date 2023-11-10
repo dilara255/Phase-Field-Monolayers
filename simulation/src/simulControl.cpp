@@ -83,9 +83,9 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 
 	auto dimensions = m_activeLattice_ptr->getFieldDimensions();
 
-	std::string baseFilename = std::to_string(m_cells) + "_" + std::to_string(dimensions.width) 
-							+ "_" + std::to_string(dimensions.height) + "_" + std::to_string(m_stepsRan) 
-							+ "_" + std::to_string(m_initialSeed);
+	std::string baseFilename = "sim" + std::to_string((int)m_lastSimulFuncUsed) + "_" + std::to_string(m_cells) 
+		                    + "_" + std::to_string(dimensions.width) + "_" + std::to_string(dimensions.height) 
+		                    + "_" + std::to_string(m_stepsRan) + "_" + std::to_string(m_initialSeed);
 	
 	FILE* fp_pgm = fopen((baseFilename + ".pgm").c_str(), "wb");
 	if(fp_pgm == NULL) { return false; }
@@ -123,6 +123,7 @@ void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationT
 	if((int)simulationToRun >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) { return; }
 
 	m_stepsToRun = steps;
+	m_lastSimulFuncUsed = simulationToRun;
 	m_isRunning = true;
 
 	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_stepsRan, &m_isRunning);
