@@ -95,6 +95,12 @@ void PFM::PeriodicDoublesLattice2D::writeDataPoint(coordinate_t coordinate, doub
 	else { m_data[index] = newValue; return; }
 }
 
+void PFM::PeriodicDoublesLattice2D::incrementDataPoint(coordinate_t coordinate, double changeInValue) {
+	size_t index = indexFromPeriodicCoordinate(coordinate);
+	if (index >= m_elements) { return; }
+	else { m_data[index] += changeInValue; return; }
+}
+
  double* PFM::PeriodicDoublesLattice2D::createCopyOfAllData(fieldDimensions_t* dimensions_ptr) const {
 	*dimensions_ptr = m_dimensions;
 	if (!m_hasAllocated || !m_hasIntialized) { return NULL; }

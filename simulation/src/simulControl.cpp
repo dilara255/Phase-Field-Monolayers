@@ -118,6 +118,14 @@ bool PFM::SimulationControl::checkIfShouldStop() {
 	return m_shouldStop;
 }
 
+int PFM::SimulationControl::getNumberCells() const {
+	return m_cells;
+}
+
+double PFM::SimulationControl::getLastCellSeedValue() const {
+	return m_lastCellSeedValue;
+}
+
 void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationToRun) {
 	if(controller.isSimulationRunning()) { return; }
 	if((int)simulationToRun >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) { return; }
