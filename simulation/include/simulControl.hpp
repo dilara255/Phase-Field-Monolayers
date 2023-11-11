@@ -56,6 +56,8 @@ namespace PFM {
 
         bool isSimulationRunning() const;
         bool checkIfShouldStop();
+        int getNumberCells() const;
+        double getLastCellSeedValue() const;
 
         int stepsAlreadyRan() const;
         void resetStepsAlreadyRan();
@@ -69,6 +71,7 @@ namespace PFM {
         void nonBlockingStop();
 
         int m_cells = 0;
+        double m_lastCellSeedValue = CELL_SEED_VAL;
         bool m_shouldStop = false;
         bool m_isRunning = false;
         int m_stepsRan = 0;

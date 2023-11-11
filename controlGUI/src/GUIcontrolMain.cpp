@@ -9,8 +9,18 @@
 #include "guiControlMain.hpp"
 
 #define RUN_GUI_TESTS 0
-#define RUN_SIM_DATACTRL_TESTS 1
-#define RUN_SINGLE_LAYER_SIM 0
+#define RUN_SIM_DATACTRL_TESTS 0
+#define RUN_SINGLE_LAYER_SIM 1
+#define TOTAL_SIM_FUNCS ((int)PFM::simFuncEnum::TOTAL_SIM_FUNCS)
+
+typedef struct parameters_st {
+	int width, height, cells;
+} parameters_t;
+
+parameters_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
+	{512, 512, 50},
+	{256, 256, 9}
+};
 
 int main() {
 
@@ -28,12 +38,16 @@ int main() {
 }
 
 bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
+	if ((int)simulationFunctionToRun >= TOTAL_SIM_FUNCS) {
+		LOG_ERROR("Invalid simulation function selected");
+		return false;
+	}
 
 	LOG_DEBUG("Will run the simulation and display on the GUI");
 
-	int width = 512;
-	int height = 512;
-	int cells = 50;
+	int width = defaultParamsPerSimulType[(int)simulationFunctionToRun].width;
+	int height = defaultParamsPerSimulType[(int)simulationFunctionToRun].height;
+	int cells = defaultParamsPerSimulType[(int)simulationFunctionToRun].cells;
 
 	PFM::fieldDimensions_t dimensions = {(size_t)width, (size_t)height};
 

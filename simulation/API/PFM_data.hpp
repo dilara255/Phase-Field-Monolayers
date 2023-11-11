@@ -34,6 +34,8 @@ namespace PFM {
 		double getElement(size_t index) const;
 		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.
 		void writeDataPoint(coordinate_t coordinate, double newValue);
+		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.
+		void incrementDataPoint(coordinate_t coordinate, double changeInValue);
 		
 		//Allocates a new buffer and passes the data. *dimensions_ptr will hold the dimensions of the new buffer.
 		//The new buffer becomes a responsability of the caller.
