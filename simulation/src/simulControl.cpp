@@ -16,15 +16,15 @@ bool PFM::SimulationControl::isInitialized() const {
 }
 
 PeriodicDoublesLattice2D* PFM::SimulationControl::getFieldPtr() const {
-	return m_activeLattice_ptr.get();
+	return m_baseLattice_ptr.get();
 }
         
 void PFM::SimulationControl::releaseField() {
-	if(m_activeLattice_ptr != NULL) { m_activeLattice_ptr.release(); }
+	if(m_baseLattice_ptr != NULL) { m_baseLattice_ptr.release(); }
 }
 
 void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
-	                                                                              double cellSeedValue) {
+	                                                           bool perCellLayer, double cellSeedValue) {
 	
 	if(isSimulationRunning()) { stop(); }
 	releaseField();
@@ -41,7 +41,7 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 		initialData.push_back(cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
 	}
 
-	m_activeLattice_ptr = 
+	m_baseLattice_ptr = 
 		std::unique_ptr<PeriodicDoublesLattice2D>(new PeriodicDoublesLattice2D(dimensions, initialData));
 
 	m_cells = numberCells;
@@ -77,15 +77,18 @@ int PFM::SimulationControl::stop() {
 
 //TODO: an actual reasonable save system : p
 bool PFM::SimulationControl::saveFieldToFile() const {
-	if (!m_hasInitialized || !m_activeLattice_ptr->isInitialized() || !m_activeLattice_ptr->hasAllocated()) {
+	if (!m_hasInitialized || !m_baseLattice_ptr->isInitialized() || !m_baseLattice_ptr->hasAllocated()) {
 		return false;
 	}
 
-	auto dimensions = m_activeLattice_ptr->getFieldDimensions();
+	auto dimensions = m_baseLattice_ptr->getFieldDimensions();
 
-	std::string baseFilename = "sim" + std::to_string((int)m_lastSimulFuncUsed) + "_" + std::to_string(m_cells) 
-		                    + "_" + std::to_string(dimensions.width) + "_" + std::to_string(dimensions.height) 
-		                    + "_" + std::to_string(m_stepsRan) + "_" + std::to_string(m_initialSeed);
+	std::string baseFilename = "sim" + std::to_string((int)m_lastSimulFuncUsed) 
+		                     + "_A" + std::to_string(m_lastA) + "_k" + std::to_string(m_lastK)
+		                     + "_dt" + std::to_string(m_lastDT)
+		                     + "_" + std::to_string(m_cells) + "_" + std::to_string(dimensions.width) 
+		                     + "_" + std::to_string(dimensions.height) + "_" + std::to_string(m_stepsRan) 
+		                     + "_" + std::to_string(m_initialSeed);
 	
 	FILE* fp_pgm = fopen((baseFilename + ".pgm").c_str(), "wb");
 	if(fp_pgm == NULL) { return false; }
@@ -99,7 +102,7 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 	double value;
 	for (int j = 0; j < (int)dimensions.height; j++) {
 		for (int i = 0; i < (int)dimensions.width; i++) {
-		  value = m_activeLattice_ptr->getDataPoint({i,j});
+		  value = m_baseLattice_ptr->getDataPoint({i,j});
 		  fprintf(fp_pgm, "%c", (char)(value*maxColor));
 		  fprintf(fp_bin, "%f", value);
 		}
@@ -108,6 +111,18 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 	fclose(fp_bin);
 
 	return true;
+}
+
+void PFM::SimulationControl::setAused(double newA) {
+	m_lastA = newA;
+}
+
+void PFM::SimulationControl::setKused(double newK) {
+	m_lastK = newK;
+}
+
+void PFM::SimulationControl::setDTused(double newDT) {
+	m_lastDT = newDT;
 }
 
 bool PFM::SimulationControl::checkIfShouldStop() {
@@ -152,9 +167,10 @@ void PFM::SimulationControl::resetStepsAlreadyRan() {
 
 ///These API calls are really just wrappers to calls to methods of the controller:
 
-PeriodicDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions, uint32_t numberCells) {
+PeriodicDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions, uint32_t numberCells, 
+	                                                                                 bool perCellLayer) {
 	
-	controller.reinitializeController(dimensions, numberCells);
+	controller.reinitializeController(dimensions, numberCells, perCellLayer);
 	return controller.getFieldPtr();
 }
 

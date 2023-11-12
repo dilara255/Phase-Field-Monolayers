@@ -40,7 +40,7 @@ namespace PFM {
         //If not yet initialized, initializes and creates a new field
         //Otherwise, destroys the old field, reinitializes and creates a new field with "dimensions"
         void reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
-                                                  double cellSeedValue = CELL_SEED_VAL);
+                                    bool perCellLayer, double cellSeedValue = CELL_SEED_VAL);
 
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
@@ -53,6 +53,9 @@ namespace PFM {
 
         //Returns false in case the field was unitialized or unallocated
         bool saveFieldToFile() const;
+        void setAused(double newA);
+        void setKused(double newK);
+        void setDTused(double newK);
 
         bool isSimulationRunning() const;
         bool checkIfShouldStop();
@@ -70,17 +73,24 @@ namespace PFM {
         //WARNING: When the simulation actually stops, its thread is STILL HANGING. Does nothing not running.
         void nonBlockingStop();
 
-        int m_cells = 0;
-        double m_lastCellSeedValue = CELL_SEED_VAL;
-        bool m_shouldStop = false;
+        bool m_hasInitialized = false;
         bool m_isRunning = false;
+        bool m_shouldStop = false;
         int m_stepsRan = 0;
         int m_stepsToRun = 0;
-        bool m_hasInitialized = false;
-        uint64_t m_initialSeed = DEFAULT_PRNG_SEED0;
-        std::unique_ptr<PeriodicDoublesLattice2D> m_activeLattice_ptr = NULL;
+        
         std::thread m_stepsThread;
-        PFM::simFuncEnum m_lastSimulFuncUsed = PFM::simFuncEnum::TOTAL_SIM_FUNCS;
+
+        int m_cells = 0;
+        double m_lastCellSeedValue = CELL_SEED_VAL;
+        uint64_t m_initialSeed = DEFAULT_PRNG_SEED0;
+        PFM::simFuncEnum m_lastSimulFuncUsed = PFM::simFuncEnum::TOTAL_SIM_FUNCS;        
+        double m_lastK = -1;
+        double m_lastA = -1;
+        double m_lastDT = -1;
+        
+        std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr = NULL;
+        std::vector<std::unique_ptr<PeriodicDoublesLattice2D>> m_perCellLaticePtrs;
     };
     //***************************************************************
 }
