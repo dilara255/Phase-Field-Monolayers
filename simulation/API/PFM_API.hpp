@@ -11,7 +11,7 @@ namespace PFM {
 
 	//If anything fails, returns NULL. Otherwise, returns the field to be used by the simulation
 	PFM_API PeriodicDoublesLattice2D* initializeSimulation(PFM::fieldDimensions_t dimensions, 
-		                                                                uint32_t numberCells);
+		                                                   uint32_t numberCells, bool perCellLayer = false);
 
 	PFM_API bool isSimulationRunning();
 	PFM_API int stopSimulation();
