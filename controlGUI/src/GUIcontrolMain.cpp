@@ -10,7 +10,8 @@
 
 #define RUN_GUI_TESTS 0
 #define RUN_SIM_DATACTRL_TESTS 0
-#define RUN_SINGLE_LAYER_SIM 1
+#define RUN_SINGLE_LAYER_CH_SIM 0
+#define RUN_MULTI_LAYER_CH_SIM 1
 #define TOTAL_SIM_FUNCS ((int)PFM::simFuncEnum::TOTAL_SIM_FUNCS)
 
 typedef struct parameters_st {
@@ -19,7 +20,8 @@ typedef struct parameters_st {
 
 parameters_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
 	{512, 512, 50},
-	{256, 256, 9}
+	{256, 256, 9},
+	{128, 128, 1}
 };
 
 int main() {
@@ -28,7 +30,8 @@ int main() {
 
 	if(RUN_GUI_TESTS) { result &= PFM_GUI_TESTS::guiLinkingAndDependencyTests(); }
 	if(RUN_SIM_DATACTRL_TESTS) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::DATA_CONTROL_TEST); }
-	if(RUN_SINGLE_LAYER_SIM) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_SIM); }
+	if(RUN_SINGLE_LAYER_CH_SIM) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_CH_SIM); }
+	if(RUN_MULTI_LAYER_CH_SIM) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::MULTI_LAYER_CH_SIM); }
 
 	if(result) { LOG_INFO("All ok"); }
 	else { LOG_ERROR("Errors found"); }

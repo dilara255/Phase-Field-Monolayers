@@ -21,9 +21,10 @@ namespace PFM {
     
     //WARNING: these should always be kept in synch with PFM::simFuncEnum (@PFM_API.hpp)
     SimulationSteps_fn dataAndControllerTest_fn;
-    SimulationSteps_fn singleLayerSim_fn;
+    SimulationSteps_fn singleLayerCHsim_fn;
+    SimulationSteps_fn multiLayerCHsim_fn;
     static SimulationSteps_fn* simFunctionsPtrs_arr[(int)simFuncEnum::TOTAL_SIM_FUNCS] = {
-        &dataAndControllerTest_fn, &singleLayerSim_fn
+        &dataAndControllerTest_fn, &singleLayerCHsim_fn, &multiLayerCHsim_fn
     };
     //***************************************************************
 
@@ -35,7 +36,8 @@ namespace PFM {
 
     public:
         bool isInitialized() const;
-        PeriodicDoublesLattice2D* getFieldPtr() const; //TODO: does this really work with const in the front?
+        PeriodicDoublesLattice2D* getBaseFieldPtr() const;
+        std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* getLayerFieldsVectorPtr() const;
         
         //If not yet initialized, initializes and creates a new field
         //Otherwise, destroys the old field, reinitializes and creates a new field with "dimensions"

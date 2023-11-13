@@ -2,12 +2,86 @@
 #include "derivatives.hpp"
 #include <assert.h>
 
+//TODO: separate initialization, simulation and wrap-up
+
 void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius, 
 	                                 double cellSeedValue, bool invertValueOn);
 
-void PFM::singleLayerSim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
-	//Test simulation: the pixels initialized as non-zero should "diffuse" up and to the right
-	//(not really diffuse, more like reinforce - eventually everything should be "maximal" and then loop)
+void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
+	//Runs Chan-Hiliard on one layer per cell and adds the resultos into a base layer
+
+	const bool invertField = false;
+	const uint32_t extraSubsteps = 2;
+	const double k = 1;
+	const double A = 0.5;
+	const double dt = 0.05;
+	const double initialCellDiameterDensity = 1; //always a bit less because integers. Also, seeds not packed
+	//TODO: on the seeding function, define spacing (ie, option to use a spatial configuration for best packing)
+
+	controller_ptr->setKused(k);
+	controller_ptr->setAused(A);
+	controller_ptr->setDTused(dt);
+
+	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
+	auto layerFieldsVectorPtr = controller_ptr->getLayerFieldsVectorPtr();
+
+	const int width = (int)baseField_ptr->getFieldDimensions().width;
+	const int height = (int)baseField_ptr->getFieldDimensions().height;
+
+	const double initialCellRadius = initialCellDiameterDensity * std::min(width, height)
+		                             / (2 * std::sqrt(2) * std::sqrt((float)controller_ptr->getNumberCells()));
+
+	expandCells(baseField_ptr, initialCellRadius, controller_ptr->getLastCellSeedValue(), invertField);
+	
+	double expectedInterfaceWidth = std::sqrt(2*k/A);
+	double radiusToWidth = initialCellRadius / expectedInterfaceWidth;
+	printf("Radius to expected interface width = %f (radius: %f, width: %f)\n", 
+		             radiusToWidth, initialCellRadius, expectedInterfaceWidth );
+
+	PFM::coordinate_t centerPoint;
+	double phi;
+	double phi0;
+	double laplacian;	
+	neighborhood9_t neigh;
+
+	while(!controller_ptr->checkIfShouldStop()) {
+		for (int j = 0; j < height; j++) {
+			centerPoint.y = j;
+
+			for (int i = 0; i < width; i++) {
+				centerPoint.x = i;
+
+				neigh = baseField_ptr->getNeighborhood(centerPoint);
+				phi0 = neigh.getCenter();
+
+				for (uint32_t k = 0; k < extraSubsteps; k++) {
+
+					laplacian = PFM::laplacian9pointsAroundNeighCenter(&neigh);
+					phi = neigh.getCenter();
+
+					neigh.setCenter(phi0 + dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi)) );
+				}
+				
+				laplacian = PFM::laplacian9pointsAroundNeighCenter(&neigh);
+				phi = neigh.getCenter();
+
+				baseField_ptr->incrementDataPoint(centerPoint, dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi)) );
+			}
+		}
+
+		*stepCount_ptr += 1;
+		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
+			if(*stepCount_ptr % 1000 == 0) { printf("steps: %d\n", *stepCount_ptr); }
+		#else
+			if(*stepCount_ptr % 100000 == 0) { printf("steps: %d\n", *stepCount_ptr); }
+		#endif
+	}
+
+	*isRunning_ptr = false;
+}
+
+void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
+	//Runs Chan-Hiliard on a single layer
 	
 	const bool invertField = false;
 	const double k = 1;
@@ -20,7 +94,7 @@ void PFM::singleLayerSim_fn(SimulationControl* controller_ptr, int* stepCount_pt
 	controller_ptr->setAused(A);
 	controller_ptr->setDTused(dt);
 
-	auto field_ptr = controller_ptr->getFieldPtr();
+	auto field_ptr = controller_ptr->getBaseFieldPtr();
 
 	const int width = (int)field_ptr->getFieldDimensions().width;
 	const int height = (int)field_ptr->getFieldDimensions().height;
@@ -72,7 +146,7 @@ void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepC
 	controller_ptr->setAused(maxValue);	
 	controller_ptr->setDTused(1);	
 
-	auto field_ptr = controller_ptr->getFieldPtr();
+	auto field_ptr = controller_ptr->getBaseFieldPtr();
 
 	const int width = (int)field_ptr->getFieldDimensions().width;
 	const int height = (int)field_ptr->getFieldDimensions().height;
