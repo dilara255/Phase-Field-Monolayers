@@ -7,7 +7,7 @@
 
 namespace PFM {
 
-	enum class simFuncEnum { DATA_CONTROL_TEST, SINGLE_LAYER_SIM, TOTAL_SIM_FUNCS};
+	enum class simFuncEnum { DATA_CONTROL_TEST, SINGLE_LAYER_CH_SIM, MULTI_LAYER_CH_SIM, TOTAL_SIM_FUNCS};
 
 	//If anything fails, returns NULL. Otherwise, returns the field to be used by the simulation
 	PFM_API PeriodicDoublesLattice2D* initializeSimulation(PFM::fieldDimensions_t dimensions, 

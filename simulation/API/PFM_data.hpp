@@ -3,14 +3,40 @@
 //TODO: *in case* this is turned into a shared library, what should or shouldn't get a PFM_API appended?
 
 #include <vector>
+#include <assert.h>
+
+#define ALL_CELLS_ID -1
 
 namespace PFM {
 
-	typedef struct coordinate_str {
+	typedef struct coordinate_st {
 		int x, y;
 	} coordinate_t;
 
-	typedef struct fieldDimensions_str {
+	typedef struct neighborhood9_st {
+		double data[9];
+
+		inline double getElement(int x, int y) {
+			assert(x >= 0 && y >= 0);
+			assert(y*3 + x < 9);
+			return data[(y*3 + x)];
+		}
+
+		inline double getCenter() {
+			return data[4];
+		}
+
+		inline void setCenter(double newValue) {
+			data[4] = newValue;
+		}
+
+		inline void incrementCenter(double valueChange) {
+			data[4] += valueChange;
+		}
+
+	} neighborhood9_t;
+
+	typedef struct fieldDimensions_st {
 		size_t width, height;
 		size_t totalElements() const;
 	} fieldDimensions_t;
@@ -20,7 +46,8 @@ namespace PFM {
 		//If invalid dimensions are passed, no memory is allocated. 
 		//If no initialData is passed, no data is initialized, but memory is allocated.
 		//If the size of the data passed doesn't fit the dimensions *exactly*, it's ignored.
-		PeriodicDoublesLattice2D(fieldDimensions_t newDimensions, std::vector<double> initialData = {});
+		PeriodicDoublesLattice2D(fieldDimensions_t newDimensions, int cellID = ALL_CELLS_ID, 
+			                                           std::vector<double> initialData = {});
 
 		bool hasAllocated() const;
 		bool isInitialized() const;		
@@ -32,6 +59,8 @@ namespace PFM {
 		//If an out-of-bounds element is asked, will return NAN.
 		double getDataPoint(coordinate_t coordinate) const;
 		double getElement(size_t index) const;
+		//Gets a structure with the 3x3 neighboorhod of the centerpoint. 
+		neighborhood9_t getNeighborhood(coordinate_t centerPoint) const;
 		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.
 		void writeDataPoint(coordinate_t coordinate, double newValue);
 		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.

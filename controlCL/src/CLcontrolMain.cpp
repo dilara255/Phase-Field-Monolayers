@@ -7,14 +7,16 @@
 
 #define RUN_CLI_TESTS 0
 #define RUN_SIM_DATACTRL_TESTS 0
-#define RUN_SINGLE_LAYER_SIM 1
+#define RUN_SINGLE_LAYER_CH_SIM 0
+#define RUN_MULTI_LAYER_CH_SIM 1
 
 int main() {
 	bool result = true;
 
 	if(RUN_CLI_TESTS) { PFM::linkingTest(); }
 	if(RUN_SIM_DATACTRL_TESTS) { result &= PFM_CLI::runSimulation(PFM::simFuncEnum::DATA_CONTROL_TEST); }
-	if(RUN_SINGLE_LAYER_SIM) { result &= PFM_CLI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_SIM); }
+	if(RUN_SINGLE_LAYER_CH_SIM) { result &= PFM_CLI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_CH_SIM); }
+	if(RUN_MULTI_LAYER_CH_SIM) { result &= PFM_CLI::runSimulation(PFM::simFuncEnum::MULTI_LAYER_CH_SIM); }
 
 	if(result) { LOG_INFO("All ok"); }
 	else { LOG_ERROR("Errors found"); }

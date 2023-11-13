@@ -15,9 +15,14 @@ bool PFM::SimulationControl::isInitialized() const {
 	return m_hasInitialized;
 }
 
-PeriodicDoublesLattice2D* PFM::SimulationControl::getFieldPtr() const {
+PeriodicDoublesLattice2D* PFM::SimulationControl::getBaseFieldPtr() const {
 	return m_baseLattice_ptr.get();
 }
+
+std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* PFM::SimulationControl::getLayerFieldsVectorPtr() const {
+	return (std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>*)&m_perCellLaticePtrs;
+}
+
         
 void PFM::SimulationControl::releaseField() {
 	if(m_baseLattice_ptr != NULL) { m_baseLattice_ptr.release(); }
@@ -36,13 +41,36 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 	//The data to be used on initialization:
 	int cellSpacing = elements;
 	if(numberCells > 1) { cellSpacing /= numberCells; }
-	for (size_t i = 0; i < elements; i++) {
-		//To "seed" numberCells equally spaced cells with initialValue, and all others with zero:
-		initialData.push_back(cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
-	}
 
-	m_baseLattice_ptr = 
-		std::unique_ptr<PeriodicDoublesLattice2D>(new PeriodicDoublesLattice2D(dimensions, initialData));
+	if(!perCellLayer) {
+		for (size_t i = 0; i < elements; i++) {
+			//To "seed" numberCells equally spaced cells with initialValue, and all others with zero:
+			initialData.push_back(cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
+		}
+		m_baseLattice_ptr = 
+			std::unique_ptr<PeriodicDoublesLattice2D>(
+				new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID, initialData)
+			);
+	}
+	else {
+		m_baseLattice_ptr = 
+			std::unique_ptr<PeriodicDoublesLattice2D>(new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID));
+
+		m_perCellLaticePtrs.reserve(numberCells);
+		for (uint32_t cell = 0; cell < numberCells; cell++) {
+			for (size_t i = 0; i < elements; i++) {
+				//To "seed" numberCells equally spaced cells with initialValue, and all others with zero:
+				initialData.push_back((double)(i == cellSpacing * cell));
+			}
+
+			m_perCellLaticePtrs.push_back(
+				std::unique_ptr<PeriodicDoublesLattice2D>(
+					new PeriodicDoublesLattice2D(dimensions, cell, initialData)
+				)
+			);
+			initialData.clear();
+		}
+	}
 
 	m_cells = numberCells;
 	m_shouldStop = false;
@@ -171,7 +199,7 @@ PeriodicDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions
 	                                                                                 bool perCellLayer) {
 	
 	controller.reinitializeController(dimensions, numberCells, perCellLayer);
-	return controller.getFieldPtr();
+	return controller.getBaseFieldPtr();
 }
 
 bool PFM::isSimulationRunning() {
@@ -199,5 +227,5 @@ void PFM::runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun) {
 }
 
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {
-	return controller.getFieldPtr();
+	return controller.getBaseFieldPtr();
 }

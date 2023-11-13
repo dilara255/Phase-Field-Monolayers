@@ -4,12 +4,12 @@
 
 using namespace PFM;
 
-size_t PFM::fieldDimensions_str::totalElements() const {
+size_t PFM::fieldDimensions_st::totalElements() const {
 	return width * height;
 }
 
-PFM::PeriodicDoublesLattice2D::PeriodicDoublesLattice2D(fieldDimensions_t newDimensions, 
-	                                                    std::vector<double> initialData) {
+PFM::PeriodicDoublesLattice2D::PeriodicDoublesLattice2D(fieldDimensions_t newDimensions, int cellID, 
+	                                                                std::vector<double> initialData) {
 	m_hasAllocated = false;
 	m_hasIntialized = false;
 
@@ -27,11 +27,13 @@ PFM::PeriodicDoublesLattice2D::PeriodicDoublesLattice2D(fieldDimensions_t newDim
 	m_data.reserve(m_elements);
 	m_hasAllocated = true;
 
-	if (initialData.size() == m_elements) {
-		for (size_t i = 0; i < m_elements; i++) {
-			m_data.push_back(initialData[i]);
+	if(cellID == ALL_CELLS_ID) {
+		if (initialData.size() == m_elements) {
+			for (size_t i = 0; i < m_elements; i++) {
+				m_data.push_back(initialData[i]);
+			}
+			m_hasIntialized = true;
 		}
-		m_hasIntialized = true;
 	}
 
 	return;
@@ -87,6 +89,28 @@ double PFM::PeriodicDoublesLattice2D::getDataPoint(coordinate_t coordinate) cons
 double PFM::PeriodicDoublesLattice2D::getElement(size_t index) const {
 	if (index >= m_elements) { return NAN; }
 	else { return m_data[index]; }
+}
+
+//TODO: it might be helpful to optimize this a bit (but measures are still pending)
+neighborhood9_t PFM::PeriodicDoublesLattice2D::getNeighborhood(coordinate_t centerPoint) const {
+	int centerX = centerPoint.x;
+	int centerY = centerPoint.y;
+	
+	neighborhood9_t neigh = {
+		getDataPoint({centerX - 1, centerY - 1}),
+		getDataPoint({centerX, centerY - 1}),
+		getDataPoint({centerX + 1, centerY - 1}),
+
+		getDataPoint({centerX - 1, centerY}),
+		getDataPoint({centerX, centerY}),
+		getDataPoint({centerX + 1, centerY}),
+
+		getDataPoint({centerX - 1, centerY + 1}),
+		getDataPoint({centerX, centerY + 1}),
+		getDataPoint({centerX + 1, centerY + 1})
+	};
+
+	return neigh;
 }
 
 void PFM::PeriodicDoublesLattice2D::writeDataPoint(coordinate_t coordinate, double newValue) {
