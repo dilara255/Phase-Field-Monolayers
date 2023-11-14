@@ -8,6 +8,37 @@ size_t PFM::fieldDimensions_st::totalElements() const {
 	return width * height;
 }
 
+PFM::CurrentAndLastPerioricDoublesLattice2D::CurrentAndLastPerioricDoublesLattice2D(fieldDimensions_t newDimensions, 
+																				int cellID,
+																				std::vector<double> initialData) {
+
+	m_latticeA_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
+		new PeriodicDoublesLattice2D(newDimensions, cellID, initialData)
+	);
+	m_lattice1_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
+		new PeriodicDoublesLattice2D(newDimensions, cellID, initialData)
+	);
+}
+		
+PFM::PeriodicDoublesLattice2D* PFM::CurrentAndLastPerioricDoublesLattice2D::getPointerToCurrent() {
+	if(m_isLattice1current) { return m_lattice1_ptr.get(); }
+	else { return m_latticeA_ptr.get(); }
+}
+
+PFM::PeriodicDoublesLattice2D* PFM::CurrentAndLastPerioricDoublesLattice2D::getPointerToLast() {
+	if(m_isLattice1current) { return m_latticeA_ptr.get(); }
+	else { return m_lattice1_ptr.get(); }
+}
+
+void PFM::CurrentAndLastPerioricDoublesLattice2D::rotatePointers() {
+	m_isLattice1current = !m_isLattice1current;
+}
+
+void PFM::CurrentAndLastPerioricDoublesLattice2D::releaseFields() {
+	if(m_latticeA_ptr != NULL) { m_latticeA_ptr.release(); } 
+	if(m_lattice1_ptr != NULL) { m_lattice1_ptr.release(); } 
+}
+
 PFM::PeriodicDoublesLattice2D::PeriodicDoublesLattice2D(fieldDimensions_t newDimensions, int cellID, 
 	                                                                std::vector<double> initialData) {
 	m_hasAllocated = false;

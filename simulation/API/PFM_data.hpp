@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <assert.h>
+#include <memory>
 
 #define ALL_CELLS_ID -1
 
@@ -90,13 +91,37 @@ namespace PFM {
 
 	private:
 		std::vector<double> m_data;
+
 		bool m_hasAllocated;
 		bool m_hasIntialized;
 		fieldDimensions_t m_dimensions;
 		size_t m_elements;
+
 		std::vector<checkData_t> m_fieldChecks;
 		
 		size_t indexFromBoundedCoordinate(coordinate_t coordinate) const;
 		size_t indexFromPeriodicCoordinate(coordinate_t coordinate) const;
+	};
+
+	//This holds 2 lattices to be used in conjunction, one for the current and another for the last value
+	class CurrentAndLastPerioricDoublesLattice2D {
+	public:
+		CurrentAndLastPerioricDoublesLattice2D(fieldDimensions_t newDimensions, int cellID = ALL_CELLS_ID, 
+			                                                            std::vector<double> initialData = {});
+		
+		PeriodicDoublesLattice2D* getPointerToCurrent();
+		PeriodicDoublesLattice2D* getPointerToLast();
+
+		void rotatePointers(); 
+
+		void releaseFields();
+
+		//TODO: write method to write into both fields
+
+	private:
+		std::unique_ptr<PeriodicDoublesLattice2D> m_lattice1_ptr;
+		std::unique_ptr<PeriodicDoublesLattice2D> m_latticeA_ptr;
+		
+		bool m_isLattice1current = true;
 	};
 }

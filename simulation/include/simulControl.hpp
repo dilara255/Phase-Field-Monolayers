@@ -11,6 +11,7 @@
 
 #define CELL_SEED_VAL (1.0)
 #define MS_TO_WAIT 10
+#define DEFAULT_STEPS_PER_CHECK 500
 
 namespace PFM {
 
@@ -21,10 +22,12 @@ namespace PFM {
     
     //WARNING: these should always be kept in synch with PFM::simFuncEnum (@PFM_API.hpp)
     SimulationSteps_fn dataAndControllerTest_fn;
-    SimulationSteps_fn singleLayerCHsim_fn;
+    SimulationSteps_fn singleLayerCHsimOnlyCurrent_fn;
+    SimulationSteps_fn singleLayerCHsimCurrentAndOld_fn;
     SimulationSteps_fn multiLayerCHsim_fn;
     static SimulationSteps_fn* simFunctionsPtrs_arr[(int)simFuncEnum::TOTAL_SIM_FUNCS] = {
-        &dataAndControllerTest_fn, &singleLayerCHsim_fn, &multiLayerCHsim_fn
+        &dataAndControllerTest_fn, &singleLayerCHsimOnlyCurrent_fn, &singleLayerCHsimCurrentAndOld_fn,
+        &multiLayerCHsim_fn
     };
     //***************************************************************
 
@@ -36,7 +39,7 @@ namespace PFM {
 
     public:
         bool isInitialized() const;
-        PeriodicDoublesLattice2D* getBaseFieldPtr() const;
+        CurrentAndLastPerioricDoublesLattice2D* getBaseFieldPtr();
         std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* getLayerFieldsVectorPtr() const;
         
         //If not yet initialized, initializes and creates a new field
@@ -60,12 +63,14 @@ namespace PFM {
         void setAused(double newA);
         void setKused(double newK);
         void setDTused(double newK);
+        void setStepsPerCheckSaved(int newStepsPerCheckSaved);
 
         bool isSimulationRunning() const;
         bool checkIfShouldStop();
         int getNumberCells() const;
         double getLastCellSeedValue() const;
         bool shouldStillExpandSeeds() const;
+        int getStepsPerCheckSaved() const;
 
         int stepsAlreadyRan() const;
         void resetStepsAlreadyRan();
@@ -94,8 +99,9 @@ namespace PFM {
         double m_lastK = -1;
         double m_lastA = -1;
         double m_lastDT = -1;
+        int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
         
-        std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr = NULL;
+        std::unique_ptr<PFM::CurrentAndLastPerioricDoublesLattice2D> m_baseLattice_ptr;
         std::vector<std::unique_ptr<PeriodicDoublesLattice2D>> m_perCellLaticePtrs;
     };
     //***************************************************************
