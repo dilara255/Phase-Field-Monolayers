@@ -16,7 +16,7 @@ bool PFM::SimulationControl::isInitialized() const {
 	return m_hasInitialized;
 }
 
-PeriodicDoublesLattice2D* PFM::SimulationControl::getBaseFieldPtr() const {
+CurrentAndLastPerioricDoublesLattice2D* PFM::SimulationControl::getBaseFieldPtr() {
 	return m_baseLattice_ptr.get();
 }
 
@@ -26,7 +26,10 @@ std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* PFM::SimulationControl::
 
         
 void PFM::SimulationControl::releaseField() {
-	if(m_baseLattice_ptr != NULL) { m_baseLattice_ptr.release(); }
+	if (m_baseLattice_ptr != NULL) {
+		m_baseLattice_ptr->releaseFields();
+		m_baseLattice_ptr.release();
+	}
 }
 
 //TODO: this whole thing should be reimplemented, and probably split apart a bit
@@ -63,15 +66,15 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 			m_seedsNeedExpanding = false;
 		}
 		
-		m_baseLattice_ptr = 
-			std::unique_ptr<PeriodicDoublesLattice2D>(
-				new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID, initialData)
-			);
+		m_baseLattice_ptr = std::unique_ptr<CurrentAndLastPerioricDoublesLattice2D>(
+			new CurrentAndLastPerioricDoublesLattice2D(dimensions, ALL_CELLS_ID, initialData)
+		);
 	}
 	else {
 		//TODO: Implement other seedings for this
-		m_baseLattice_ptr = 
-			std::unique_ptr<PeriodicDoublesLattice2D>(new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID));
+		m_baseLattice_ptr = std::unique_ptr<CurrentAndLastPerioricDoublesLattice2D>(
+			new CurrentAndLastPerioricDoublesLattice2D(dimensions, ALL_CELLS_ID)
+		);
 
 		m_perCellLaticePtrs.reserve(numberCells);
 		for (uint32_t cell = 0; cell < numberCells; cell++) {
@@ -122,11 +125,15 @@ int PFM::SimulationControl::stop() {
 
 //TODO: an actual reasonable save system : p
 bool PFM::SimulationControl::saveFieldToFile() const {
-	if (!m_hasInitialized || !m_baseLattice_ptr->isInitialized() || !m_baseLattice_ptr->hasAllocated()) {
+
+	if (!m_hasInitialized || m_baseLattice_ptr->getPointerToCurrent() == NULL) { return false; }
+	
+	auto currentBaseLatticePtr = m_baseLattice_ptr->getPointerToCurrent();
+	if(!currentBaseLatticePtr->isInitialized() || !currentBaseLatticePtr->hasAllocated()) {
 		return false;
 	}
 
-	auto dimensions = m_baseLattice_ptr->getFieldDimensions();
+	auto dimensions = currentBaseLatticePtr->getFieldDimensions();
 
 	std::string baseFilename = "sim" + std::to_string((int)m_lastSimulFuncUsed) 
 		                     + "_A" + std::to_string(m_lastA) + "_k" + std::to_string(m_lastK)
@@ -147,7 +154,7 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 	double value;
 	for (int j = 0; j < (int)dimensions.height; j++) {
 		for (int i = 0; i < (int)dimensions.width; i++) {
-		  value = m_baseLattice_ptr->getDataPoint({i,j});
+		  value = currentBaseLatticePtr->getDataPoint({i,j});
 		  fprintf(fp_pgm, "%c", (char)(value*maxColor));
 		  fprintf(fp_bin, "%f", value);
 		}
@@ -170,6 +177,10 @@ void PFM::SimulationControl::setDTused(double newDT) {
 	m_lastDT = newDT;
 }
 
+void PFM::SimulationControl::setStepsPerCheckSaved(int newStepsPerCheckSaved) {
+	m_stepsPerCheckSaved = newStepsPerCheckSaved;
+}
+
 bool PFM::SimulationControl::checkIfShouldStop() {
 	if(m_shouldStop || (m_stepsToRun > 0 && m_stepsRan >= m_stepsToRun)) {
 		m_shouldStop = true;
@@ -188,6 +199,10 @@ double PFM::SimulationControl::getLastCellSeedValue() const {
 
 bool PFM::SimulationControl::shouldStillExpandSeeds() const {
 	return m_seedsNeedExpanding;
+}
+
+int PFM::SimulationControl::getStepsPerCheckSaved() const {
+	return m_stepsPerCheckSaved;
 }
 
 void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationToRun) {
@@ -216,8 +231,10 @@ void PFM::SimulationControl::resetStepsAlreadyRan() {
 
 ///These API calls are really just wrappers to calls to methods of the controller:
 
-PeriodicDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions, uint32_t numberCells, 
-	                                             PFM::initialConditions initialCond, bool perCellLayer) {
+CurrentAndLastPerioricDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions, 
+	                                                              uint32_t numberCells, 
+																  PFM::initialConditions initialCond, 
+																  bool perCellLayer) {
 	
 	controller.reinitializeController(dimensions, numberCells, initialCond, perCellLayer);
 	return controller.getBaseFieldPtr();
@@ -247,6 +264,8 @@ void PFM::runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun) {
 	controller.runForSteps(stepsToRun, simulationToRun);
 }
 
+//TODO: this gives the default-current between the two rotating fields. 
+//WARNING: May introduce a 1-step delay.
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {
-	return controller.getBaseFieldPtr();
+	return controller.getBaseFieldPtr()->getPointerToCurrent();
 }

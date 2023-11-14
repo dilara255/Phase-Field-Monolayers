@@ -4,41 +4,59 @@
 
 //TODO: separate initialization, simulation and wrap-up
 
+//TODO: version which accepts the controller and deals with the data (eg, currentAndLast, multi-layers, etc)
 void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius, 
 	                                 double cellSeedValue, bool invertValueOn);
 
+//Runs Chan-Hiliard on one layer per cell and adds the results into a base layer
 void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
-	//Runs Chan-Hiliard on one layer per cell and adds the resultos into a base layer
+	//TODO: Implement : )
+	puts("multi-layer simulation not it implemented");
+	*isRunning_ptr = false;
+}
+
+//Runs Chan-Hiliard on a single base layer. Keeps current and last step and uses both to calculate change
+void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, int* stepCount_ptr, 
+	                                                                         bool* isRunning_ptr) {
+
+	//TODO: actually rotate the current and old data layers : p
 
 	const bool invertField = false;
 	const uint32_t extraSubsteps = 2;
 	const double k = 1;
 	const double A = 0.5;
 	const double dt = 0.05;
-	const double initialCellDiameterDensity = 1; //always a bit less because integers. Also, seeds not packed
-	//TODO: on the seeding function, define spacing (ie, option to use a spatial configuration for best packing)
+	const double initialCellDiameterDensity = 1/std::sqrt(2);
+	const int stepsPerCheckSaved = controller_ptr->getStepsPerCheckSaved();
 
 	controller_ptr->setKused(k);
 	controller_ptr->setAused(A);
 	controller_ptr->setDTused(dt);
 
 	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
+	auto currentStepField_ptr = baseField_ptr->getPointerToCurrent();
+	auto lastStepField_ptr = baseField_ptr->getPointerToLast();
+
 	//auto layerFieldsVectorPtr = controller_ptr->getLayerFieldsVectorPtr();
 
-	const int width = (int)baseField_ptr->getFieldDimensions().width;
-	const int height = (int)baseField_ptr->getFieldDimensions().height;
+	const int width = (int)currentStepField_ptr->getFieldDimensions().width;
+	const int height = (int)currentStepField_ptr->getFieldDimensions().height;
 
 	const double initialCellRadius = initialCellDiameterDensity * std::min(width, height)
-		                             / (2 * std::sqrt(2) * std::sqrt((float)controller_ptr->getNumberCells()));
+		                             / (2 * std::sqrt((float)controller_ptr->getNumberCells()));
 
 	if(controller_ptr->shouldStillExpandSeeds()) {
-		expandCells(baseField_ptr, initialCellRadius, controller_ptr->getLastCellSeedValue(), invertField);
+		expandCells(currentStepField_ptr, initialCellRadius, 
+			            controller_ptr->getLastCellSeedValue(), invertField);
+		expandCells(lastStepField_ptr, initialCellRadius, 
+			            controller_ptr->getLastCellSeedValue(), invertField);
 	}
 	else if (invertField) {
 		for (int j = 0; j < height; j++) {
 			for (int i = 0; i < width; i++) {
 				//TODO: make sure this inversion actually works in general
-				baseField_ptr->writeDataPoint({i,j}, 1 - baseField_ptr->getDataPoint({i,j}));
+				currentStepField_ptr->writeDataPoint({i,j}, 1 - currentStepField_ptr->getDataPoint({i,j}));
+				lastStepField_ptr->writeDataPoint({i,j}, 1 - lastStepField_ptr->getDataPoint({i,j}));
 			}
 		}
 	}
@@ -69,7 +87,7 @@ void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_p
 			for (int i = 0; i < width; i++) {
 				centerPoint.x = i;
 
-				neigh = baseField_ptr->getNeighborhood(centerPoint);
+				neigh = currentStepField_ptr->getNeighborhood(centerPoint);
 				phi0 = neigh.getCenter();
 
 				for (uint32_t k = 0; k < extraSubsteps; k++) {
@@ -89,21 +107,24 @@ void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_p
 				checkData.density += newValue;
 				checkData.absoluteChange += std::abs(change);
 
-				baseField_ptr->writeDataPoint(centerPoint, phi0 + change);
+				currentStepField_ptr->writeDataPoint(centerPoint, phi0 + change);
 			}
 		}
 
-		int stepsPerPrintout = 2500;
+		int checksPerPrintout = 5;
 		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
-			stepsPerPrintout /= 10;
+			checksPerPrintout = 1;
 		#endif
 		
-		if(*stepCount_ptr % stepsPerPrintout == 0) { 
+		if(*stepCount_ptr % stepsPerCheckSaved == 0) { 
 			checkData.density /= (width * height);
 			checkData.absoluteChange /= (width * height);
-			printf("steps: %d - density: %f - absolute change (last step): %f\n", 
-						*stepCount_ptr, checkData.density, checkData.absoluteChange); 
-			baseField_ptr->addFieldCheckData(checkData);
+			currentStepField_ptr->addFieldCheckData(checkData);
+
+			if(*stepCount_ptr % (stepsPerCheckSaved * checksPerPrintout) == 0) {
+				printf("steps: %d - density: %f - absolute change (last step): %f\n", 
+							*stepCount_ptr, checkData.density, checkData.absoluteChange); 
+			}
 		}	
 
 		*stepCount_ptr += 1;
@@ -112,29 +133,45 @@ void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_p
 	*isRunning_ptr = false;
 }
 
-void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
-	//Runs Chan-Hiliard on a single layer
+//Runs Chan-Hiliard on a single base layer. OVERWRITES values mid-step (doesn't keep last step data separatedly)
+void PFM::singleLayerCHsimOnlyCurrent_fn(SimulationControl* controller_ptr, int* stepCount_ptr, 
+	                                                                       bool* isRunning_ptr) {
 	
-	const bool invertField = false;
+		const bool invertField = false;
+	const uint32_t extraSubsteps = 2;
 	const double k = 1;
-	const double A = 0.125;
+	const double A = 0.5;
 	const double dt = 0.05;
-	const double initialCellDiameterDensity = 1; //always a bit less because integers. Also, seeds not packed
-	//TODO: on the seeding function, define spacing (ie, option to use a spatial configuration for best packing)
+	const double initialCellDiameterDensity = 1/std::sqrt(2);
+	const int stepsPerCheckSaved = controller_ptr->getStepsPerCheckSaved();
 
 	controller_ptr->setKused(k);
 	controller_ptr->setAused(A);
 	controller_ptr->setDTused(dt);
 
-	auto field_ptr = controller_ptr->getBaseFieldPtr();
+	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
+	auto currentStepField_ptr = baseField_ptr->getPointerToCurrent();
 
-	const int width = (int)field_ptr->getFieldDimensions().width;
-	const int height = (int)field_ptr->getFieldDimensions().height;
+	//auto layerFieldsVectorPtr = controller_ptr->getLayerFieldsVectorPtr();
+
+	const int width = (int)currentStepField_ptr->getFieldDimensions().width;
+	const int height = (int)currentStepField_ptr->getFieldDimensions().height;
 
 	const double initialCellRadius = initialCellDiameterDensity * std::min(width, height)
-		                             / (2 * std::sqrt(2) * std::sqrt((float)controller_ptr->getNumberCells()));
+		                             / (2 * std::sqrt((float)controller_ptr->getNumberCells()));
 
-	expandCells(field_ptr, initialCellRadius, controller_ptr->getLastCellSeedValue(), invertField);
+	if(controller_ptr->shouldStillExpandSeeds()) {
+		expandCells(currentStepField_ptr, initialCellRadius, 
+			            controller_ptr->getLastCellSeedValue(), invertField);
+	}
+	else if (invertField) {
+		for (int j = 0; j < height; j++) {
+			for (int i = 0; i < width; i++) {
+				//TODO: make sure this inversion actually works in general
+				currentStepField_ptr->writeDataPoint({i,j}, 1 - currentStepField_ptr->getDataPoint({i,j}));
+			}
+		}
+	}
 	
 	double expectedInterfaceWidth = std::sqrt(2*k/A);
 	double radiusToWidth = initialCellRadius / expectedInterfaceWidth;
@@ -143,34 +180,74 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 
 	PFM::coordinate_t centerPoint;
 	double phi;
+	double phi0;
 	double laplacian;	
+	double change;
+	double newValue;
+	neighborhood9_t neigh;
+	PFM::checkData_t checkData;
 
 	while(!controller_ptr->checkIfShouldStop()) {
+
+		checkData.density = 0;
+		checkData.absoluteChange = 0;
+		checkData.step = *stepCount_ptr;
+
 		for (int j = 0; j < height; j++) {
 			centerPoint.y = j;
 
 			for (int i = 0; i < width; i++) {
 				centerPoint.x = i;
 
-				phi = field_ptr->getDataPoint(centerPoint);
-				laplacian = PFM::laplacian5points(field_ptr, centerPoint);
+				neigh = currentStepField_ptr->getNeighborhood(centerPoint);
+				phi0 = neigh.getCenter();
 
-				field_ptr->incrementDataPoint(centerPoint, dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi)) );
+				for (uint32_t k = 0; k < extraSubsteps; k++) {
+
+					laplacian = PFM::laplacian9pointsAroundNeighCenter(&neigh);
+					phi = neigh.getCenter();
+
+					neigh.setCenter(phi0 + dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi)) );
+				}
+				
+				laplacian = PFM::laplacian9pointsAroundNeighCenter(&neigh);
+				phi = neigh.getCenter();
+
+				change = dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi));
+				newValue = phi0 + change;
+				
+				checkData.density += newValue;
+				checkData.absoluteChange += std::abs(change);
+
+				currentStepField_ptr->writeDataPoint(centerPoint, phi0 + change);
 			}
 		}
 
-		*stepCount_ptr += 1;
+		int checksPerPrintout = 5;
 		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
-			if(*stepCount_ptr % 100 == 0) { printf("steps: %d\n", *stepCount_ptr); }
+			checksPerPrintout = 1;
 		#endif
+		
+		if(*stepCount_ptr % stepsPerCheckSaved == 0) { 
+			checkData.density /= (width * height);
+			checkData.absoluteChange /= (width * height);
+			currentStepField_ptr->addFieldCheckData(checkData);
+
+			if(*stepCount_ptr % (stepsPerCheckSaved * checksPerPrintout) == 0) {
+				printf("steps: %d - density: %f - absolute change (last step): %f\n", 
+							*stepCount_ptr, checkData.density, checkData.absoluteChange); 
+			}
+		}	
+
+		*stepCount_ptr += 1;
 	}
-	
+
 	*isRunning_ptr = false;
 }
 
+//Test simulation: the pixels initialized as non-zero should "diffuse" up and to the right
+//(not really diffuse, more like reinforce - eventually everything should be "maximal" and then loop)
 void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
-	//Test simulation: the pixels initialized as non-zero should "diffuse" up and to the right
-	//(not really diffuse, more like reinforce - eventually everything should be "maximal" and then loop)
 	
 	const double diffusionFactor = 0.025;
 	const double maxValue = 1;
@@ -178,7 +255,7 @@ void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepC
 	controller_ptr->setAused(maxValue);	
 	controller_ptr->setDTused(1);	
 
-	auto field_ptr = controller_ptr->getBaseFieldPtr();
+	auto field_ptr = controller_ptr->getBaseFieldPtr()->getPointerToCurrent();
 
 	const int width = (int)field_ptr->getFieldDimensions().width;
 	const int height = (int)field_ptr->getFieldDimensions().height;
