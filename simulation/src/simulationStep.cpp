@@ -10,7 +10,7 @@ void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius,
 void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
 	//Runs Chan-Hiliard on one layer per cell and adds the resultos into a base layer
 
-	const bool invertField = false;
+	const bool invertField = true;
 	const uint32_t extraSubsteps = 2;
 	const double k = 1;
 	const double A = 0.5;
@@ -23,7 +23,7 @@ void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_p
 	controller_ptr->setDTused(dt);
 
 	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
-	auto layerFieldsVectorPtr = controller_ptr->getLayerFieldsVectorPtr();
+	//auto layerFieldsVectorPtr = controller_ptr->getLayerFieldsVectorPtr();
 
 	const int width = (int)baseField_ptr->getFieldDimensions().width;
 	const int height = (int)baseField_ptr->getFieldDimensions().height;
@@ -31,7 +31,17 @@ void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_p
 	const double initialCellRadius = initialCellDiameterDensity * std::min(width, height)
 		                             / (2 * std::sqrt(2) * std::sqrt((float)controller_ptr->getNumberCells()));
 
-	expandCells(baseField_ptr, initialCellRadius, controller_ptr->getLastCellSeedValue(), invertField);
+	if(controller_ptr->shouldStillExpandSeeds()) {
+		expandCells(baseField_ptr, initialCellRadius, controller_ptr->getLastCellSeedValue(), invertField);
+	}
+	else if (invertField) {
+		for (int j = 0; j < height; j++) {
+			for (int i = 0; i < width; i++) {
+				//TODO: make sure this inversion actually works in general
+				baseField_ptr->writeDataPoint({i,j}, 1 - baseField_ptr->getDataPoint({i,j}));
+			}
+		}
+	}
 	
 	double expectedInterfaceWidth = std::sqrt(2*k/A);
 	double radiusToWidth = initialCellRadius / expectedInterfaceWidth;

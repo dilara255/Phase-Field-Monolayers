@@ -8,10 +8,14 @@
 namespace PFM {
 
 	enum class simFuncEnum { DATA_CONTROL_TEST, SINGLE_LAYER_CH_SIM, MULTI_LAYER_CH_SIM, TOTAL_SIM_FUNCS};
+	enum class initialConditions { EVENLY_SPACED_INDEX, BALANCED_RANDOM, TOTAL_INITIAL_CONDS};
 
 	//If anything fails, returns NULL. Otherwise, returns the field to be used by the simulation
 	PFM_API PeriodicDoublesLattice2D* initializeSimulation(PFM::fieldDimensions_t dimensions, 
-		                                                   uint32_t numberCells, bool perCellLayer = false);
+		                                                   uint32_t numberCells, 
+														   PFM::initialConditions initialCond = 
+																initialConditions::EVENLY_SPACED_INDEX,
+													       bool perCellLayer = false);
 
 	PFM_API bool isSimulationRunning();
 	PFM_API int stopSimulation();
