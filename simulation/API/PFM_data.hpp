@@ -36,6 +36,12 @@ namespace PFM {
 
 	} neighborhood9_t;
 
+	typedef struct checkData_st {
+		int step = 0;
+		double density = 0;
+		double absoluteChange = 0;
+	} checkData_t;
+
 	typedef struct fieldDimensions_st {
 		size_t width, height;
 		size_t totalElements() const;
@@ -66,6 +72,9 @@ namespace PFM {
 		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.
 		void incrementDataPoint(coordinate_t coordinate, double changeInValue);
 		
+		//Adds a density and it's step to a vector with the previous field densities;
+		void addFieldCheckData(checkData_t checkData);
+
 		//Allocates a new buffer and passes the data. *dimensions_ptr will hold the dimensions of the new buffer.
 		//The new buffer becomes a responsability of the caller.
 		//Will return null if not yet allocated or initialized or if the new allocation fails.
@@ -78,14 +87,15 @@ namespace PFM {
 		//If elements in newData > the size of the field after the starting point, returns false.
 		//If the field is not yet initialized or allocated, also returns false (and doesn't accept new data).
 		bool acceptBulkData(coordinate_t startingPoint, std::vector<double> newData);
-	
+
 	private:
 		std::vector<double> m_data;
 		bool m_hasAllocated;
 		bool m_hasIntialized;
 		fieldDimensions_t m_dimensions;
 		size_t m_elements;
-
+		std::vector<checkData_t> m_fieldChecks;
+		
 		size_t indexFromBoundedCoordinate(coordinate_t coordinate) const;
 		size_t indexFromPeriodicCoordinate(coordinate_t coordinate) const;
 	};

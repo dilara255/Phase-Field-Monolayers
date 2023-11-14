@@ -125,6 +125,10 @@ void PFM::PeriodicDoublesLattice2D::incrementDataPoint(coordinate_t coordinate, 
 	else { m_data[index] += changeInValue; return; }
 }
 
+void PFM::PeriodicDoublesLattice2D::addFieldCheckData(PFM::checkData_t checkData) {
+	m_fieldChecks.push_back(checkData);
+}
+
  double* PFM::PeriodicDoublesLattice2D::createCopyOfAllData(fieldDimensions_t* dimensions_ptr) const {
 	*dimensions_ptr = m_dimensions;
 	if (!m_hasAllocated || !m_hasIntialized) { return NULL; }

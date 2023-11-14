@@ -10,7 +10,7 @@ void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius,
 void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
 	//Runs Chan-Hiliard on one layer per cell and adds the resultos into a base layer
 
-	const bool invertField = true;
+	const bool invertField = false;
 	const uint32_t extraSubsteps = 2;
 	const double k = 1;
 	const double A = 0.5;
@@ -52,9 +52,17 @@ void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_p
 	double phi;
 	double phi0;
 	double laplacian;	
+	double change;
+	double newValue;
 	neighborhood9_t neigh;
+	PFM::checkData_t checkData;
 
 	while(!controller_ptr->checkIfShouldStop()) {
+
+		checkData.density = 0;
+		checkData.absoluteChange = 0;
+		checkData.step = *stepCount_ptr;
+
 		for (int j = 0; j < height; j++) {
 			centerPoint.y = j;
 
@@ -75,16 +83,30 @@ void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_p
 				laplacian = PFM::laplacian9pointsAroundNeighCenter(&neigh);
 				phi = neigh.getCenter();
 
-				baseField_ptr->incrementDataPoint(centerPoint, dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi)) );
+				change = dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi));
+				newValue = phi0 + change;
+				
+				checkData.density += newValue;
+				checkData.absoluteChange += std::abs(change);
+
+				baseField_ptr->writeDataPoint(centerPoint, phi0 + change);
 			}
 		}
 
-		*stepCount_ptr += 1;
+		int stepsPerPrintout = 2500;
 		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
-			if(*stepCount_ptr % 1000 == 0) { printf("steps: %d\n", *stepCount_ptr); }
-		#else
-			if(*stepCount_ptr % 100000 == 0) { printf("steps: %d\n", *stepCount_ptr); }
+			stepsPerPrintout /= 10;
 		#endif
+		
+		if(*stepCount_ptr % stepsPerPrintout == 0) { 
+			checkData.density /= (width * height);
+			checkData.absoluteChange /= (width * height);
+			printf("steps: %d - density: %f - absolute change (last step): %f\n", 
+						*stepCount_ptr, checkData.density, checkData.absoluteChange); 
+			baseField_ptr->addFieldCheckData(checkData);
+		}	
+
+		*stepCount_ptr += 1;
 	}
 
 	*isRunning_ptr = false;
