@@ -41,8 +41,10 @@ namespace PFM {
         
         //If not yet initialized, initializes and creates a new field
         //Otherwise, destroys the old field, reinitializes and creates a new field with "dimensions"
+        //Defaults to initialConditions::EVENLY_SPACED_INDEX if a bad condition is passed
         void reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
-                                    bool perCellLayer, double cellSeedValue = CELL_SEED_VAL);
+                                    PFM::initialConditions initialCond, bool perCellLayer, 
+                                    double cellSeedValue = CELL_SEED_VAL);
 
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
@@ -63,6 +65,7 @@ namespace PFM {
         bool checkIfShouldStop();
         int getNumberCells() const;
         double getLastCellSeedValue() const;
+        bool shouldStillExpandSeeds() const;
 
         int stepsAlreadyRan() const;
         void resetStepsAlreadyRan();
@@ -80,6 +83,7 @@ namespace PFM {
         bool m_shouldStop = false;
         int m_stepsRan = 0;
         int m_stepsToRun = 0;
+        bool m_seedsNeedExpanding = false;
         
         std::thread m_stepsThread;
 

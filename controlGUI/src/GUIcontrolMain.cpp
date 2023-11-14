@@ -16,12 +16,13 @@
 
 typedef struct parameters_st {
 	int width, height, cells;
+	PFM::initialConditions initialCond = PFM::initialConditions::EVENLY_SPACED_INDEX;
 } parameters_t;
 
 parameters_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
 	{512, 512, 50},
 	{256, 256, 9},
-	{128, 128, 1}
+	{128, 128, 1, PFM::initialConditions::BALANCED_RANDOM}
 };
 
 int main() {
@@ -48,13 +49,17 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	LOG_DEBUG("Will run the simulation and display on the GUI");
 
-	int width = defaultParamsPerSimulType[(int)simulationFunctionToRun].width;
-	int height = defaultParamsPerSimulType[(int)simulationFunctionToRun].height;
-	int cells = defaultParamsPerSimulType[(int)simulationFunctionToRun].cells;
+	int simIndex = (int)simulationFunctionToRun;
+
+	int width = defaultParamsPerSimulType[simIndex].width;
+	int height = defaultParamsPerSimulType[simIndex].height;
+	int cells = defaultParamsPerSimulType[simIndex].cells;
 
 	PFM::fieldDimensions_t dimensions = {(size_t)width, (size_t)height};
 
-	auto dataField_ptr = PFM::initializeSimulation(dimensions, cells);
+	
+	auto dataField_ptr = PFM::initializeSimulation(dimensions, cells, 
+		                                           defaultParamsPerSimulType[simIndex].initialCond);
 	LOG_INFO("Simulation initialized");
 		
 	IMG::floats2Dfield_t floatField = IMG::createFloats2Dfield(width, height);

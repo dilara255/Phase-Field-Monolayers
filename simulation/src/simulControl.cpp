@@ -4,6 +4,7 @@
 
 #include "fAux/API/timeHelpers.hpp"
 #include "fAux/API/miscDefines.hpp"
+#include "fAux/API/prng.hpp"
 
 using namespace PFM;
 
@@ -28,8 +29,10 @@ void PFM::SimulationControl::releaseField() {
 	if(m_baseLattice_ptr != NULL) { m_baseLattice_ptr.release(); }
 }
 
+//TODO: this whole thing should be reimplemented, and probably split apart a bit
 void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
-	                                                           bool perCellLayer, double cellSeedValue) {
+													PFM::initialConditions initialCond, bool perCellLayer, 
+	                                                                                 double cellSeedValue) {
 	
 	if(isSimulationRunning()) { stop(); }
 	releaseField();
@@ -43,16 +46,30 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 	if(numberCells > 1) { cellSpacing /= numberCells; }
 
 	if(!perCellLayer) {
-		for (size_t i = 0; i < elements; i++) {
-			//To "seed" numberCells equally spaced cells with initialValue, and all others with zero:
-			initialData.push_back(cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
+		if (initialCond == PFM::initialConditions::EVENLY_SPACED_INDEX) {
+			for (size_t i = 0; i < elements; i++) {
+				//To "seed" numberCells equally spaced cells with initialValue, and all others with zero:
+				initialData.push_back(cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
+			}
+			m_seedsNeedExpanding = true;
 		}
+		else {
+			uint64_t seed = m_initialSeed;
+			for (size_t i = 0; i < elements; i++) {
+				//Each elemnt starts with a random value between -0.5 and 1.5:
+				double value = -0.5 + 2*(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
+				initialData.push_back(value);
+			}
+			m_seedsNeedExpanding = false;
+		}
+		
 		m_baseLattice_ptr = 
 			std::unique_ptr<PeriodicDoublesLattice2D>(
 				new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID, initialData)
 			);
 	}
 	else {
+		//TODO: Implement other seedings for this
 		m_baseLattice_ptr = 
 			std::unique_ptr<PeriodicDoublesLattice2D>(new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID));
 
@@ -169,6 +186,10 @@ double PFM::SimulationControl::getLastCellSeedValue() const {
 	return m_lastCellSeedValue;
 }
 
+bool PFM::SimulationControl::shouldStillExpandSeeds() const {
+	return m_seedsNeedExpanding;
+}
+
 void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationToRun) {
 	if(controller.isSimulationRunning()) { return; }
 	if((int)simulationToRun >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) { return; }
@@ -196,9 +217,9 @@ void PFM::SimulationControl::resetStepsAlreadyRan() {
 ///These API calls are really just wrappers to calls to methods of the controller:
 
 PeriodicDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions, uint32_t numberCells, 
-	                                                                                 bool perCellLayer) {
+	                                             PFM::initialConditions initialCond, bool perCellLayer) {
 	
-	controller.reinitializeController(dimensions, numberCells, perCellLayer);
+	controller.reinitializeController(dimensions, numberCells, initialCond, perCellLayer);
 	return controller.getBaseFieldPtr();
 }
 
