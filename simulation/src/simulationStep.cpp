@@ -36,11 +36,13 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
 	auto currentStepField_ptr = baseField_ptr->getPointerToCurrent();
 	auto lastStepField_ptr = baseField_ptr->getPointerToLast();
-
+	
 	//auto layerFieldsVectorPtr = controller_ptr->getLayerFieldsVectorPtr();
 
 	const int width = (int)currentStepField_ptr->getFieldDimensions().width;
 	const int height = (int)currentStepField_ptr->getFieldDimensions().height;
+
+	//CELL EXPANSION (EXTRACT):
 
 	const double initialCellRadius = initialCellDiameterDensity * std::min(width, height)
 		                             / (2 * std::sqrt((float)controller_ptr->getNumberCells()));
@@ -66,6 +68,8 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 	printf("Radius to expected interface width = %f (radius: %f, width: %f)\n", 
 		             radiusToWidth, initialCellRadius, expectedInterfaceWidth );
 
+	//ACTUAL STEPS:
+
 	PFM::coordinate_t centerPoint;
 	double phi;
 	double phi0;
@@ -75,11 +79,16 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 	neighborhood9_t neigh;
 	PFM::checkData_t checkData;
 
+	auto lastDphisField_ptr = controller_ptr->getLastDphiFieldPtr();
+
 	while(!controller_ptr->checkIfShouldStop()) {
 
 		checkData.density = 0;
 		checkData.absoluteChange = 0;
 		checkData.step = *stepCount_ptr;
+
+		currentStepField_ptr = baseField_ptr->getPointerToCurrent();
+		lastStepField_ptr = baseField_ptr->getPointerToLast();
 
 		for (int j = 0; j < height; j++) {
 			centerPoint.y = j;
@@ -87,7 +96,7 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 			for (int i = 0; i < width; i++) {
 				centerPoint.x = i;
 
-				neigh = currentStepField_ptr->getNeighborhood(centerPoint);
+				neigh = lastStepField_ptr->getNeighborhood(centerPoint);
 				phi0 = neigh.getCenter();
 
 				for (uint32_t k = 0; k < extraSubsteps; k++) {
@@ -101,7 +110,11 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 				laplacian = PFM::laplacian9pointsAroundNeighCenter(&neigh);
 				phi = neigh.getCenter();
 
-				change = dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi));
+				change = 0.5* (dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi))) 
+					   + 0.5 * lastDphisField_ptr->getDataPoint(centerPoint);
+
+				lastDphisField_ptr->writeDataPoint(centerPoint, change);
+
 				newValue = phi0 + change;
 				
 				checkData.density += newValue;
@@ -128,6 +141,7 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 		}	
 
 		*stepCount_ptr += 1;
+		baseField_ptr->rotatePointers();
 	}
 
 	*isRunning_ptr = false;

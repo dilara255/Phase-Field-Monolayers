@@ -65,6 +65,11 @@ PFM::PeriodicDoublesLattice2D::PeriodicDoublesLattice2D(fieldDimensions_t newDim
 			}
 			m_hasIntialized = true;
 		}
+		else {
+			for (size_t i = 0; i < m_elements; i++) {
+				m_data.push_back(0);
+			}
+		}
 	}
 
 	return;

@@ -40,6 +40,7 @@ namespace PFM {
     public:
         bool isInitialized() const;
         CurrentAndLastPerioricDoublesLattice2D* getBaseFieldPtr();
+        PeriodicDoublesLattice2D* getLastDphiFieldPtr();
         std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* getLayerFieldsVectorPtr() const;
         
         //If not yet initialized, initializes and creates a new field
@@ -77,7 +78,7 @@ namespace PFM {
 
     private:
             
-        void releaseField();
+        void releaseFields();
         void stepsEnded();
         //Asks the controller to stop, but otherwise keeps going. *Use with caution*.
         //WARNING: When the simulation actually stops, its thread is STILL HANGING. Does nothing not running.
@@ -102,6 +103,7 @@ namespace PFM {
         int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
         
         std::unique_ptr<PFM::CurrentAndLastPerioricDoublesLattice2D> m_baseLattice_ptr;
+        std::unique_ptr<PeriodicDoublesLattice2D> m_lastDphis_ptr;
         std::vector<std::unique_ptr<PeriodicDoublesLattice2D>> m_perCellLaticePtrs;
     };
     //***************************************************************

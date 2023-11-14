@@ -20,15 +20,22 @@ CurrentAndLastPerioricDoublesLattice2D* PFM::SimulationControl::getBaseFieldPtr(
 	return m_baseLattice_ptr.get();
 }
 
+PeriodicDoublesLattice2D* PFM::SimulationControl::getLastDphiFieldPtr() {
+	return m_lastDphis_ptr.get();
+}
+
 std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* PFM::SimulationControl::getLayerFieldsVectorPtr() const {
 	return (std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>*)&m_perCellLaticePtrs;
 }
 
         
-void PFM::SimulationControl::releaseField() {
+void PFM::SimulationControl::releaseFields() {
 	if (m_baseLattice_ptr != NULL) {
 		m_baseLattice_ptr->releaseFields();
 		m_baseLattice_ptr.release();
+	}
+	if (m_lastDphis_ptr != NULL) {
+		m_lastDphis_ptr.release();
 	}
 }
 
@@ -38,10 +45,16 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 	                                                                                 double cellSeedValue) {
 	
 	if(isSimulationRunning()) { stop(); }
-	releaseField();
+	releaseFields();
+
+	size_t elements = dimensions.totalElements();
+	
+	m_lastDphis_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
+			new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID)
+	);
 
 	std::vector<double> initialData;
-	size_t elements = dimensions.totalElements();
+
 	initialData.reserve(elements);
 
 	//The data to be used on initialization:
