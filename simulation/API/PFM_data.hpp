@@ -23,7 +23,7 @@ namespace PFM {
 			return data[(y*3 + x)];
 		}
 
-		inline double getCenter() {
+		inline double getCenter() const {
 			return data[4];
 		}
 
@@ -52,7 +52,7 @@ namespace PFM {
 	public:
 		//If invalid dimensions are passed, no memory is allocated. 
 		//If no initialData is passed, no data is initialized, but memory is allocated.
-		//If the size of the data passed doesn't fit the dimensions *exactly*, it's ignored.
+		//If the size of the data passed doesn't fit the dimensions *exactly*, the field is filled with 0s.
 		PeriodicDoublesLattice2D(fieldDimensions_t newDimensions, int cellID = ALL_CELLS_ID, 
 			                                           std::vector<double> initialData = {});
 
