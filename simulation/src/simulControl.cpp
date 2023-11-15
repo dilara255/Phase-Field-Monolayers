@@ -16,12 +16,16 @@ bool PFM::SimulationControl::isInitialized() const {
 	return m_hasInitialized;
 }
 
-CurrentAndLastPerioricDoublesLattice2D* PFM::SimulationControl::getBaseFieldPtr() {
+CurrentAndLastPerioricDoublesLattice2D* PFM::SimulationControl::getRotatingBaseFieldPtr() {
+	return m_rotatingBaseLattice_ptr.get();
+}
+
+PeriodicDoublesLattice2D* PFM::SimulationControl::getBaseFieldPtr() {
 	return m_baseLattice_ptr.get();
 }
 
 PeriodicDoublesLattice2D* PFM::SimulationControl::getLastDphiFieldPtr() {
-	return m_lastDphis_ptr.get();
+	return m_RKtempAccField_ptr.get();
 }
 
 std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* PFM::SimulationControl::getLayerFieldsVectorPtr() const {
@@ -30,12 +34,15 @@ std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* PFM::SimulationControl::
 
         
 void PFM::SimulationControl::releaseFields() {
+	if (m_rotatingBaseLattice_ptr != NULL) {
+		m_rotatingBaseLattice_ptr->releaseFields();
+		m_rotatingBaseLattice_ptr.release();
+	}
 	if (m_baseLattice_ptr != NULL) {
-		m_baseLattice_ptr->releaseFields();
 		m_baseLattice_ptr.release();
 	}
-	if (m_lastDphis_ptr != NULL) {
-		m_lastDphis_ptr.release();
+	if (m_RKtempAccField_ptr != NULL) {
+		m_RKtempAccField_ptr.release();
 	}
 }
 
@@ -49,7 +56,7 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 
 	size_t elements = dimensions.totalElements();
 	
-	m_lastDphis_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
+	m_RKtempAccField_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
 			new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID)
 	);
 
@@ -79,14 +86,20 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 			m_seedsNeedExpanding = false;
 		}
 		
-		m_baseLattice_ptr = std::unique_ptr<CurrentAndLastPerioricDoublesLattice2D>(
+		m_rotatingBaseLattice_ptr = std::unique_ptr<CurrentAndLastPerioricDoublesLattice2D>(
 			new CurrentAndLastPerioricDoublesLattice2D(dimensions, ALL_CELLS_ID, initialData)
+		);
+		m_baseLattice_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
+			new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID, initialData)
 		);
 	}
 	else {
 		//TODO: Implement other seedings for this
-		m_baseLattice_ptr = std::unique_ptr<CurrentAndLastPerioricDoublesLattice2D>(
+		m_rotatingBaseLattice_ptr = std::unique_ptr<CurrentAndLastPerioricDoublesLattice2D>(
 			new CurrentAndLastPerioricDoublesLattice2D(dimensions, ALL_CELLS_ID)
+		);
+		m_baseLattice_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
+			new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID, initialData)
 		);
 
 		m_perCellLaticePtrs.reserve(numberCells);
@@ -139,9 +152,9 @@ int PFM::SimulationControl::stop() {
 //TODO: an actual reasonable save system : p
 bool PFM::SimulationControl::saveFieldToFile() const {
 
-	if (!m_hasInitialized || m_baseLattice_ptr->getPointerToCurrent() == NULL) { return false; }
+	if (!m_hasInitialized || m_rotatingBaseLattice_ptr->getPointerToCurrent() == NULL) { return false; }
 	
-	auto currentBaseLatticePtr = m_baseLattice_ptr->getPointerToCurrent();
+	auto currentBaseLatticePtr = m_rotatingBaseLattice_ptr->getPointerToCurrent();
 	if(!currentBaseLatticePtr->isInitialized() || !currentBaseLatticePtr->hasAllocated()) {
 		return false;
 	}
@@ -250,7 +263,7 @@ CurrentAndLastPerioricDoublesLattice2D* PFM::initializeSimulation(fieldDimension
 																  bool perCellLayer) {
 	
 	controller.reinitializeController(dimensions, numberCells, initialCond, perCellLayer);
-	return controller.getBaseFieldPtr();
+	return controller.getRotatingBaseFieldPtr();
 }
 
 bool PFM::isSimulationRunning() {
@@ -280,5 +293,5 @@ void PFM::runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun) {
 //TODO: this gives the default-current between the two rotating fields. 
 //WARNING: May introduce a 1-step delay.
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {
-	return controller.getBaseFieldPtr()->getPointerToCurrent();
+	return controller.getRotatingBaseFieldPtr()->getPointerToCurrent();
 }

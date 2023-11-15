@@ -23,7 +23,7 @@ namespace PFM {
 			return data[(y*3 + x)];
 		}
 
-		inline double getCenter() {
+		inline double getCenter() const {
 			return data[4];
 		}
 

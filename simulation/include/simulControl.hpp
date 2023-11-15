@@ -38,8 +38,16 @@ namespace PFM {
     //TODO: probably should be a singleton : )
 
     public:
+
+        //TODO:
+        //add an activeField_ptr. This will be the one the API will give the caller
+        //add method to set getBaseFieldPtr to return pointer to m_rotatingBaseLattice_ptr's currentLayer
+        //add method to set getBaseFieldPtr to return pointer to it's own field
+        //These should also affect what the activeField_ptr actually points to
+
         bool isInitialized() const;
-        CurrentAndLastPerioricDoublesLattice2D* getBaseFieldPtr();
+        CurrentAndLastPerioricDoublesLattice2D* getRotatingBaseFieldPtr();
+        PeriodicDoublesLattice2D* getBaseFieldPtr();
         PeriodicDoublesLattice2D* getLastDphiFieldPtr();
         std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* getLayerFieldsVectorPtr() const;
         
@@ -102,8 +110,9 @@ namespace PFM {
         double m_lastDT = -1;
         int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
         
-        std::unique_ptr<PFM::CurrentAndLastPerioricDoublesLattice2D> m_baseLattice_ptr;
-        std::unique_ptr<PeriodicDoublesLattice2D> m_lastDphis_ptr;
+        std::unique_ptr<PFM::CurrentAndLastPerioricDoublesLattice2D> m_rotatingBaseLattice_ptr;
+        std::unique_ptr<PeriodicDoublesLattice2D> m_RKtempAccField_ptr;
+        std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr;
         std::vector<std::unique_ptr<PeriodicDoublesLattice2D>> m_perCellLaticePtrs;
     };
     //***************************************************************
