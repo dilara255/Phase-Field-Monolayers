@@ -49,8 +49,17 @@ namespace PFM {
         CurrentAndLastPerioricDoublesLattice2D* getRotatingBaseFieldPtr();
         PeriodicDoublesLattice2D* getBaseFieldPtr();
         PeriodicDoublesLattice2D* getLastDphiFieldPtr();
-        std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* getLayerFieldsVectorPtr() const;
         
+        std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* getLayerFieldsVectorPtr() const;
+    
+        //Returns a pointer to the active base field
+        //May be a pointer to a distinc base-field or to the current layer of the rotating field
+        //Which one is set by setRotatingCurrentAsActive() and setBaseAsActive()
+        //By default, points to the base lattice
+        PeriodicDoublesLattice2D* getActiveFieldPtr();
+        PeriodicDoublesLattice2D* setRotatingCurrentAsActive(); //also returns the new active pointer
+        PeriodicDoublesLattice2D* setBaseAsActive(); //also returns the new active pointer
+
         //If not yet initialized, initializes and creates a new field
         //Otherwise, destroys the old field, reinitializes and creates a new field with "dimensions"
         //Defaults to initialConditions::EVENLY_SPACED_INDEX if a bad condition is passed
@@ -110,9 +119,13 @@ namespace PFM {
         double m_lastDT = -1;
         int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
         
+        //To be filled with actual data:
         std::unique_ptr<PFM::CurrentAndLastPerioricDoublesLattice2D> m_rotatingBaseLattice_ptr;
         std::unique_ptr<PeriodicDoublesLattice2D> m_RKtempAccField_ptr;
         std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr;
+
+        PeriodicDoublesLattice2D* m_activeBaseField_ptr;
+
         std::vector<std::unique_ptr<PeriodicDoublesLattice2D>> m_perCellLaticePtrs;
     };
     //***************************************************************
