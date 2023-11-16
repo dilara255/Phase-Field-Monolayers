@@ -12,7 +12,7 @@
 void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius, 
 	                                 double cellSeedValue, bool invertValueOn);
 
-void updatedChecks(PFM::checkData_t* checks_ptr, const int stepsPerCheckSaved);
+void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved);
 
 void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr, 
 	                                      const double initialCellDiameterDensity, 
@@ -34,7 +34,7 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 	const bool invertField = true;
 	const double k = 1;
 	const double A = 0.5;
-	const double dt = 0.005;
+	const double dt = 0.05;
 	const double initialCellDiameterDensity = 1/std::sqrt(2);
 
 	preProccessFieldsAndUpdateController(controller_ptr, initialCellDiameterDensity, k, A, dt,
@@ -48,11 +48,7 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 	//The actual steps:
 	while(!controller_ptr->checkIfShouldStop()) {
 
-		checkData.density = 0;
-		checkData.absoluteChange = 0;
-		checkData.step = *stepCount_ptr;
-
-		//controller_ptr->setRotatingCurrentAsActive();
+		//controller_ptr->setRotatingLastAsActive();
 		//INT::TD::explicitEulerCahnHiliard(rotBaseField_ptr, dt, k, A, &checkData);
 		//INT::TD::implicitEulerCahnHiliard(4, rotBaseField_ptr, baseField_ptr, dt, k ,A, &checkData);
 		//INT::TD::heunCahnHiliard(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
@@ -66,7 +62,7 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 		*/
 		INT::TD::verletCahnHiliard(rotBaseField_ptr, baseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
 
-		updatedChecks(&checkData, controller_ptr->getStepsPerCheckSaved());
+		updatedChecks(&checkData, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved());
 
 		*stepCount_ptr += 1;				
 	}
@@ -330,13 +326,15 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 		             radiusToWidth, initialCellRadius, expectedInterfaceWidth );
 }
 
-void updatedChecks(PFM::checkData_t* checks_ptr, const int stepsPerCheckSaved) {
+void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved) {
 	
-	int elements = PFM::getActiveFieldPtr()->getNumberOfActualElements();
+	if(step % stepsPerCheckSaved == 0) { 
+		int elements = PFM::getActiveFieldPtr()->getNumberOfActualElements();
 
-	if(checks_ptr->step % stepsPerCheckSaved == 0) { 
 		checks_ptr->density /= elements;
 		checks_ptr->absoluteChange /= elements;
+		checks_ptr->step = step;
+	
 		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
 
 		int checksPerPrintout = 5;
@@ -348,4 +346,6 @@ void updatedChecks(PFM::checkData_t* checks_ptr, const int stepsPerCheckSaved) {
 						checks_ptr->step, checks_ptr->density, checks_ptr->absoluteChange); 
 		}
 	}	
+
+	checks_ptr->zeroOut();
 }

@@ -53,11 +53,11 @@ namespace PFM {
         std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* getLayerFieldsVectorPtr() const;
     
         //Returns a pointer to the active base field
-        //May be a pointer to a distinc base-field or to the current layer of the rotating field
-        //Which one is set by setRotatingCurrentAsActive() and setBaseAsActive()
+        //May be a pointer to a distinc base-field or to the last layer of the rotating field
         //By default, points to the base lattice
         PeriodicDoublesLattice2D* getActiveFieldPtr();
-        PeriodicDoublesLattice2D* setRotatingCurrentAsActive(); //also returns the new active pointer
+        //Which one is set by setRotatingLastAsActive() and setBaseAsActive()
+        PeriodicDoublesLattice2D* setRotatingLastAsActive(); //also returns the new active pointer
         PeriodicDoublesLattice2D* setBaseAsActive(); //also returns the new active pointer
 
         //If not yet initialized, initializes and creates a new field
