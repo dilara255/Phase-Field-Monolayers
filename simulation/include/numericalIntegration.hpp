@@ -8,54 +8,47 @@
 
 namespace INT { 
 	
-	double rungeKutaKnFinalCoef(int steps, int n);
+	enum class rungeKuttaOrder { TWO, FOUR };
+	inline int rkStepsFromOrder(rungeKuttaOrder order) { 
+		if(order == rungeKuttaOrder::TWO) { return 2; }
+		else if (order == rungeKuttaOrder::FOUR) { return 4; }
+		else { assert("BAD RK ORDER"); return 0; }
+	}
 
-	double rungeKutaKnIntermediateCoef(int steps, int n);
+	double rungeKutaKnFinalCoef(rungeKuttaOrder order, int n);
+
+	double rungeKutaKnIntermediateCoef(rungeKuttaOrder order, int n);
 
 namespace TD {
 
 void explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
-	                          double dt, double chK, double chA, PFM::checkData_t* checks_ptr);
+	                          const double dt, const double chK, const double chA, 
+	                          PFM::checkData_t* checks_ptr);
 
-//TODO: maxSteps plus maxDif, e fazer rodar até (dif <= maxDif || step >= maxSteps)
+//For now, runs for a set amount of substeps
+//TODO: actually test convergence
 void implicitEulerCahnHiliard(int steps, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
-	                                            PFM::PeriodicDoublesLattice2D* baseField_ptr, double dt,
-	                                               double chK, double chA, PFM::checkData_t* checks_ptr);
+	                          PFM::PeriodicDoublesLattice2D* baseField_ptr, const double dt,
+	                          const double chK, const double chA, PFM::checkData_t* checks_ptr);
 
-void heunCahnHiliard(PFM::PeriodicDoublesLattice2D* field_ptr,
-	                 PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-	                 double chK, double chA, double dt, 
+void heunCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+	                 PFM::PeriodicDoublesLattice2D* tempKs_ptr,
+	                 const double dt, const double chK, const double chA, 
 	                 PFM::checkData_t* checks_ptr);
 
 void verletCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 								   PFM::PeriodicDoublesLattice2D* field_ptr,
 	                               PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                               double chK, double chA, double dt, 
+	                               const double dt, const double chK, const double chA, 
 	                               PFM::checkData_t* checks_ptr);
 
-void rungeKutaCahnHiliardFirstStep(double coefKnFinal, double coefKnInterm, int height, int width, 
-	                               PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-								   PFM::PeriodicDoublesLattice2D* field_ptr,
-	                               PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                               double chK, double chA, double dt);
-
-void rungeKutaCahnHiliardIntermediateStep(int RKstep, double coefKnFinal, double coefKnInterm,
-	                                      int height, int width, 
-	                                      PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-										  PFM::PeriodicDoublesLattice2D* field_ptr,
-	                                      PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                                      double chK, double chA, double dt);
-
-void rungeKutaCahnHiliardFinalStep(double coefKnFinal, double coefKnInterm, int height, int width, 
-	                               PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-	                               PFM::PeriodicDoublesLattice2D* field_ptr,
-	                               PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                               double chK, double chA, double dt, PFM::checkData_t* checks_ptr);
-
-void rungeKutaCahnHiliard(int steps, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+//So far only supports 2 or 4 steps. Will do nothing (or fail an assert) if another amount is 
+//TODO: add more coeficient lists and order enumerations
+//TODO: eventually, maybe, generalize or something, idk
+void rungeKuttaCahnHiliard(rungeKuttaOrder order, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 						  PFM::PeriodicDoublesLattice2D* field_ptr,
 	                      PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                      double chK, double chA, double dt, PFM::checkData_t* checks_ptr);
+	                      const double dt, const double chK, const double chA, PFM::checkData_t* checks_ptr);
 
 }
 }
