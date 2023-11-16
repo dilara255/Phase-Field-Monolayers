@@ -24,8 +24,8 @@ PeriodicDoublesLattice2D* PFM::SimulationControl::getBaseFieldPtr() {
 	return m_baseLattice_ptr.get();
 }
 
-PeriodicDoublesLattice2D* PFM::SimulationControl::getLastDphiFieldPtr() {
-	return m_RKtempAccField_ptr.get();
+PeriodicDoublesLattice2D* PFM::SimulationControl::getLastDphisAndTempKsFieldPtr() {
+	return m_lastDphisAndTempKsField_ptr.get();
 }
 
 std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* PFM::SimulationControl::getLayerFieldsVectorPtr() const {
@@ -56,8 +56,8 @@ void PFM::SimulationControl::releaseFields() {
 	if (m_baseLattice_ptr != NULL) {
 		m_baseLattice_ptr.release();
 	}
-	if (m_RKtempAccField_ptr != NULL) {
-		m_RKtempAccField_ptr.release();
+	if (m_lastDphisAndTempKsField_ptr != NULL) {
+		m_lastDphisAndTempKsField_ptr.release();
 	}
 
 	m_hasInitialized = false;
@@ -73,7 +73,7 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 
 	size_t elements = dimensions.totalElements();
 	
-	m_RKtempAccField_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
+	m_lastDphisAndTempKsField_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
 			new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID)
 	);
 

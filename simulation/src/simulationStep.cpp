@@ -103,6 +103,8 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 	
 	PFM::checkData_t checkData;
 	auto rotBaseField_ptr = controller_ptr->getRotatingBaseFieldPtr();
+	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
+	auto tempKsAndDphis_ptr = controller_ptr->getLastDphisAndTempKsFieldPtr();
 
 	//The actual steps:
 	while(!controller_ptr->checkIfShouldStop()) {
@@ -196,7 +198,9 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 
 		controller_ptr->setRotatingCurrentAsActive();
 
-		INT::TD::explicitEulerCahnHiliard(rotBaseField_ptr, dt, k, A, &checkData);
+		//INT::TD::explicitEulerCahnHiliard(rotBaseField_ptr, dt, k, A, &checkData);
+		//INT::TD::implicitEulerCahnHiliard(4, rotBaseField_ptr, baseField_ptr, dt, k ,A, &checkData);
+		INT::TD::heunCahnHiliard(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
 
 		updatedChecks(&checkData, controller_ptr->getStepsPerCheckSaved());
 

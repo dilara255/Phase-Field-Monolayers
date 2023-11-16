@@ -12,7 +12,8 @@ double INT::rungeKutaKnIntermediateCoef(int steps, int n) {
 }
 
 void INT::TD::explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
-	                          double dt, double chK, double chA, PFM::checkData_t* checks_ptr) {
+	                                   const double dt, const double chK, const double chA, 
+	                                   PFM::checkData_t* checks_ptr) {
 	
 	auto currentStepField_ptr = rotatingField_ptr->getPointerToCurrent();
 	auto lastStepField_ptr = rotatingField_ptr->getPointerToLast();
@@ -45,10 +46,10 @@ void INT::TD::explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice
 	rotatingField_ptr->rotatePointers();
 }
 
-//TODO: maxSteps plus maxDif, e fazer rodar até (dif <= maxDif || step >= maxSteps)
+//TODO: pass maxSteps plus maxDif, run while(dif > maxDif && step < maxSteps)
 void INT::TD::implicitEulerCahnHiliard(int steps, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
-	                                            PFM::PeriodicDoublesLattice2D* baseField_ptr, double dt,
-	                                               double chK, double chA, PFM::checkData_t* checks_ptr) {
+	                                   PFM::PeriodicDoublesLattice2D* baseField_ptr, const double dt,
+	                                   const double chK, const double chA, PFM::checkData_t* checks_ptr) {
 
 	if(steps < 1) { return; }
 	if(steps == 1) { explicitEulerCahnHiliard(rotatingField_ptr, dt, chK, chA, checks_ptr); return; }
@@ -102,17 +103,67 @@ void INT::TD::implicitEulerCahnHiliard(int steps, PFM::CurrentAndLastPerioricDou
 	}
 }
 
-void INT::TD::heunCahnHiliard(PFM::PeriodicDoublesLattice2D* field_ptr,
-	                 PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-	                 double chK, double chA, double dt, 
-	                 PFM::checkData_t* checks_ptr) {
+void INT::TD::heunCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+							  PFM::PeriodicDoublesLattice2D* tempKs_ptr,
+							  const double dt, const double chK, const double chA,
+							  PFM::checkData_t* checks_ptr) {
 
+	auto currentStepField_ptr = rotatingField_ptr->getPointerToCurrent();
+	auto lastStepField_ptr = rotatingField_ptr->getPointerToLast();
+
+	int height = currentStepField_ptr->getFieldDimensions().height;
+	int width = currentStepField_ptr->getFieldDimensions().width;
+
+	PFM::coordinate_t centerPoint;
+	PFM::neighborhood9_t neigh;
+	double dPhi0;
+	double phi0;
+	double dPhi;
+	double phi;
+
+	for (int j = 0; j < height; j++) {
+			centerPoint.y = j;
+
+		for (int i = 0; i < width; i++) {
+			centerPoint.x = i;
+		
+			neigh = lastStepField_ptr->getNeighborhood(centerPoint);
+			phi0 = neigh.getCenter();
+		
+			dPhi0 = chNumericalF(&neigh, chK, chA);
+			tempKs_ptr->writeDataPoint(centerPoint, dPhi0);
+
+			currentStepField_ptr->writeDataPoint(centerPoint, phi0 + dt * dPhi0);
+		}
+	}
+
+	for (int j = 0; j < height; j++) {
+			centerPoint.y = j;
+
+		for (int i = 0; i < width; i++) {
+			centerPoint.x = i;
+		
+			phi0 = lastStepField_ptr->getDataPoint(centerPoint);
+			neigh = currentStepField_ptr->getNeighborhood(centerPoint);
+		
+			dPhi = chNumericalF(&neigh, chK, chA);
+			dPhi0 = tempKs_ptr->getDataPoint(centerPoint);
+
+			phi = phi0 + 0.5 * dt * (dPhi + dPhi0);
+			currentStepField_ptr->writeDataPoint(centerPoint, phi);
+
+			checks_ptr->density += phi;
+			checks_ptr->absoluteChange += std::abs(0.5*(dPhi + dPhi0));
+		}
+	}
+	
+	rotatingField_ptr->rotatePointers();
 }
 
 void INT::TD::verletCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 								   PFM::PeriodicDoublesLattice2D* field_ptr,
 	                               PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                               double chK, double chA, double dt, 
+	                               const double dt, const double chK, const double chA, 
 	                               PFM::checkData_t* checks_ptr) {
 
 }
@@ -121,7 +172,7 @@ void INT::TD::rungeKutaCahnHiliardFirstStep(double coefKnFinal, double coefKnInt
 	                               PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 								   PFM::PeriodicDoublesLattice2D* field_ptr,
 	                               PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                               double chK, double chA, double dt) {
+	                               const double dt, const double chK, const double chA) {
 
 }
 
@@ -130,7 +181,7 @@ void INT::TD::rungeKutaCahnHiliardIntermediateStep(int RKstep, double coefKnFina
 	                                      PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 										  PFM::PeriodicDoublesLattice2D* field_ptr,
 	                                      PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                                      double chK, double chA, double dt) {
+	                                      const double dt, const double chK, const double chA) {
 
 	PFM::coordinate_t centerPoint;
 	PFM::neighborhood9_t neigh;
@@ -161,17 +212,19 @@ void INT::TD::rungeKutaCahnHiliardIntermediateStep(int RKstep, double coefKnFina
 }
 
 void INT::TD::rungeKutaCahnHiliardFinalStep(double coefKnFinal, double coefKnInterm, int height, int width, 
-	                               PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-	                               PFM::PeriodicDoublesLattice2D* field_ptr,
-	                               PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                               double chK, double chA, double dt, PFM::checkData_t* checks_ptr) {
+										    PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+										    PFM::PeriodicDoublesLattice2D* field_ptr,
+										    PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
+										    const double dt, const double chK, const double chA,
+										    PFM::checkData_t* checks_ptr) {
 
 }
 
 void INT::TD::rungeKutaCahnHiliard(int steps, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-						  PFM::PeriodicDoublesLattice2D* field_ptr,
-	                      PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                      double chK, double chA, double dt, PFM::checkData_t* checks_ptr) {
+								   PFM::PeriodicDoublesLattice2D* field_ptr,
+								   PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
+								   const double dt, const double chK, const double chA, 
+								   PFM::checkData_t* checks_ptr) {
 
 	if(steps < 1) { return; }
 	if(steps == 1) { explicitEulerCahnHiliard(rotatingField_ptr, dt, chK, chA, checks_ptr); return;}
