@@ -37,12 +37,12 @@ PeriodicDoublesLattice2D* PFM::SimulationControl::getActiveFieldPtr() {
 }
 
 PeriodicDoublesLattice2D* PFM::SimulationControl::setRotatingCurrentAsActive() {
-	m_activeBaseField_ptr = m_rotatingBaseLattice_ptr->getPointerToCurrent();
+	m_activeBaseField_ptr = m_rotatingBaseLattice_ptr->getPointerToLast();
 	return m_activeBaseField_ptr;
 }
 
 PeriodicDoublesLattice2D* PFM::SimulationControl::setBaseAsActive() {
-	m_activeBaseField_ptr = m_rotatingBaseLattice_ptr->getPointerToLast();
+	m_activeBaseField_ptr = m_baseLattice_ptr.get();
 	return m_activeBaseField_ptr;	
 }
         
@@ -165,6 +165,14 @@ int PFM::SimulationControl::stop() {
 	m_shouldStop = false;
 
 	return m_stepsRan;
+}
+
+void PFM::SimulationControl::mirrorRotatingOnBase() {
+	m_baseLattice_ptr.get()->mirrorAllDataFrom(m_rotatingBaseLattice_ptr.get()->getPointerToCurrent());
+}
+
+void PFM::SimulationControl::mirrorBaseOnRotating() {
+	m_rotatingBaseLattice_ptr.get()->getPointerToCurrent()->mirrorAllDataFrom(m_baseLattice_ptr.get());
 }
 
 //TODO: an actual reasonable save system : p

@@ -2,13 +2,42 @@
 
 //TODO: Implement : )
 
+double INT::rungeKutaKnIntermediateCoef(rungeKuttaOrder order, int n) {
+	if(n <= 0) { assert("BAD RK N"); return 0.0; }
 
-double INT::rungeKutaKnFinalCoef(int steps, int n) {
-	return 0;
+	double order2[2] = { 0.5, 0 };
+	double order4[4] = { 0.5, 0.5, 1, 0 };
+
+	if (order == rungeKuttaOrder::TWO) {
+		if(n > 2) { assert("BAD RK N"); return 0.0; }
+
+		return order2[n-1];
+	}
+	else if (order == rungeKuttaOrder::FOUR) {
+		if(n > 4) { assert("BAD RK N"); return 0.0; }
+
+		return order4[n-1];
+	}
+	else { assert("BAD RK ORDER"); return 0.0; }
 }
 
-double INT::rungeKutaKnIntermediateCoef(int steps, int n) {
-	return 0;
+double INT::rungeKutaKnFinalCoef(rungeKuttaOrder order, int n) {
+	if(n <= 0) { assert("BAD RK N"); return 0.0; }
+
+	double order2[2] = { 0, 1 };
+	double order4[4] = { 1.0/6, 1.0/3, 1.0/3, 1.0/6 };
+
+	if (order == rungeKuttaOrder::TWO) {
+		if(n > 2) { assert("BAD RK N"); return 0.0; }
+
+		return order2[n-1];
+	}
+	else if (order == rungeKuttaOrder::FOUR) {
+		if(n > 4) { assert("BAD RK N"); return 0.0; }
+
+		return order4[n-1];
+	}
+	else { assert("BAD RK ORDER"); return 0.0; }
 }
 
 void INT::TD::explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
@@ -43,6 +72,7 @@ void INT::TD::explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice
 			checks_ptr->absoluteChange += std::abs(dPhi);
 		}
 	}
+
 	rotatingField_ptr->rotatePointers();
 }
 
@@ -166,17 +196,107 @@ void INT::TD::verletCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rot
 	                               const double dt, const double chK, const double chA, 
 	                               PFM::checkData_t* checks_ptr) {
 
+	auto currentStepField_ptr = rotatingField_ptr->getPointerToCurrent();
+	auto lastStepField_ptr = rotatingField_ptr->getPointerToLast();
+
+	int height = currentStepField_ptr->getFieldDimensions().height;
+	int width = currentStepField_ptr->getFieldDimensions().width;
+
+	PFM::coordinate_t centerPoint;
+	PFM::neighborhood9_t phiNeigh;
+	PFM::neighborhood9_t dPhiNeigh;
+
+	double an, phi0, dPhi0, phi, phiPrev; //phiPrev: phi_n-1
+
+	//dPhi0 = f(phi0)
+	//an = A(phi0, dPhi0)
+	//phi = 2*phi0 - phiPrev + an * dt * dt
+
+	//First we want to get dPhi on all elements, plus store their current phi
+	//The current phi will later become the "next step's previous step's phi", after the fields rotate (in the end)
+	//Note along the way that we only write to currentStepField_ptr and only read lastStepField_ptr
+	for (int j = 0; j < height; j++) {
+			centerPoint.y = j;
+
+		for (int i = 0; i < width; i++) {
+			centerPoint.x = i;
+		
+			phiNeigh = field_ptr->getNeighborhood(centerPoint);
+			phi0 = phiNeigh.getCenter();
+
+			dPhi0 = chNumericalF(&phiNeigh, chK, chA);
+			tempKs_ptr->writeDataPoint(centerPoint, dPhi0);
+
+			//Note: currentStepField is written before it's read: value comming in doesn't matter
+			//After rotation, this will become lastStepField and hold the phiPrev of the next step
+			currentStepField_ptr->writeDataPoint(centerPoint, phi0); 
+		}
+	}
+
+	//Then we can calculate an and phi in a single loop:
+	for (int j = 0; j < height; j++) {
+			centerPoint.y = j;
+
+		for (int i = 0; i < width; i++) {
+			centerPoint.x = i;
+		
+			phiNeigh = field_ptr->getNeighborhood(centerPoint);
+			phi0 = phiNeigh.getCenter();
+
+			dPhiNeigh = tempKs_ptr->getNeighborhood(centerPoint);
+
+			an = INT::chNumericalA(&phiNeigh, &dPhiNeigh, chK, chA);
+
+			phiPrev = lastStepField_ptr->getDataPoint(centerPoint); //from the step before the last one completed
+
+			phi = 2*phi0 - phiPrev + an * dt * dt;
+
+			field_ptr->writeDataPoint(centerPoint, phi);
+
+			checks_ptr->density += phi;
+			checks_ptr->absoluteChange += std::abs( (phi-phi0)/dt );
+		}
+	}
+
+	//As noted, we only write to currentStepField_ptr and only read lastStepField_ptr
+	//The rotation will make lastStepField take the value of currentStepField
+	//which is the value on the step before this one
+	//this will be the value of phi_n-1, or phiPrev, in the next step
+	rotatingField_ptr->rotatePointers();
 }
 
-void INT::TD::rungeKutaCahnHiliardFirstStep(double coefKnFinal, double coefKnInterm, int height, int width, 
+void rungeKutaCahnHiliardFirstStep(double coefKnFinal, double coefKnInterm, int height, int width, 
 	                               PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 								   PFM::PeriodicDoublesLattice2D* field_ptr,
 	                               PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
 	                               const double dt, const double chK, const double chA) {
 
+	PFM::coordinate_t centerPoint;
+	PFM::neighborhood9_t neigh;
+	double phi0, kn;
+
+	auto currentStepField_ptr = rotatingField_ptr->getPointerToCurrent();
+
+	for (int j = 0; j < height; j++) {
+		centerPoint.y = j;
+
+		for (int i = 0; i < width; i++) {
+			centerPoint.x = i;
+			
+			neigh = field_ptr->getNeighborhood(centerPoint);
+				
+			kn = dt * INT::chNumericalF(&neigh, chK, chA);
+			tempKs_ptr->writeDataPoint(centerPoint, coefKnFinal * kn); //also clears old data
+				
+			phi0 = neigh.getCenter();
+			currentStepField_ptr->writeDataPoint(centerPoint, phi0 + coefKnInterm * kn);
+		}
+	}
+	rotatingField_ptr->rotatePointers();
+
 }
 
-void INT::TD::rungeKutaCahnHiliardIntermediateStep(int RKstep, double coefKnFinal, double coefKnInterm,
+void rungeKutaCahnHiliardIntermediateStep(double coefKnFinal, double coefKnInterm,
 	                                      int height, int width, 
 	                                      PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 										  PFM::PeriodicDoublesLattice2D* field_ptr,
@@ -196,60 +316,82 @@ void INT::TD::rungeKutaCahnHiliardIntermediateStep(int RKstep, double coefKnFina
 			for (int i = 0; i < width; i++) {
 				centerPoint.x = i;
 			
-				if(RKstep == 0) tempKs_ptr->writeDataPoint(centerPoint, 0); //clear tempKs
-
 				neigh = lastStepField_ptr->getNeighborhood(centerPoint);
 
-				phi0 = neigh.getCenter();
-				kn = dt * chNumericalF(&neigh, chK, chA);
+				kn = dt * INT::chNumericalF(&neigh, chK, chA);
 
-				tempKs_ptr->incrementDataPoint(centerPoint, kn * coefKnFinal);
-
+				tempKs_ptr->incrementDataPoint(centerPoint, coefKnFinal * kn);
+				
+				phi0 = field_ptr->getDataPoint(centerPoint);
 				currentStepField_ptr->writeDataPoint(centerPoint, phi0 + coefKnInterm * kn);
 			}
 	}
 	rotatingField_ptr->rotatePointers();
 }
 
-void INT::TD::rungeKutaCahnHiliardFinalStep(double coefKnFinal, double coefKnInterm, int height, int width, 
-										    PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-										    PFM::PeriodicDoublesLattice2D* field_ptr,
-										    PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-										    const double dt, const double chK, const double chA,
-										    PFM::checkData_t* checks_ptr) {
-
-}
-
-void INT::TD::rungeKutaCahnHiliard(int steps, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+void rungeKutaCahnHiliardFinalStep(double coefKnFinal, int height, int width, 
+								   PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 								   PFM::PeriodicDoublesLattice2D* field_ptr,
 								   PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-								   const double dt, const double chK, const double chA, 
+								   const double dt, const double chK, const double chA,
 								   PFM::checkData_t* checks_ptr) {
+	
+	PFM::coordinate_t centerPoint;
+	PFM::neighborhood9_t neigh;
+	double dPhi, phi0, phi, kn;
 
-	if(steps < 1) { return; }
-	if(steps == 1) { explicitEulerCahnHiliard(rotatingField_ptr, dt, chK, chA, checks_ptr); return;}
+	auto lastStepField_ptr = rotatingField_ptr->getPointerToLast();
+
+	for (int j = 0; j < height; j++) {
+		centerPoint.y = j;
+
+		for (int i = 0; i < width; i++) {
+			centerPoint.x = i;
+			
+			neigh = lastStepField_ptr->getNeighborhood(centerPoint);
+
+			kn = dt * INT::chNumericalF(&neigh, chK, chA);
+			dPhi = tempKs_ptr->getDataPoint(centerPoint) + coefKnFinal * kn;
+
+			phi0 = field_ptr->getDataPoint(centerPoint);
+			phi = phi0 + dPhi;
+
+			field_ptr->writeDataPoint(centerPoint, phi);		
+
+			checks_ptr->density += phi;
+			checks_ptr->absoluteChange += std::abs(dPhi/dt);
+		}
+	}
+}
+
+void INT::TD::rungeKuttaCahnHiliard(INT::rungeKuttaOrder order, 
+	                                PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+								    PFM::PeriodicDoublesLattice2D* field_ptr,
+								    PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
+								    const double dt, const double chK, const double chA, 
+								    PFM::checkData_t* checks_ptr) {
+
+	int steps = INT::rkStepsFromOrder(order);
+	if(steps == 0) { assert("BAD RK ORDER"); return; }
 
 	int height = field_ptr->getFieldDimensions().height;
 	int width = field_ptr->getFieldDimensions().width;
 
-	double coefKnFinal = rungeKutaKnFinalCoef(steps, 1);
-	double coefKnInterm = rungeKutaKnIntermediateCoef(steps, 1);
-
+	double coefKnInterm = rungeKutaKnIntermediateCoef(order, 1);
+	double coefKnFinal = rungeKutaKnFinalCoef(order, 1);
 	rungeKutaCahnHiliardFirstStep(coefKnFinal, coefKnInterm, height, width, 
-		                          rotatingField_ptr, field_ptr, tempKs_ptr, chK, chA, dt);
+		                          rotatingField_ptr, field_ptr, tempKs_ptr, dt, chK, chA);
 	if (steps > 2) {
 		for(int i = 0; i < (steps - 2); i++) {
-			coefKnFinal = rungeKutaKnFinalCoef(steps, i+2);
-			coefKnInterm = rungeKutaKnIntermediateCoef(steps, i+2);
 
-			rungeKutaCahnHiliardIntermediateStep(i, coefKnFinal, coefKnInterm, height, width, 
-				                                 rotatingField_ptr, field_ptr, tempKs_ptr, chK, chA, dt);
+			coefKnInterm = rungeKutaKnIntermediateCoef(order, i+2);
+			coefKnFinal = rungeKutaKnFinalCoef(order, i+2);
+			rungeKutaCahnHiliardIntermediateStep(coefKnFinal, coefKnInterm, height, width, 
+				                                 rotatingField_ptr, field_ptr, tempKs_ptr, dt, chK, chA);
 		}
 	}
 
-	coefKnFinal = rungeKutaKnFinalCoef(steps, steps);
-	coefKnInterm = rungeKutaKnIntermediateCoef(steps, steps);
-
-	rungeKutaCahnHiliardFinalStep(coefKnFinal, coefKnInterm, height, width, 
-		                          rotatingField_ptr, field_ptr, tempKs_ptr, chK, chA, dt, checks_ptr);
+	coefKnFinal = rungeKutaKnFinalCoef(order, steps);
+	rungeKutaCahnHiliardFinalStep(coefKnFinal, height, width, 
+		                          rotatingField_ptr, field_ptr, tempKs_ptr, dt, chK, chA, checks_ptr);
 }

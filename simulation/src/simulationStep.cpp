@@ -12,79 +12,18 @@
 void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius, 
 	                                 double cellSeedValue, bool invertValueOn);
 
+void updatedChecks(PFM::checkData_t* checks_ptr, const int stepsPerCheckSaved);
+
+void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr, 
+	                                      const double initialCellDiameterDensity, 
+	                                      const double k, const double A, const double dt,
+	                                      const double expectedInterfaceWidth, const bool invertField);
+
 //Runs Chan-Hiliard on one layer per cell and adds the results into a base layer
 void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
 	//TODO: Implement : )
 	puts("multi-layer simulation not it implemented");
 	*isRunning_ptr = false;
-}
-
-//TODO: separate initialization, simulation and wrap-up on the following functions
-
-void updatedChecks(PFM::checkData_t* checks_ptr, const int stepsPerCheckSaved) {
-	
-	int elements = PFM::getActiveFieldPtr()->getNumberOfActualElements();
-
-	if(checks_ptr->step % stepsPerCheckSaved == 0) { 
-		checks_ptr->density /= elements;
-		checks_ptr->absoluteChange /= elements;
-		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
-
-		int checksPerPrintout = 5;
-		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
-			checksPerPrintout = 1;
-		#endif
-		if(checks_ptr->step % (stepsPerCheckSaved * checksPerPrintout) == 0) {
-			printf("steps: %d - density: %f - absolute change (last step): %f\n", 
-						checks_ptr->step, checks_ptr->density, checks_ptr->absoluteChange); 
-		}
-	}	
-}
-
-void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr, 
-	                                      const double initialCellDiameterDensity, 
-	                                      const double k, const double A, const double dt,
-	                                      const double expectedInterfaceWidth, const bool invertField) {
-	
-	controller_ptr->setKused(k);
-	controller_ptr->setAused(A);
-	controller_ptr->setDTused(dt);
-
-	auto rotBaseField_ptr = controller_ptr->getRotatingBaseFieldPtr();
-	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
-	auto currentStepField_ptr = rotBaseField_ptr->getPointerToCurrent();
-	auto lastStepField_ptr = rotBaseField_ptr->getPointerToLast();
-	
-	//auto layerFieldsVectorPtr = controller_ptr->getLayerFieldsVectorPtr();
-
-	const int width = (int)baseField_ptr->getFieldDimensions().width;
-	const int height = (int)baseField_ptr->getFieldDimensions().height;
-
-	const double initialCellRadius = initialCellDiameterDensity * std::min(width, height)
-		                             / (2 * std::sqrt((float)controller_ptr->getNumberCells()));
-
-	if(controller_ptr->shouldStillExpandSeeds()) {
-		expandCells(currentStepField_ptr, initialCellRadius, 
-			            controller_ptr->getLastCellSeedValue(), invertField);
-		expandCells(lastStepField_ptr, initialCellRadius, 
-			            controller_ptr->getLastCellSeedValue(), invertField);
-		expandCells(baseField_ptr, initialCellRadius, 
-			            controller_ptr->getLastCellSeedValue(), invertField);
-	}
-	else if (invertField) {
-		for (int j = 0; j < height; j++) {
-			for (int i = 0; i < width; i++) {
-				//TODO: make sure this inversion actually works in general
-				currentStepField_ptr->writeDataPoint({i,j}, 1 - currentStepField_ptr->getDataPoint({i,j}));
-				lastStepField_ptr->writeDataPoint({i,j}, 1 - lastStepField_ptr->getDataPoint({i,j}));
-				baseField_ptr->writeDataPoint({i,j}, 1 - baseField_ptr->getDataPoint({i,j}));
-			}
-		}
-	}
-	
-	double radiusToWidth = initialCellRadius / expectedInterfaceWidth;
-	printf("Radius to expected interface width = %f (radius: %f, width: %f)\n", 
-		             radiusToWidth, initialCellRadius, expectedInterfaceWidth );
 }
 
 //Runs Chan-Hiliard on a single base layer. Keeps current and last step and uses both to calculate change
@@ -95,7 +34,7 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 	const bool invertField = true;
 	const double k = 1;
 	const double A = 0.5;
-	const double dt = 0.05;
+	const double dt = 0.005;
 	const double initialCellDiameterDensity = 1/std::sqrt(2);
 
 	preProccessFieldsAndUpdateController(controller_ptr, initialCellDiameterDensity, k, A, dt,
@@ -113,94 +52,19 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 		checkData.absoluteChange = 0;
 		checkData.step = *stepCount_ptr;
 
-		/*
-		//RK4:
-		for (int j = 0; j < height; j++) {
-			centerPoint.y = j;
-
-			for (int i = 0; i < width; i++) {
-				centerPoint.x = i;
-			
-				tempKsField_ptr->writeDataPoint(centerPoint, 0); //clear tempKs
-
-				neigh = baseField_ptr->getNeighborhood(centerPoint);
-				
-				kn = dt * chNumericalF(&neigh, k, A);
-				tempKsField_ptr->incrementDataPoint(centerPoint, (1.0/6) * kn);
-				
-				phi0 = neigh.getCenter();
-				currentStepField_ptr->writeDataPoint(centerPoint, phi0 + kn);
-			}
-		}
-		rotBaseField_ptr->rotatePointers();
-
-		currentStepField_ptr = rotBaseField_ptr->getPointerToCurrent();
-		lastStepField_ptr = rotBaseField_ptr->getPointerToLast();
-		for (int j = 0; j < height; j++) {
-			centerPoint.y = j;
-
-			for (int i = 0; i < width; i++) {
-				centerPoint.x = i;
-			
-				neigh = lastStepField_ptr->getNeighborhood(centerPoint);
-				
-				kn = dt * chNumericalF(&neigh, k, A);
-				tempKsField_ptr->incrementDataPoint(centerPoint, (1.0/3) * kn);
-				
-				phi0 = baseField_ptr->getDataPoint(centerPoint);
-				currentStepField_ptr->writeDataPoint(centerPoint, phi0 + 0.5 * kn);
-			}
-		}
-		rotBaseField_ptr->rotatePointers();
-
-		currentStepField_ptr = rotBaseField_ptr->getPointerToCurrent();
-		lastStepField_ptr = rotBaseField_ptr->getPointerToLast();
-		for (int j = 0; j < height; j++) {
-			centerPoint.y = j;
-
-			for (int i = 0; i < width; i++) {
-				centerPoint.x = i;
-			
-				neigh = lastStepField_ptr->getNeighborhood(centerPoint);
-				
-				kn = dt * chNumericalF(&neigh, k, A);
-				tempKsField_ptr->incrementDataPoint(centerPoint, (1.0/3) * kn);
-				
-				phi0 = baseField_ptr->getDataPoint(centerPoint);
-				currentStepField_ptr->writeDataPoint(centerPoint, phi0 + 0.5 * kn);
-			}
-		}
-		rotBaseField_ptr->rotatePointers();
-
-		currentStepField_ptr = rotBaseField_ptr->getPointerToCurrent();
-		lastStepField_ptr = rotBaseField_ptr->getPointerToLast();
-		for (int j = 0; j < height; j++) {
-			centerPoint.y = j;
-
-			for (int i = 0; i < width; i++) {
-				centerPoint.x = i;
-			
-				neigh = lastStepField_ptr->getNeighborhood(centerPoint);
-
-				kn = dt * chNumericalF(&neigh, k, A);
-				dPhi = tempKsField_ptr->getDataPoint(centerPoint) + (1.0/6) * kn;
-
-				phi0 = baseField_ptr->getDataPoint(centerPoint);
-				phi = phi0 + dPhi;
-
-				baseField_ptr->writeDataPoint(centerPoint, phi);		
-
-				checkData.density += phi;
-				checkData.absoluteChange += std::abs(dPhi/dt);
-			}
-		}
-		*/
-
-		controller_ptr->setRotatingCurrentAsActive();
-
+		//controller_ptr->setRotatingCurrentAsActive();
 		//INT::TD::explicitEulerCahnHiliard(rotBaseField_ptr, dt, k, A, &checkData);
 		//INT::TD::implicitEulerCahnHiliard(4, rotBaseField_ptr, baseField_ptr, dt, k ,A, &checkData);
-		INT::TD::heunCahnHiliard(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
+		//INT::TD::heunCahnHiliard(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
+
+		controller_ptr->setBaseAsActive();
+		/*
+		INT::TD::rungeKuttaCahnHiliard(INT::rungeKuttaOrder::TWO, rotBaseField_ptr, baseField_ptr, 
+			                                             tempKsAndDphis_ptr, dt, k, A, &checkData);
+		INT::TD::rungeKuttaCahnHiliard(INT::rungeKuttaOrder::FOUR, rotBaseField_ptr, baseField_ptr, 
+			                                             tempKsAndDphis_ptr, dt, k, A, &checkData);
+		*/
+		INT::TD::verletCahnHiliard(rotBaseField_ptr, baseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
 
 		updatedChecks(&checkData, controller_ptr->getStepsPerCheckSaved());
 
@@ -418,4 +282,70 @@ void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius,
 			}
 		}
 	}
+}
+
+void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr, 
+	                                      const double initialCellDiameterDensity, 
+	                                      const double k, const double A, const double dt,
+	                                      const double expectedInterfaceWidth, const bool invertField) {
+	
+	controller_ptr->setKused(k);
+	controller_ptr->setAused(A);
+	controller_ptr->setDTused(dt);
+
+	auto rotBaseField_ptr = controller_ptr->getRotatingBaseFieldPtr();
+	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
+	auto currentStepField_ptr = rotBaseField_ptr->getPointerToCurrent();
+	auto lastStepField_ptr = rotBaseField_ptr->getPointerToLast();
+	
+	//auto layerFieldsVectorPtr = controller_ptr->getLayerFieldsVectorPtr();
+
+	const int width = (int)baseField_ptr->getFieldDimensions().width;
+	const int height = (int)baseField_ptr->getFieldDimensions().height;
+
+	const double initialCellRadius = initialCellDiameterDensity * std::min(width, height)
+		                             / (2 * std::sqrt((float)controller_ptr->getNumberCells()));
+
+	if(controller_ptr->shouldStillExpandSeeds()) {
+		expandCells(currentStepField_ptr, initialCellRadius, 
+			            controller_ptr->getLastCellSeedValue(), invertField);
+		expandCells(lastStepField_ptr, initialCellRadius, 
+			            controller_ptr->getLastCellSeedValue(), invertField);
+		expandCells(baseField_ptr, initialCellRadius, 
+			            controller_ptr->getLastCellSeedValue(), invertField);
+	}
+	else if (invertField) {
+		for (int j = 0; j < height; j++) {
+			for (int i = 0; i < width; i++) {
+				//TODO: make sure this inversion actually works in general
+				currentStepField_ptr->writeDataPoint({i,j}, 1 - currentStepField_ptr->getDataPoint({i,j}));
+				lastStepField_ptr->writeDataPoint({i,j}, 1 - lastStepField_ptr->getDataPoint({i,j}));
+				baseField_ptr->writeDataPoint({i,j}, 1 - baseField_ptr->getDataPoint({i,j}));
+			}
+		}
+	}
+	
+	double radiusToWidth = initialCellRadius / expectedInterfaceWidth;
+	printf("Radius to expected interface width = %f (radius: %f, width: %f)\n", 
+		             radiusToWidth, initialCellRadius, expectedInterfaceWidth );
+}
+
+void updatedChecks(PFM::checkData_t* checks_ptr, const int stepsPerCheckSaved) {
+	
+	int elements = PFM::getActiveFieldPtr()->getNumberOfActualElements();
+
+	if(checks_ptr->step % stepsPerCheckSaved == 0) { 
+		checks_ptr->density /= elements;
+		checks_ptr->absoluteChange /= elements;
+		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
+
+		int checksPerPrintout = 5;
+		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
+			checksPerPrintout = 1;
+		#endif
+		if(checks_ptr->step % (stepsPerCheckSaved * checksPerPrintout) == 0) {
+			printf("steps: %d - density: %f - absolute change (last step): %f\n", 
+						checks_ptr->step, checks_ptr->density, checks_ptr->absoluteChange); 
+		}
+	}	
 }

@@ -76,6 +76,11 @@ namespace PFM {
         //Returns the amount of steps ran
         int stop();
 
+        //Copies the data from the currentStep of the rotating fields into the baseField
+        void mirrorRotatingOnBase();
+        //Copies the data from the baseField into the currentStep of the rotating fields
+        void mirrorBaseOnRotating();
+
         //Returns false in case the field was unitialized or unallocated
         bool saveFieldToFile() const;
         void setAused(double newA);

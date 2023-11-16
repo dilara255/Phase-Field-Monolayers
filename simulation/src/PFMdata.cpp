@@ -200,3 +200,15 @@ void PFM::PeriodicDoublesLattice2D::addFieldCheckData(PFM::checkData_t checkData
 	}
 	return true;
 }
+
+  bool PFM::PeriodicDoublesLattice2D::mirrorAllDataFrom(PeriodicDoublesLattice2D* otherField_ptr) {
+	if(!m_hasIntialized || !m_hasAllocated) { return false; }
+	if(!otherField_ptr->isInitialized() || !otherField_ptr->hasAllocated()) { return false; }
+	if(m_data.size() != otherField_ptr->getNumberOfActualElements()) { return false; }
+	
+	for (size_t i = 0; i < m_data.size(); i++) {
+		m_data[i] = otherField_ptr->getElement(i);
+	}
+	return true;
+}
+ 

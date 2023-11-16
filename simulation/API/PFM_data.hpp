@@ -89,6 +89,10 @@ namespace PFM {
 		//If the field is not yet initialized or allocated, also returns false (and doesn't accept new data).
 		bool acceptBulkData(coordinate_t startingPoint, std::vector<double> newData);
 
+		//If the fields don't have the exact same size, returns false.
+		//If either of the field are not yet initialized or allocated, also returns false.
+		bool mirrorAllDataFrom(PeriodicDoublesLattice2D* otherField_ptr);
+
 	private:
 		std::vector<double> m_data;
 
