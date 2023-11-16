@@ -16,7 +16,7 @@ inline double chNumericalF(const PFM::neighborhood9_t* neigh_ptr, double k, doub
 	return k*laplacian - A*phi*(1-phi)*(1-2*phi);
 }
 
-//TODO: implement methods on simulContro.hpp TODO and then these integrations
+//TODO: implement integrations
 
 void explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
 	                          double dt, double chK, double chA, PFM::checkData_t* checks_ptr) {
@@ -51,6 +51,7 @@ void explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotat
 	}
 }
 
+//TODO: maxSteps plus maxDif, e fazer rodar até (dif <= maxDif || step >= maxSteps)
 void implicitEulerCahnHiliard(int steps, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
 	                                            PFM::PeriodicDoublesLattice2D* baseField_ptr, double dt,
 	                                               double chK, double chA, PFM::checkData_t* checks_ptr) {
@@ -110,7 +111,17 @@ void implicitEulerCahnHiliard(int steps, PFM::CurrentAndLastPerioricDoublesLatti
 }
 
 void heunCahnHiliard(PFM::PeriodicDoublesLattice2D* field_ptr,
-	                 PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr) {
+	                 PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+	                 double chK, double chA, double dt, 
+	                 PFM::checkData_t* checks_ptr) {
+
+}
+
+void verletCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+								   PFM::PeriodicDoublesLattice2D* field_ptr,
+	                               PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
+	                               double chK, double chA, double dt, 
+	                               PFM::checkData_t* checks_ptr) {
 
 }
 
@@ -298,12 +309,12 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 			
 				tempKsField_ptr->writeDataPoint(centerPoint, 0); //clear tempKs
 
-				neigh = lastStepField_ptr->getNeighborhood(centerPoint);
+				neigh = baseField_ptr->getNeighborhood(centerPoint);
 				
 				kn = dt * chNumericalF(&neigh, k, A);
 				tempKsField_ptr->incrementDataPoint(centerPoint, (1.0/6) * kn);
 				
-				phi0 = baseField_ptr->getDataPoint(centerPoint);
+				phi0 = neigh.getCenter();
 				currentStepField_ptr->writeDataPoint(centerPoint, phi0 + kn);
 			}
 		}
@@ -358,10 +369,9 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 				neigh = lastStepField_ptr->getNeighborhood(centerPoint);
 
 				kn = dt * chNumericalF(&neigh, k, A);
-				tempKsField_ptr->incrementDataPoint(centerPoint, (1.0/6) * kn);
-				
+				dPhi = tempKsField_ptr->getDataPoint(centerPoint) + (1.0/6) * kn;
+
 				phi0 = baseField_ptr->getDataPoint(centerPoint);
-				dPhi = tempKsField_ptr->getDataPoint(centerPoint);
 				phi = phi0 + dPhi;
 
 				baseField_ptr->writeDataPoint(centerPoint, phi);		
@@ -370,17 +380,16 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 				checkData.absoluteChange += std::abs(dPhi/dt);
 			}
 		}
-
-		int checksPerPrintout = 5;
-		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
-			checksPerPrintout = 1;
-		#endif
 		
 		if(*stepCount_ptr % stepsPerCheckSaved == 0) { 
 			checkData.density /= (width * height);
 			checkData.absoluteChange /= (width * height);
 			currentStepField_ptr->addFieldCheckData(checkData);
 
+			int checksPerPrintout = 5;
+			#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
+				checksPerPrintout = 1;
+			#endif
 			if(*stepCount_ptr % (stepsPerCheckSaved * checksPerPrintout) == 0) {
 				printf("steps: %d - density: %f - absolute change (last step): %f\n", 
 							*stepCount_ptr, checkData.density, checkData.absoluteChange); 
@@ -388,7 +397,6 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 		}	
 
 		*stepCount_ptr += 1;
-		rotBaseField_ptr->rotatePointers();
 	}
 
 	*isRunning_ptr = false;

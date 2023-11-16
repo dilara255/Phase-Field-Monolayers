@@ -32,8 +32,23 @@ std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>* PFM::SimulationControl::
 	return (std::vector<std::unique_ptr<PeriodicDoublesLattice2D>>*)&m_perCellLaticePtrs;
 }
 
+PeriodicDoublesLattice2D* PFM::SimulationControl::getActiveFieldPtr() {
+	return m_activeBaseField_ptr;
+}
+
+PeriodicDoublesLattice2D* PFM::SimulationControl::setRotatingCurrentAsActive() {
+	m_activeBaseField_ptr = m_rotatingBaseLattice_ptr->getPointerToCurrent();
+	return m_activeBaseField_ptr;
+}
+
+PeriodicDoublesLattice2D* PFM::SimulationControl::setBaseAsActive() {
+	m_activeBaseField_ptr = m_rotatingBaseLattice_ptr->getPointerToLast();
+	return m_activeBaseField_ptr;	
+}
         
 void PFM::SimulationControl::releaseFields() {
+	
+	m_activeBaseField_ptr = NULL;
 	if (m_rotatingBaseLattice_ptr != NULL) {
 		m_rotatingBaseLattice_ptr->releaseFields();
 		m_rotatingBaseLattice_ptr.release();
@@ -44,6 +59,8 @@ void PFM::SimulationControl::releaseFields() {
 	if (m_RKtempAccField_ptr != NULL) {
 		m_RKtempAccField_ptr.release();
 	}
+
+	m_hasInitialized = false;
 }
 
 //TODO: this whole thing should be reimplemented, and probably split apart a bit
@@ -122,6 +139,7 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 	m_shouldStop = false;
 	m_stepsRan = 0;
     m_stepsToRun = 0;
+	setBaseAsActive();
 
 	m_hasInitialized = true;
 }
@@ -257,13 +275,13 @@ void PFM::SimulationControl::resetStepsAlreadyRan() {
 
 ///These API calls are really just wrappers to calls to methods of the controller:
 
-CurrentAndLastPerioricDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions, 
-	                                                              uint32_t numberCells, 
-																  PFM::initialConditions initialCond, 
-																  bool perCellLayer) {
+const PeriodicDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions, 
+	                                                      uint32_t numberCells, 
+	                                                      PFM::initialConditions initialCond, 
+													      bool perCellLayer) {
 	
 	controller.reinitializeController(dimensions, numberCells, initialCond, perCellLayer);
-	return controller.getRotatingBaseFieldPtr();
+	return controller.getActiveFieldPtr();
 }
 
 bool PFM::isSimulationRunning() {
