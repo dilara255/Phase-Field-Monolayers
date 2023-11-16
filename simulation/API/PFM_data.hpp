@@ -41,6 +41,8 @@ namespace PFM {
 		int step = 0;
 		double density = 0;
 		double absoluteChange = 0;
+
+		inline void zeroOut() { step = 0; density = 0; absoluteChange = 0; }
 	} checkData_t;
 
 	typedef struct fieldDimensions_st {

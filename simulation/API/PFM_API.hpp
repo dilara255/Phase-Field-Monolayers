@@ -31,4 +31,5 @@ namespace PFM {
 	
 	//Returns NULL in case no field is active or the simulation hasn't been initialized
 	PFM_API PeriodicDoublesLattice2D* getActiveFieldPtr();
+	PFM_API const PeriodicDoublesLattice2D* getActiveFieldConstPtr();
 }

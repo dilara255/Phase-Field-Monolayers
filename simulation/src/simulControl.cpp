@@ -36,7 +36,7 @@ PeriodicDoublesLattice2D* PFM::SimulationControl::getActiveFieldPtr() {
 	return m_activeBaseField_ptr;
 }
 
-PeriodicDoublesLattice2D* PFM::SimulationControl::setRotatingCurrentAsActive() {
+PeriodicDoublesLattice2D* PFM::SimulationControl::setRotatingLastAsActive() {
 	m_activeBaseField_ptr = m_rotatingBaseLattice_ptr->getPointerToLast();
 	return m_activeBaseField_ptr;
 }
@@ -316,8 +316,10 @@ void PFM::runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun) {
 	controller.runForSteps(stepsToRun, simulationToRun);
 }
 
-//TODO: this gives the default-current between the two rotating fields. 
-//WARNING: May introduce a 1-step delay.
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {
-	return controller.getRotatingBaseFieldPtr()->getPointerToCurrent();
+	return controller.getActiveFieldPtr();
+}
+
+const PeriodicDoublesLattice2D* PFM::getActiveFieldConstPtr() {
+	return (const PeriodicDoublesLattice2D*)controller.getActiveFieldPtr();
 }
