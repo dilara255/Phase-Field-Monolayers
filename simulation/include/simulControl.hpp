@@ -60,6 +60,8 @@ namespace PFM {
         PeriodicDoublesLattice2D* setRotatingLastAsActive(); //also returns the new active pointer
         PeriodicDoublesLattice2D* setBaseAsActive(); //also returns the new active pointer
 
+        checkData_t* getActiveFieldsCheckDataPtr();
+
         //If not yet initialized, initializes and creates a new field
         //Otherwise, destroys the old field, reinitializes and creates a new field with "dimensions"
         //Defaults to initialConditions::EVENLY_SPACED_INDEX if a bad condition is passed

@@ -32,39 +32,44 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 
 	//TODO: extract the parameters
 	const bool invertField = true;
-	const double k = 1;
+	const double k = 2;
 	const double A = 0.5;
 	const double dt = 0.05;
+	const double expectedInterfaceWidth = std::sqrt(2*k/A);
 	const double initialCellDiameterDensity = 1/std::sqrt(2);
 
 	preProccessFieldsAndUpdateController(controller_ptr, initialCellDiameterDensity, k, A, dt,
-		                                                        std::sqrt(2*k/A), invertField);
+		                                                  expectedInterfaceWidth, invertField);
 	
-	PFM::checkData_t checkData;
+	controller_ptr->setBaseAsActive();
+	auto checks_ptr = controller_ptr->getActiveFieldsCheckDataPtr();
 	auto rotBaseField_ptr = controller_ptr->getRotatingBaseFieldPtr();
 	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
 	auto tempKsAndDphis_ptr = controller_ptr->getLastDphisAndTempKsFieldPtr();
 
+	updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved());
+
 	//The actual steps:
 	while(!controller_ptr->checkIfShouldStop()) {
+	
+		INT::TD::explicitEulerCahnHiliard(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
 
 		//controller_ptr->setRotatingLastAsActive();
-		//INT::TD::explicitEulerCahnHiliard(rotBaseField_ptr, dt, k, A, &checkData);
 		//INT::TD::implicitEulerCahnHiliard(4, rotBaseField_ptr, baseField_ptr, dt, k ,A, &checkData);
 		//INT::TD::heunCahnHiliard(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
 
-		controller_ptr->setBaseAsActive();
+		//controller_ptr->setBaseAsActive();
 		/*
 		INT::TD::rungeKuttaCahnHiliard(INT::rungeKuttaOrder::TWO, rotBaseField_ptr, baseField_ptr, 
 			                                             tempKsAndDphis_ptr, dt, k, A, &checkData);
 		INT::TD::rungeKuttaCahnHiliard(INT::rungeKuttaOrder::FOUR, rotBaseField_ptr, baseField_ptr, 
 			                                             tempKsAndDphis_ptr, dt, k, A, &checkData);
 		*/
-		INT::TD::verletCahnHiliard(rotBaseField_ptr, baseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
+		//INT::TD::verletCahnHiliard(rotBaseField_ptr, baseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
 
-		updatedChecks(&checkData, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved());
+		*stepCount_ptr += 1;
 
-		*stepCount_ptr += 1;				
+		updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved());
 	}
 
 	*isRunning_ptr = false;
@@ -126,7 +131,7 @@ void PFM::singleLayerCHsimOnlyCurrent_fn(SimulationControl* controller_ptr, int*
 
 	while(!controller_ptr->checkIfShouldStop()) {
 
-		checkData.density = 0;
+		checkData.densityChange = 0;
 		checkData.absoluteChange = 0;
 		checkData.step = *stepCount_ptr;
 
@@ -155,7 +160,7 @@ void PFM::singleLayerCHsimOnlyCurrent_fn(SimulationControl* controller_ptr, int*
 				change = dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi));
 				newValue = phi0 + change;
 				
-				checkData.density += newValue;
+				checkData.densityChange += change;
 				checkData.absoluteChange += std::abs(change);
 
 				currentStepField_ptr->writeDataPoint(centerPoint, phi0 + change);
@@ -168,13 +173,14 @@ void PFM::singleLayerCHsimOnlyCurrent_fn(SimulationControl* controller_ptr, int*
 		#endif
 		
 		if(*stepCount_ptr % stepsPerCheckSaved == 0) { 
-			checkData.density /= (width * height);
+			checkData.densityChange /= (width * height);
+			checkData.lastDensity += checkData.densityChange;
 			checkData.absoluteChange /= (width * height);
 			currentStepField_ptr->addFieldCheckData(checkData);
 
 			if(*stepCount_ptr % (stepsPerCheckSaved * checksPerPrintout) == 0) {
 				printf("steps: %d - density: %f - absolute change (last step): %f\n", 
-							*stepCount_ptr, checkData.density, checkData.absoluteChange); 
+							*stepCount_ptr, checkData.lastDensity, checkData.absoluteChange); 
 			}
 		}	
 
@@ -265,19 +271,26 @@ void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius,
 	}
 
 	double valueOn = cellSeedValue;
-	if(invertValueOn) { valueOn = 0.5 + (0.5 - valueOn); } //reflect around 0.5
-
+	double inverseValueOn = 0.5 + (0.5 - valueOn); //reflect around 0.5
+	double valueOff = inverseValueOn;
+	if(invertValueOn) { valueOff = valueOn; valueOn = inverseValueOn; } 
+	double newValue;
+	lattice_ptr->checks.zeroOut();
+	
 	for (int j = 0; j < height; j++) {
 		for (int i = 0; i < width; i++) {
+
 			double value = lattice_ptr->getDataPoint({i,j});
-			if(value < 0) {
-				lattice_ptr->writeDataPoint({i,j}, valueOn);
-			}
-			else {
-				lattice_ptr->writeDataPoint({i,j}, 1 - valueOn);
-			}
+
+			if(value < 0) { newValue = valueOn; }
+			else { newValue = valueOff; }
+			
+			lattice_ptr->writeDataPoint({i,j}, newValue);
+			lattice_ptr->checks.lastDensity += newValue;
 		}
 	}
+
+	lattice_ptr->checks.lastDensity /= (width * height);
 }
 
 void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr, 
@@ -329,9 +342,10 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved) {
 	
 	if(step % stepsPerCheckSaved == 0) { 
-		int elements = PFM::getActiveFieldPtr()->getNumberOfActualElements();
+		int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
 
-		checks_ptr->density /= elements;
+		checks_ptr->densityChange /= elements;
+		checks_ptr->lastDensity += checks_ptr->densityChange;
 		checks_ptr->absoluteChange /= elements;
 		checks_ptr->step = step;
 	
@@ -343,9 +357,9 @@ void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int steps
 		#endif
 		if(checks_ptr->step % (stepsPerCheckSaved * checksPerPrintout) == 0) {
 			printf("steps: %d - density: %f - absolute change (last step): %f\n", 
-						checks_ptr->step, checks_ptr->density, checks_ptr->absoluteChange); 
+						checks_ptr->step, checks_ptr->lastDensity, checks_ptr->absoluteChange); 
 		}
 	}	
 
-	checks_ptr->zeroOut();
+	checks_ptr->clearChanges();
 }

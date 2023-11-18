@@ -21,7 +21,8 @@ namespace INT {
 
 namespace TD {
 
-void explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
+void explicitEulerCahnHiliard(PFM::PeriodicDoublesLattice2D* phiField, 
+						      PFM::PeriodicDoublesLattice2D* auxField,
 	                          const double dt, const double chK, const double chA, 
 	                          PFM::checkData_t* checks_ptr);
 
