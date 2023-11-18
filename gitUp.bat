@@ -3,7 +3,7 @@ echo off
 set major=0
 set minor=1
 set sub=4
-set build=6
+set build=7
 
 git status
 pause
