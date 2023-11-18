@@ -32,9 +32,9 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 
 	//TODO: extract the parameters
 	const bool invertField = true;
-	const double k = 2;
-	const double A = 0.5;
-	const double dt = 0.05;
+	const double k = 1;
+	const double A = 0.25;
+	const double dt = 0.75;
 	const double expectedInterfaceWidth = std::sqrt(2*k/A);
 	const double initialCellDiameterDensity = 1/std::sqrt(2);
 

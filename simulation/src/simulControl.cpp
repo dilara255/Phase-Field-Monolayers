@@ -188,14 +188,13 @@ void PFM::SimulationControl::mirrorBaseOnRotating() {
 //TODO: an actual reasonable save system : p
 bool PFM::SimulationControl::saveFieldToFile() const {
 
-	if (!m_hasInitialized || m_rotatingBaseLattice_ptr->getPointerToCurrent() == NULL) { return false; }
+	if (!m_hasInitialized || m_activeBaseField_ptr == NULL) { return false; }
 	
-	auto currentBaseLatticePtr = m_rotatingBaseLattice_ptr->getPointerToCurrent();
-	if(!currentBaseLatticePtr->isInitialized() || !currentBaseLatticePtr->hasAllocated()) {
+	if(!m_activeBaseField_ptr->isInitialized() || !m_activeBaseField_ptr->hasAllocated()) {
 		return false;
 	}
 
-	auto dimensions = currentBaseLatticePtr->getFieldDimensions();
+	auto dimensions = m_activeBaseField_ptr->getFieldDimensions();
 
 	std::string baseFilename = "sim" + std::to_string((int)m_lastSimulFuncUsed) 
 		                     + "_A" + std::to_string(m_lastA) + "_k" + std::to_string(m_lastK)
@@ -216,7 +215,7 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 	double value;
 	for (int j = 0; j < (int)dimensions.height; j++) {
 		for (int i = 0; i < (int)dimensions.width; i++) {
-		  value = currentBaseLatticePtr->getDataPoint({i,j});
+		  value = m_activeBaseField_ptr->getDataPoint({i,j});
 		  fprintf(fp_pgm, "%c", (char)(value*maxColor));
 		  fprintf(fp_bin, "%f", value);
 		}
