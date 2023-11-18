@@ -62,6 +62,7 @@ PFM::PeriodicDoublesLattice2D::PeriodicDoublesLattice2D(fieldDimensions_t newDim
 		if (initialData.size() == m_elements) {
 			for (size_t i = 0; i < m_elements; i++) {
 				m_data.push_back(initialData[i]);
+				checks.lastDensity += initialData[i];
 			}
 			m_hasIntialized = true;
 		}
@@ -71,6 +72,11 @@ PFM::PeriodicDoublesLattice2D::PeriodicDoublesLattice2D(fieldDimensions_t newDim
 			}
 		}
 	}
+
+	checks.lastDensity /= newDimensions.totalElements();
+	
+	//TODO: do I really want this printif here?
+	printf("Field loaded with density %f\n", checks.lastDensity);
 
 	return;
 }
@@ -123,7 +129,7 @@ double PFM::PeriodicDoublesLattice2D::getDataPoint(coordinate_t coordinate) cons
 }
 
 double PFM::PeriodicDoublesLattice2D::getElement(size_t index) const {
-	if (index >= m_elements) { return NAN; }
+	if (index >= m_elements) { assert(false); return NAN; }
 	else { return m_data[index]; }
 }
 
@@ -151,13 +157,13 @@ neighborhood9_t PFM::PeriodicDoublesLattice2D::getNeighborhood(coordinate_t cent
 
 void PFM::PeriodicDoublesLattice2D::writeDataPoint(coordinate_t coordinate, double newValue) {
 	size_t index = indexFromPeriodicCoordinate(coordinate);
-	if (index >= m_elements) { return; }
+	if (index >= m_elements) { assert(false); return; }
 	else { m_data[index] = newValue; return; }
 }
 
 void PFM::PeriodicDoublesLattice2D::incrementDataPoint(coordinate_t coordinate, double changeInValue) {
 	size_t index = indexFromPeriodicCoordinate(coordinate);
-	if (index >= m_elements) { return; }
+	if (index >= m_elements) { assert(false); return; }
 	else { m_data[index] += changeInValue; return; }
 }
 

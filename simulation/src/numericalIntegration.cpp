@@ -3,57 +3,68 @@
 //TODO: Implement : )
 
 double INT::rungeKutaKnIntermediateCoef(rungeKuttaOrder order, int n) {
-	if(n <= 0) { assert("BAD RK N"); return 0.0; }
+	if(n <= 0) { assert(false); return 0.0; }
 
 	double order2[2] = { 0.5, 0 };
 	double order4[4] = { 0.5, 0.5, 1, 0 };
 
 	if (order == rungeKuttaOrder::TWO) {
-		if(n > 2) { assert("BAD RK N"); return 0.0; }
+		if(n > 2) { assert(false); return 0.0; }
 
 		return order2[n-1];
 	}
 	else if (order == rungeKuttaOrder::FOUR) {
-		if(n > 4) { assert("BAD RK N"); return 0.0; }
+		if(n > 4) { assert(false); return 0.0; }
 
 		return order4[n-1];
 	}
-	else { assert("BAD RK ORDER"); return 0.0; }
+	else { assert(false); return 0.0; }
 }
 
 double INT::rungeKutaKnFinalCoef(rungeKuttaOrder order, int n) {
-	if(n <= 0) { assert("BAD RK N"); return 0.0; }
+	if(n <= 0) { assert(false); return 0.0; }
 
 	double order2[2] = { 0, 1 };
 	double order4[4] = { 1.0/6, 1.0/3, 1.0/3, 1.0/6 };
 
 	if (order == rungeKuttaOrder::TWO) {
-		if(n > 2) { assert("BAD RK N"); return 0.0; }
+		if(n > 2) { assert(false); return 0.0; }
 
 		return order2[n-1];
 	}
 	else if (order == rungeKuttaOrder::FOUR) {
-		if(n > 4) { assert("BAD RK N"); return 0.0; }
+		if(n > 4) { assert(false); return 0.0; }
 
 		return order4[n-1];
 	}
-	else { assert("BAD RK ORDER"); return 0.0; }
+	else { assert(false); return 0.0; }
 }
 
-void INT::TD::explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
+//Really this is FTCS
+void INT::TD::explicitEulerCahnHiliard(PFM::PeriodicDoublesLattice2D* phiField, 
+									   PFM::PeriodicDoublesLattice2D* auxField,
 	                                   const double dt, const double chK, const double chA, 
 	                                   PFM::checkData_t* checks_ptr) {
 	
-	auto currentStepField_ptr = rotatingField_ptr->getPointerToCurrent();
-	auto lastStepField_ptr = rotatingField_ptr->getPointerToLast();
-
-	int height = currentStepField_ptr->getFieldDimensions().height;
-	int width = currentStepField_ptr->getFieldDimensions().width;
+	int height = phiField->getFieldDimensions().height;
+	int width = phiField->getFieldDimensions().width;
 
 	PFM::coordinate_t centerPoint;
 	PFM::neighborhood9_t neigh;
+	
+	for (int j = 0; j < height; j++) {
+			centerPoint.y = j;
+
+		for (int i = 0; i < width; i++) {
+			centerPoint.x = i;
+		
+			neigh = phiField->getNeighborhood(centerPoint);
+		
+			auxField->writeDataPoint(centerPoint, chNumericalF(&neigh, chK, chA));
+		}
+	}
+
 	double dPhi;
-	double phi;
 
 	for (int j = 0; j < height; j++) {
 			centerPoint.y = j;
@@ -61,21 +72,20 @@ void INT::TD::explicitEulerCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice
 		for (int i = 0; i < width; i++) {
 			centerPoint.x = i;
 		
-			neigh = lastStepField_ptr->getNeighborhood(centerPoint);
+			neigh = auxField->getNeighborhood(centerPoint);
 		
-			dPhi = chNumericalF(&neigh, chK, chA);
-			phi = neigh.getCenter() + dt * dPhi;
+			dPhi = PFM::laplacian9pointsAroundNeighCenter(&neigh);
 
-			currentStepField_ptr->writeDataPoint(centerPoint, phi);
-
-			checks_ptr->density += phi;
+			phiField->incrementDataPoint(centerPoint, dt * dPhi);
+			
+			checks_ptr->densityChange += dPhi * dt;
 			checks_ptr->absoluteChange += std::abs(dPhi);
 		}
 	}
-
-	rotatingField_ptr->rotatePointers();
 }
 
+//TODO: FIX ALL OF THE BELLOW:
+/*
 //TODO: pass maxSteps plus maxDif, run while(dif > maxDif && step < maxSteps)
 void INT::TD::implicitEulerCahnHiliard(int steps, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
 	                                   PFM::PeriodicDoublesLattice2D* baseField_ptr, const double dt,
@@ -372,7 +382,7 @@ void INT::TD::rungeKuttaCahnHiliard(INT::rungeKuttaOrder order,
 								    PFM::checkData_t* checks_ptr) {
 
 	int steps = INT::rkStepsFromOrder(order);
-	if(steps == 0) { assert("BAD RK ORDER"); return; }
+	if(steps == 0) { assert(false); return; }
 
 	int height = field_ptr->getFieldDimensions().height;
 	int width = field_ptr->getFieldDimensions().width;
@@ -395,3 +405,4 @@ void INT::TD::rungeKuttaCahnHiliard(INT::rungeKuttaOrder order,
 	rungeKutaCahnHiliardFinalStep(coefKnFinal, height, width, 
 		                          rotatingField_ptr, field_ptr, tempKs_ptr, dt, chK, chA, checks_ptr);
 }
+*/

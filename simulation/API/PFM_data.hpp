@@ -39,10 +39,12 @@ namespace PFM {
 
 	typedef struct checkData_st {
 		int step = 0;
-		double density = 0;
+		double lastDensity = 0;
+		double densityChange = 0;
 		double absoluteChange = 0;
 
-		inline void zeroOut() { step = 0; density = 0; absoluteChange = 0; }
+		inline void clearChanges() {densityChange = 0; absoluteChange = 0;}
+		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0; }
 	} checkData_t;
 
 	typedef struct fieldDimensions_st {
@@ -94,6 +96,10 @@ namespace PFM {
 		//If the fields don't have the exact same size, returns false.
 		//If either of the field are not yet initialized or allocated, also returns false.
 		bool mirrorAllDataFrom(PeriodicDoublesLattice2D* otherField_ptr);
+
+		//To hold check data for the field. Is initialized on field initialization
+		//Other than that, is of responsability of the user of the class
+		checkData_t checks;
 
 	private:
 		std::vector<double> m_data;

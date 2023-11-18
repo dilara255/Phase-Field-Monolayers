@@ -45,6 +45,10 @@ PeriodicDoublesLattice2D* PFM::SimulationControl::setBaseAsActive() {
 	m_activeBaseField_ptr = m_baseLattice_ptr.get();
 	return m_activeBaseField_ptr;	
 }
+
+checkData_t* PFM::SimulationControl::getActiveFieldsCheckDataPtr() {
+	return &m_activeBaseField_ptr->checks;
+}
         
 void PFM::SimulationControl::releaseFields() {
 	
@@ -84,12 +88,18 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 	//The data to be used on initialization:
 	int cellSpacing = elements;
 	if(numberCells > 1) { cellSpacing /= numberCells; }
+	bool centerSingleCell = false; //TODO: pass as parameter
 
 	if(!perCellLayer) {
 		if (initialCond == PFM::initialConditions::EVENLY_SPACED_INDEX) {
 			for (size_t i = 0; i < elements; i++) {
 				//To "seed" numberCells equally spaced cells with initialValue, and all others with zero:
-				initialData.push_back(cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
+				if (numberCells == 1 && centerSingleCell) {
+					initialData.push_back(cellSeedValue * ( i == (elements + dimensions.width)/2) );
+				}
+				else {
+					initialData.push_back(cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
+				}
 			}
 			m_seedsNeedExpanding = true;
 		}
