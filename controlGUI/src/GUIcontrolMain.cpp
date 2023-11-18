@@ -23,7 +23,7 @@ typedef struct parameters_st {
 parameters_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
 	{512, 512, 50},
 	{128, 128, 1, PFM::initialConditions::BALANCED_RANDOM},
-	{128, 128, 1, PFM::initialConditions::BALANCED_RANDOM},
+	{128, 128, 1, PFM::initialConditions::EVENLY_SPACED_INDEX},
 	{128, 128, 5}
 };
 

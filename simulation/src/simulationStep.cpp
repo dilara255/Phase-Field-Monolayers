@@ -32,9 +32,10 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 
 	//TODO: extract the parameters
 	const bool invertField = true;
-	const double k = 1;
+	constexpr double k = 1;
 	const double A = 0.25;
-	const double dt = 0.75;
+	constexpr double dt = 0.25;
+	static_assert(dt <= 1/(4*k), "dt too large for k"); //Max dt for heat diffusion in FTCS, used as a ballpark
 	const double expectedInterfaceWidth = std::sqrt(2*k/A);
 	const double initialCellDiameterDensity = 1/std::sqrt(2);
 

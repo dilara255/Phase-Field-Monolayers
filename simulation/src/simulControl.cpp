@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "PFM_API.hpp"
 #include "PFM_tests.hpp"
 #include "simulControl.hpp"
@@ -186,6 +188,7 @@ void PFM::SimulationControl::mirrorBaseOnRotating() {
 }
 
 //TODO: an actual reasonable save system : p
+//NOTE: values are clamped to [0, 1]
 bool PFM::SimulationControl::saveFieldToFile() const {
 
 	if (!m_hasInitialized || m_activeBaseField_ptr == NULL) { return false; }
@@ -216,7 +219,7 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 	for (int j = 0; j < (int)dimensions.height; j++) {
 		for (int i = 0; i < (int)dimensions.width; i++) {
 		  value = m_activeBaseField_ptr->getDataPoint({i,j});
-		  fprintf(fp_pgm, "%c", (char)(value*maxColor));
+		  fprintf(fp_pgm, "%c", (char)(std::clamp(value, 0.0, 1.0) * maxColor));
 		  fprintf(fp_bin, "%f", value);
 		}
 	}
