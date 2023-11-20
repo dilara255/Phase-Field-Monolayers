@@ -74,7 +74,9 @@ void INT::TD::explicitEulerCahnHiliard(PFM::PeriodicDoublesLattice2D* phiField,
 		
 			neigh = auxField->getNeighborhood(centerPoint);
 		
-			dPhi = PFM::laplacian9pointsAroundNeighCenter(&neigh);
+			dPhi = -PFM::laplacian9pointsAroundNeighCenter(&neigh);
+			//-lap: the more a point "needs" to be pulled than their neighbor, the more they are pulled
+			//at the same time, the laplacian has sum 0 (on this periodic field), so total phi is conserverd
 
 			phiField->incrementDataPoint(centerPoint, dt * dPhi);
 			

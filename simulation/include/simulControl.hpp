@@ -67,7 +67,7 @@ namespace PFM {
         //Defaults to initialConditions::EVENLY_SPACED_INDEX if a bad condition is passed
         void reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
                                     PFM::initialConditions initialCond, bool perCellLayer, 
-                                    double cellSeedValue = CELL_SEED_VAL);
+                                    double bias = 0, double cellSeedValue = CELL_SEED_VAL);
 
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
@@ -125,6 +125,8 @@ namespace PFM {
         double m_lastA = -1;
         double m_lastDT = -1;
         int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
+        initialConditions m_lastInitialContidion = initialConditions::TOTAL_INITIAL_CONDS;
+        double m_lastBias = -9999;
         
         //To be filled with actual data:
         std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr;
