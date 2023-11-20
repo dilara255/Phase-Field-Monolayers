@@ -18,16 +18,15 @@ namespace PFM {
     //*******************SimulationFunctions*************************
     //These are the definitions of the possible simulation functions:
     class SimulationControl;
-    typedef void SimulationSteps_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr);
+    typedef void SimulationSteps_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr,
+                                                                                     integrationMethods method);
     
     //WARNING: these should always be kept in synch with PFM::simFuncEnum (@PFM_API.hpp)
     SimulationSteps_fn dataAndControllerTest_fn;
-    SimulationSteps_fn singleLayerCHsimOnlyCurrent_fn;
-    SimulationSteps_fn singleLayerCHsimCurrentAndOld_fn;
+    SimulationSteps_fn singleLayerCHsim_fn;
     SimulationSteps_fn multiLayerCHsim_fn;
     static SimulationSteps_fn* simFunctionsPtrs_arr[(int)simFuncEnum::TOTAL_SIM_FUNCS] = {
-        &dataAndControllerTest_fn, &singleLayerCHsimOnlyCurrent_fn, &singleLayerCHsimCurrentAndOld_fn,
-        &multiLayerCHsim_fn
+        &dataAndControllerTest_fn, &singleLayerCHsim_fn, &multiLayerCHsim_fn
     };
     //***************************************************************
 
@@ -72,7 +71,8 @@ namespace PFM {
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
         //Does nothing in case the simulation is already running or a bad simFuncEnum is passed.
-        void runForSteps(int steps, simFuncEnum simulationToRun);
+        void runForSteps(int steps, simFuncEnum simulationToRun, 
+                         integrationMethods methodToUse = integrationMethods::FTCS);
         //Asks the controller to stop and waits for confirmation (in MS_TO_WAIT ms sleep cycles)
         //When the simulation actually stops, its thread is joined. Does nothing if the simulation isn't running.
         //Returns the amount of steps ran
@@ -127,6 +127,7 @@ namespace PFM {
         int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
         initialConditions m_lastInitialContidion = initialConditions::TOTAL_INITIAL_CONDS;
         double m_lastBias = -9999;
+        integrationMethods m_lastMethod = integrationMethods::TOTAL_METHODS;
         
         //To be filled with actual data:
         std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr;
