@@ -72,7 +72,7 @@ void PFM::SimulationControl::releaseFields() {
 //TODO: this whole thing should be reimplemented, and probably split apart a bit
 void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
 													PFM::initialConditions initialCond, bool perCellLayer, 
-	                                                                                 double cellSeedValue) {
+	                                                                    double bias, double cellSeedValue) {
 	
 	if(isSimulationRunning()) { stop(); }
 	releaseFields();
@@ -109,7 +109,7 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 			uint64_t seed = m_initialSeed;
 			for (size_t i = 0; i < elements; i++) {
 				//Each elemnt starts with a random value between -0.5 and 1.5:
-				double value = -0.5 + 2*(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
+				double value = bias -0.5 + 2*(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
 				initialData.push_back(value);
 			}
 			m_seedsNeedExpanding = false;
@@ -152,6 +152,9 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 	m_stepsRan = 0;
     m_stepsToRun = 0;
 	setBaseAsActive();
+
+	m_lastInitialContidion = initialCond;
+	m_lastBias = bias;
 
 	m_hasInitialized = true;
 }
@@ -200,6 +203,8 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 	auto dimensions = m_activeBaseField_ptr->getFieldDimensions();
 
 	std::string baseFilename = "sim" + std::to_string((int)m_lastSimulFuncUsed) 
+							 + "_ini" + std::to_string((int)m_lastInitialContidion) 
+							 + "_b" + std::to_string(m_lastBias)
 		                     + "_A" + std::to_string(m_lastA) + "_k" + std::to_string(m_lastK)
 		                     + "_dt" + std::to_string(m_lastDT)
 		                     + "_" + std::to_string(m_cells) + "_" + std::to_string(dimensions.width) 
@@ -298,9 +303,10 @@ void PFM::SimulationControl::resetStepsAlreadyRan() {
 const PeriodicDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions, 
 	                                                      uint32_t numberCells, 
 	                                                      PFM::initialConditions initialCond, 
-													      bool perCellLayer) {
+														  double bias,												      
+														  bool perCellLayer) {
 	
-	controller.reinitializeController(dimensions, numberCells, initialCond, perCellLayer);
+	controller.reinitializeController(dimensions, numberCells, initialCond, perCellLayer, bias);
 	return controller.getActiveFieldPtr();
 }
 

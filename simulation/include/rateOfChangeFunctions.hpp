@@ -7,18 +7,20 @@
 
 namespace INT {
 	//"f", the time derivative for numerical integration, for Cahn-Hiliard
+	//TODO: that's not really what this is
 	inline double chNumericalF(const PFM::neighborhood9_t* neigh_ptr, const double k, const double A) {
 		const double phi = neigh_ptr->getCenter();
 		const double laplacianPhi = PFM::laplacian9pointsAroundNeighCenter(neigh_ptr);
 
-		return -k*laplacianPhi + A*phi*(1-phi)*(1-2*phi);
+		return k*laplacianPhi - A*phi*(1-phi)*(1-2*phi);
+		//+lap -> diffusion (- would accentuate differences)
+		//-phi*(1-phi)*(1-2*phi): pulls to the attractors (+ would push)
 	}
 
+	/*
 	//WARNING: this is not right
-	//TODO: FIX 
+	//TODO: FIX IF VERLET IS EVER RE-IMPLEMENTED
 	//"A(xn)", the second time derivative for numerical integration, for Cahn-Hiliard
-	//Note: changing the signs of the terms gives off interesting effects
-	//-k term + A term seems stable (and fun) -> I did have a minus sign missing somewhere, so this makes sense
 	inline double chNumericalA(const PFM::neighborhood9_t* phiNeigh_ptr, const PFM::neighborhood9_t* dPhiNeigh_ptr, 
 																					const double k, const double A) {
 	
@@ -30,7 +32,7 @@ namespace INT {
 		const double laplacianDPhi = PFM::laplacian9pointsAroundNeighCenter(dPhiNeigh_ptr);
 		
 		return k*laplacianDPhi - A*dPhi*((1 - (a+b)*phi)*(1 - (a-b)*phi));
-	}
+	}*/
 }
 
 

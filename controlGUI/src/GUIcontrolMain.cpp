@@ -18,12 +18,13 @@
 typedef struct parameters_st {
 	int width, height, cells;
 	PFM::initialConditions initialCond = PFM::initialConditions::EVENLY_SPACED_INDEX;
+	double bias = 0;
 } parameters_t;
 
 parameters_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
 	{512, 512, 50},
-	{128, 128, 1, PFM::initialConditions::BALANCED_RANDOM},
-	{128, 128, 1, PFM::initialConditions::EVENLY_SPACED_INDEX},
+	{128, 128, 1, PFM::initialConditions::LINEAR_RANDOM},
+	{128, 128, 9, PFM::initialConditions::LINEAR_RANDOM, 0.33},
 	{128, 128, 5}
 };
 
@@ -61,11 +62,12 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	int width = defaultParamsPerSimulType[simIndex].width;
 	int height = defaultParamsPerSimulType[simIndex].height;
 	int cells = defaultParamsPerSimulType[simIndex].cells;
+	auto initialCondition = defaultParamsPerSimulType[simIndex].initialCond;
+	double bias = defaultParamsPerSimulType[simIndex].bias;	
 
 	PFM::fieldDimensions_t dimensions = {(size_t)width, (size_t)height};
-
 	
-	PFM::initializeSimulation(dimensions, cells, defaultParamsPerSimulType[simIndex].initialCond);
+	PFM::initializeSimulation(dimensions, cells, initialCondition, bias);
 
 	LOG_INFO("Simulation initialized");
 		
