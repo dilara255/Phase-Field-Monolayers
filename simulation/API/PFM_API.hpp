@@ -26,9 +26,11 @@ namespace PFM {
 	PFM_API void resetStepsRan();
 	PFM_API bool saveFieldToFile();
 	
-	//If <= 0, will run until manually stopped
-	//If the simulation is already running or the simFuncEnum is bad, will do nothing (*no warning*)
-	PFM_API void runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun);
+	//If steps <= 0, will run until manually stopped
+	//If the simulation is already running or the simFuncEnum or method is bad, will do nothing (*no warning*)
+	PFM_API void runForSteps(int stepsToRun, 
+		                     PFM::simFuncEnum simulationToRun = PFM::simFuncEnum::SINGLE_LAYER_CH_SIM,
+		                     integrationMethods method = integrationMethods::FTCS);
 	
 	//Returns NULL in case no field is active or the simulation hasn't been initialized
 	PFM_API PeriodicDoublesLattice2D* getActiveFieldPtr();

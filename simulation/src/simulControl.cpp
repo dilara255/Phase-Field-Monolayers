@@ -279,6 +279,7 @@ void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationT
 	                                                  PFM::integrationMethods method) {
 	if(controller.isSimulationRunning()) { return; }
 	if((int)simulationToRun >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) { return; }
+	if((int)method >=  (int)PFM::integrationMethods::TOTAL_METHODS) { return; }
 
 	m_stepsToRun = steps;
 	m_lastSimulFuncUsed = simulationToRun;
@@ -334,8 +335,8 @@ bool PFM::saveFieldToFile() {
 	return controller.saveFieldToFile();
 }
 	
-void PFM::runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun) {
-	controller.runForSteps(stepsToRun, simulationToRun);
+void PFM::runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun, PFM::integrationMethods method) {
+	controller.runForSteps(stepsToRun, simulationToRun, method);
 }
 
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {

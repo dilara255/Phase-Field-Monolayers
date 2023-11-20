@@ -18,6 +18,7 @@ typedef struct parameters_st {
 	int width, height, cells;
 	PFM::initialConditions initialCond = PFM::initialConditions::EVENLY_SPACED_INDEX;
 	double bias = 0;
+	PFM::integrationMethods method = PFM::integrationMethods::FTCS;
 } parameters_t;
 
 parameters_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
@@ -32,9 +33,7 @@ int main() {
 
 	if(RUN_GUI_TESTS) { result &= PFM_GUI_TESTS::guiLinkingAndDependencyTests(); }
 	if(RUN_SIM_DATACTRL_TESTS) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::DATA_CONTROL_TEST); }
-	if(RUN_SINGLE_LAYER_CH_SIM) { 
-		result &= PFM_GUI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_CH_SIM); 
-	}
+	if(RUN_SINGLE_LAYER_CH_SIM) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_CH_SIM); }
 	if(RUN_MULTI_LAYER_CH_SIM) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::MULTI_LAYER_CH_SIM); }
 
 	if(result) { LOG_INFO("All ok"); }
@@ -59,6 +58,7 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	int cells = defaultParamsPerSimulType[simIndex].cells;
 	auto initialCondition = defaultParamsPerSimulType[simIndex].initialCond;
 	double bias = defaultParamsPerSimulType[simIndex].bias;	
+	PFM::integrationMethods method = defaultParamsPerSimulType[simIndex].method;	
 
 	PFM::fieldDimensions_t dimensions = {(size_t)width, (size_t)height};
 	
