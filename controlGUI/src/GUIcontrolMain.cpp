@@ -10,8 +10,7 @@
 
 #define RUN_GUI_TESTS 0
 #define RUN_SIM_DATACTRL_TESTS 0
-#define RUN_SINGLE_LAYER_CH_SIM_NO_OLD 0
-#define RUN_SINGLE_LAYER_CH_SIM_WITH_OLD 1
+#define RUN_SINGLE_LAYER_CH_SIM 1
 #define RUN_MULTI_LAYER_CH_SIM 0
 #define TOTAL_SIM_FUNCS ((int)PFM::simFuncEnum::TOTAL_SIM_FUNCS)
 
@@ -23,7 +22,6 @@ typedef struct parameters_st {
 
 parameters_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
 	{512, 512, 50},
-	{128, 128, 1, PFM::initialConditions::LINEAR_RANDOM},
 	{128, 128, 9, PFM::initialConditions::LINEAR_RANDOM, 0.33},
 	{128, 128, 5}
 };
@@ -34,11 +32,8 @@ int main() {
 
 	if(RUN_GUI_TESTS) { result &= PFM_GUI_TESTS::guiLinkingAndDependencyTests(); }
 	if(RUN_SIM_DATACTRL_TESTS) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::DATA_CONTROL_TEST); }
-	if(RUN_SINGLE_LAYER_CH_SIM_NO_OLD) { 
-		result &= PFM_GUI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_CH_SIM_NO_OLD); 
-	}
-	if(RUN_SINGLE_LAYER_CH_SIM_WITH_OLD) { 
-		result &= PFM_GUI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_CH_SIM_WITH_OLD); 
+	if(RUN_SINGLE_LAYER_CH_SIM) { 
+		result &= PFM_GUI::runSimulation(PFM::simFuncEnum::SINGLE_LAYER_CH_SIM); 
 	}
 	if(RUN_MULTI_LAYER_CH_SIM) { result &= PFM_GUI::runSimulation(PFM::simFuncEnum::MULTI_LAYER_CH_SIM); }
 

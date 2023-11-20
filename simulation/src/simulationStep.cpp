@@ -20,22 +20,25 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 	                                      const double expectedInterfaceWidth, const bool invertField);
 
 //Runs Chan-Hiliard on one layer per cell and adds the results into a base layer
-void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
+void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr,
+	                                               integrationMethods method = integrationMethods::FTCS) {
 	//TODO: Implement : )
 	puts("multi-layer simulation not it implemented");
 	*isRunning_ptr = false;
 }
 
-//Runs Chan-Hiliard on a single base layer. Keeps current and last step and uses both to calculate change
-void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, int* stepCount_ptr, 
-	                                                                         bool* isRunning_ptr) {
+//Runs Chan-Hiliard on a single layer. Keeps current and last step and uses both to calculate change
+void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr,
+	                                                integrationMethods method = integrationMethods::FTCS) {
 
 	//TODO: extract the parameters
 	const bool invertField = false;
 	constexpr double k = 0.5;
 	const double A = 0.25;
 	constexpr double dt = 0.5;
-	static_assert(dt <= 1/(4*k), "dt too large for k"); //Max dt for heat diffusion in FTCS, used as a ballpark
+	//we're using fixed dx = dy = 1, h2 = 2
+	//TODO: add h as parameter
+	static_assert(dt <= 1/(4*k), "dt too large for k"); //Max stable dt for FTCS heat diffusion, used as a ballpark
 	const double expectedInterfaceWidth = std::sqrt(2*k/A);
 	const double initialCellDiameterDensity = 1/std::sqrt(2);
 
@@ -53,20 +56,30 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 	//The actual steps:
 	while(!controller_ptr->checkIfShouldStop()) {
 	
-		INT::TD::explicitEulerCahnHiliard(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
-
-		//controller_ptr->setRotatingLastAsActive();
-		//INT::TD::implicitEulerCahnHiliard(4, rotBaseField_ptr, baseField_ptr, dt, k ,A, &checkData);
-		//INT::TD::heunCahnHiliard(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
-
-		//controller_ptr->setBaseAsActive();
-		/*
-		INT::TD::rungeKuttaCahnHiliard(INT::rungeKuttaOrder::TWO, rotBaseField_ptr, baseField_ptr, 
-			                                             tempKsAndDphis_ptr, dt, k, A, &checkData);
-		INT::TD::rungeKuttaCahnHiliard(INT::rungeKuttaOrder::FOUR, rotBaseField_ptr, baseField_ptr, 
-			                                             tempKsAndDphis_ptr, dt, k, A, &checkData);
-		*/
-		//INT::TD::verletCahnHiliard(rotBaseField_ptr, baseField_ptr, tempKsAndDphis_ptr, dt, k, A, &checkData);
+		switch (method)
+		{
+		case PFM::integrationMethods::FTCS:
+			controller_ptr->setBaseAsActive();
+			INT::TD::CH::fctsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			break;
+		case PFM::integrationMethods::HEUN:
+			controller_ptr->setRotatingLastAsActive();
+			INT::TD::CH::heunStep(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			break;
+		case PFM::integrationMethods::RK2:
+			controller_ptr->setBaseAsActive();
+			INT::TD::CH::rungeKuttaStep(INT::rungeKuttaOrder::TWO, rotBaseField_ptr, baseField_ptr, 
+			                                             tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			break;
+		case PFM::integrationMethods::RK4:
+			controller_ptr->setBaseAsActive();
+			INT::TD::CH::rungeKuttaStep(INT::rungeKuttaOrder::FOUR, rotBaseField_ptr, baseField_ptr, 
+			                                             tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			break;
+		default:
+			puts("Bad Method Code"); assert(false);
+			return;
+		}
 
 		*stepCount_ptr += 1;
 
@@ -76,124 +89,10 @@ void PFM::singleLayerCHsimCurrentAndOld_fn(SimulationControl* controller_ptr, in
 	*isRunning_ptr = false;
 }
 
-//Runs Chan-Hiliard on a single base layer. OVERWRITES values mid-step (doesn't keep last step data separatedly)
-void PFM::singleLayerCHsimOnlyCurrent_fn(SimulationControl* controller_ptr, int* stepCount_ptr, 
-	                                                                       bool* isRunning_ptr) {
-	
-	const bool invertField = false;
-	const uint32_t backwardEulerExtraSteps = 0;
-	const double k = 0.5;
-	const double A = 1;
-	double expectedInterfaceWidth = std::sqrt(2*k/A);
-	const double dt = 0.05;
-	const double initialCellDiameterDensity = 1/std::sqrt(2);
-	const int stepsPerCheckSaved = controller_ptr->getStepsPerCheckSaved();
-
-	controller_ptr->setKused(k);
-	controller_ptr->setAused(A);
-	controller_ptr->setDTused(dt);
-
-	auto baseField_ptr = controller_ptr->getRotatingBaseFieldPtr();
-	auto currentStepField_ptr = baseField_ptr->getPointerToCurrent();
-
-	//auto layerFieldsVectorPtr = controller_ptr->getLayerFieldsVectorPtr();
-
-	const int width = (int)currentStepField_ptr->getFieldDimensions().width;
-	const int height = (int)currentStepField_ptr->getFieldDimensions().height;
-
-	const double initialCellRadius = initialCellDiameterDensity * std::min(width, height)
-		                             / (2 * std::sqrt((float)controller_ptr->getNumberCells()));
-
-	if(controller_ptr->shouldStillExpandSeeds()) {
-		expandCells(currentStepField_ptr, initialCellRadius, 
-			            controller_ptr->getLastCellSeedValue(), invertField);
-	}
-	else if (invertField) {
-		for (int j = 0; j < height; j++) {
-			for (int i = 0; i < width; i++) {
-				//TODO: make sure this inversion actually works in general
-				currentStepField_ptr->writeDataPoint({i,j}, 1 - currentStepField_ptr->getDataPoint({i,j}));
-			}
-		}
-	}
-	
-	double radiusToWidth = initialCellRadius / expectedInterfaceWidth;
-	printf("Radius to expected interface width = %f (radius: %f, width: %f)\n", 
-		             radiusToWidth, initialCellRadius, expectedInterfaceWidth );
-
-	PFM::coordinate_t centerPoint;
-	double phi;
-	double phi0;
-	double laplacian;	
-	double change;
-	double newValue;
-	neighborhood9_t neigh;
-	PFM::checkData_t checkData;
-
-	while(!controller_ptr->checkIfShouldStop()) {
-
-		checkData.densityChange = 0;
-		checkData.absoluteChange = 0;
-		checkData.step = *stepCount_ptr;
-
-		for (int j = 0; j < height; j++) {
-			centerPoint.y = j;
-
-			for (int i = 0; i < width; i++) {
-				centerPoint.x = i;
-
-				neigh = currentStepField_ptr->getNeighborhood(centerPoint);
-				phi0 = neigh.getCenter();
-
-				//for some backward euler steps (may be "off" if backwardEulerExtraSteps = 0) :
-				//TODO: tests needed
-				for (uint32_t k = 0; k < backwardEulerExtraSteps; k++) {
-
-					laplacian = PFM::laplacian9pointsAroundNeighCenter(&neigh);
-					phi = neigh.getCenter();
-
-					neigh.setCenter(phi0 + dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi)) );
-				}
-				
-				laplacian = PFM::laplacian9pointsAroundNeighCenter(&neigh);
-				phi = neigh.getCenter();
-
-				change = dt*(k*laplacian - A*phi*(1-phi)*(1-2*phi));
-				newValue = phi0 + change;
-				
-				checkData.densityChange += change;
-				checkData.absoluteChange += std::abs(change);
-
-				currentStepField_ptr->writeDataPoint(centerPoint, phi0 + change);
-			}
-		}
-
-		int checksPerPrintout = 5;
-		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
-			checksPerPrintout = 1;
-		#endif
-		
-		if(*stepCount_ptr % stepsPerCheckSaved == 0) { 
-			checkData.densityChange /= (width * height);
-			checkData.lastDensity += checkData.densityChange;
-			checkData.absoluteChange /= (width * height);
-			currentStepField_ptr->addFieldCheckData(checkData);
-
-			if(*stepCount_ptr % (stepsPerCheckSaved * checksPerPrintout) == 0) {
-				printf("steps: %d - density: %f - absolute change (last step): %f\n", 
-							*stepCount_ptr, checkData.lastDensity, checkData.absoluteChange); 
-			}
-		}	
-
-		*stepCount_ptr += 1;
-	}
-
-	*isRunning_ptr = false;
-}
-
 //Test simulation: the pixels initialized as non-zero should "diffuse" up and to the right
 //(not really diffuse, more like reinforce - eventually everything should be "maximal" and then loop)
-void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr) {
+void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr,
+	                                                     integrationMethods method = integrationMethods::FTCS) {
 	
 	const double diffusionFactor = 0.025;
 	const double maxValue = 1;

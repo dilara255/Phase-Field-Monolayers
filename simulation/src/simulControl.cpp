@@ -203,6 +203,7 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 	auto dimensions = m_activeBaseField_ptr->getFieldDimensions();
 
 	std::string baseFilename = "sim" + std::to_string((int)m_lastSimulFuncUsed) 
+		                     + "m" + std::to_string((int)m_lastMethod)
 							 + "_ini" + std::to_string((int)m_lastInitialContidion) 
 							 + "_b" + std::to_string(m_lastBias)
 		                     + "_A" + std::to_string(m_lastA) + "_k" + std::to_string(m_lastK)
@@ -274,15 +275,18 @@ int PFM::SimulationControl::getStepsPerCheckSaved() const {
 	return m_stepsPerCheckSaved;
 }
 
-void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationToRun) {
+void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationToRun, 
+	                                                  PFM::integrationMethods method) {
 	if(controller.isSimulationRunning()) { return; }
 	if((int)simulationToRun >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) { return; }
 
 	m_stepsToRun = steps;
 	m_lastSimulFuncUsed = simulationToRun;
+	m_lastMethod = method;
 	m_isRunning = true;
 
-	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_stepsRan, &m_isRunning);
+	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_stepsRan, &m_isRunning,
+		                                                                                                method);
 	m_stepsThread.detach();
 }
 

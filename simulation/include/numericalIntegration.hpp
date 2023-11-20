@@ -6,6 +6,7 @@
 #include "derivatives.hpp"
 #include "rateOfChangeFunctions.hpp"
 
+//Numerical integration
 namespace INT { 
 	
 	enum class rungeKuttaOrder { TWO, FOUR };
@@ -19,37 +20,38 @@ namespace INT {
 
 	double rungeKutaKnIntermediateCoef(rungeKuttaOrder order, int n);
 
+//Numerical integration of 2D fields
 namespace TD {
 
-void explicitEulerCahnHiliard(PFM::PeriodicDoublesLattice2D* phiField, 
-						      PFM::PeriodicDoublesLattice2D* auxField,
-	                          const double dt, const double chK, const double chA, 
-	                          PFM::checkData_t* checks_ptr);
+//Numerical integration of Cahn-Hilliard potential on 2D fields
+namespace CH {
+	
 
-//For now, runs for a set amount of substeps
-//TODO: actually test convergence
-void implicitEulerCahnHiliard(int steps, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr, 
-	                          PFM::PeriodicDoublesLattice2D* baseField_ptr, const double dt,
-	                          const double chK, const double chA, PFM::checkData_t* checks_ptr);
+void fctsStep(PFM::PeriodicDoublesLattice2D* phiField, 
+			  PFM::PeriodicDoublesLattice2D* auxField,
+	          const double dt, const double chK, const double chA, 
+	          PFM::checkData_t* checks_ptr);
 
-void heunCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-	                 PFM::PeriodicDoublesLattice2D* tempKs_ptr,
-	                 const double dt, const double chK, const double chA, 
-	                 PFM::checkData_t* checks_ptr);
+void heunStep(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+	          PFM::PeriodicDoublesLattice2D* tempKs_ptr,
+	          const double dt, const double chK, const double chA, 
+	          PFM::checkData_t* checks_ptr);
 
+//So far only supports order 2 or 4. Will do nothing (or fail an assert) if another oreder is passed
+//TODO: add more coeficient lists and order enumerations
+//TODO: eventually, maybe, generalize or something, idk
+void rungeKuttaStep(rungeKuttaOrder order, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
+				    PFM::PeriodicDoublesLattice2D* field_ptr,
+	                PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
+	                const double dt, const double chK, const double chA, PFM::checkData_t* checks_ptr);
+
+/* TODO: either reimplement or clear this
 void verletCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 								   PFM::PeriodicDoublesLattice2D* field_ptr,
 	                               PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
 	                               const double dt, const double chK, const double chA, 
 	                               PFM::checkData_t* checks_ptr);
-
-//So far only supports 2 or 4 steps. Will do nothing (or fail an assert) if another amount is 
-//TODO: add more coeficient lists and order enumerations
-//TODO: eventually, maybe, generalize or something, idk
-void rungeKuttaCahnHiliard(rungeKuttaOrder order, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
-						  PFM::PeriodicDoublesLattice2D* field_ptr,
-	                      PFM::PeriodicDoublesLattice2D* tempKs_ptr, 
-	                      const double dt, const double chK, const double chA, PFM::checkData_t* checks_ptr);
-
+*/
+}
 }
 }
