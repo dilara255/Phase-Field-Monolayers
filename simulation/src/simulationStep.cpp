@@ -5,14 +5,11 @@
 #include "numericalIntegration.hpp"
 #include "derivatives.hpp"
 
-
-//TODO: general reorganization of this mess of a file : )
-
 //TODO: version which accepts the controller and deals with the data (eg, currentAndLast, multi-layers, etc)
 void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius, 
 	                                 double cellSeedValue, bool invertValueOn);
 
-void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved);
+void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved, double dt);
 
 void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr, 
 	                                      const double initialCellDiameterDensity, 
@@ -31,17 +28,19 @@ void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_p
 void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr,
 	                                                integrationMethods method = integrationMethods::FTCS) {
 
+	//Parameters for the steps:
 	//TODO: extract the parameters
 	const bool invertField = false;
 	constexpr double k = 0.5;
 	const double A = 0.25;
-	constexpr double dt = 0.5;
+	constexpr double dt = 1;
 	//we're using fixed dx = dy = 1, h2 = 2
 	//TODO: add h as parameter
-	static_assert(dt <= 1/(4*k), "dt too large for k"); //Max stable dt for FTCS heat diffusion, used as a ballpark
+	//static_assert(dt <= 1/(4*k), "dt too large for k"); //Max stable dt for FTCS heat diffusion, used as a ballpark
 	const double expectedInterfaceWidth = std::sqrt(2*k/A);
-	const double initialCellDiameterDensity = 1/std::sqrt(2);
+	const double initialCellDiameterDensity = 1.0/2;
 
+	//Preparation to start stepping:
 	preProccessFieldsAndUpdateController(controller_ptr, initialCellDiameterDensity, k, A, dt,
 		                                                  expectedInterfaceWidth, invertField);
 	
@@ -51,7 +50,7 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
 	auto tempKsAndDphis_ptr = controller_ptr->getLastDphisAndTempKsFieldPtr();
 
-	updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved());
+	updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), dt);
 
 	//The actual steps:
 	while(!controller_ptr->checkIfShouldStop()) {
@@ -60,20 +59,20 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 		{
 		case PFM::integrationMethods::FTCS:
 			controller_ptr->setBaseAsActive();
-			INT::TD::CH::fctsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			N_INT::TD::CH::ftcsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
 			break;
 		case PFM::integrationMethods::HEUN:
 			controller_ptr->setRotatingLastAsActive();
-			INT::TD::CH::heunStep(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			N_INT::TD::CH::heunStep(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
 			break;
 		case PFM::integrationMethods::RK2:
 			controller_ptr->setBaseAsActive();
-			INT::TD::CH::rungeKuttaStep(INT::rungeKuttaOrder::TWO, rotBaseField_ptr, baseField_ptr, 
+			N_INT::TD::CH::rungeKuttaStep(N_INT::rungeKuttaOrder::TWO, rotBaseField_ptr, baseField_ptr, 
 			                                             tempKsAndDphis_ptr, dt, k, A, checks_ptr);
 			break;
 		case PFM::integrationMethods::RK4:
 			controller_ptr->setBaseAsActive();
-			INT::TD::CH::rungeKuttaStep(INT::rungeKuttaOrder::FOUR, rotBaseField_ptr, baseField_ptr, 
+			N_INT::TD::CH::rungeKuttaStep(N_INT::rungeKuttaOrder::FOUR, rotBaseField_ptr, baseField_ptr, 
 			                                             tempKsAndDphis_ptr, dt, k, A, checks_ptr);
 			break;
 		default:
@@ -83,9 +82,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 
 		*stepCount_ptr += 1;
 
-		updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved());
+		updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), dt);
 	}
 
+	//Done:
 	*isRunning_ptr = false;
 }
 
@@ -239,7 +239,7 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 		             radiusToWidth, initialCellRadius, expectedInterfaceWidth );
 }
 
-void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved) {
+void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved, double dt) {
 	
 	if(step % stepsPerCheckSaved == 0) { 
 		int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
@@ -256,8 +256,9 @@ void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int steps
 			checksPerPrintout = 1;
 		#endif
 		if(checks_ptr->step % (stepsPerCheckSaved * checksPerPrintout) == 0) {
-			printf("steps: %d - density: %f - absolute change (last step): %f\n", 
-						checks_ptr->step, checks_ptr->lastDensity, checks_ptr->absoluteChange); 
+			printf("t: %d - steps: %d - density: %f - absolute change (last step): %f\n", 
+						(int)(checks_ptr->step * dt), checks_ptr->step, checks_ptr->lastDensity, 
+				        checks_ptr->absoluteChange); 
 		}
 	}	
 

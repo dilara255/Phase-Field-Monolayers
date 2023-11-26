@@ -23,7 +23,7 @@ typedef struct parameters_st {
 
 parameters_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
 	{512, 512, 50},
-	{128, 128, 9, PFM::initialConditions::LINEAR_RANDOM, 0.33},
+	{128, 128, 50, PFM::initialConditions::LINEAR_RANDOM, 0.33, PFM::integrationMethods::FTCS},
 	{128, 128, 5}
 };
 
@@ -82,7 +82,7 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	std::thread renderThread = F_V2::spawnRendererOnNewThreadF(&works, &floatField, &clear, &tint, &retCode);
 
 	LOG_INFO("Will run the simulation");
-	PFM::runForSteps(-1, simulationFunctionToRun);
+	PFM::runForSteps(-1, simulationFunctionToRun, method);
 
 	size_t elements = floatField.size.getTotalElements();
 
