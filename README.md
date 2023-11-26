@@ -10,12 +10,13 @@ Main contents:
 
 ## Current state:
 
-Minimal data and control classes, plus project structure and integration with the dependencies.
-- Next minor: minimal implementation of an actual phase field model.
+Simulation of a single Cahn-Hilliard field, with support for FTCS, Heun, RK2 and RK4.
+- Next minor: checks and parameters data structure, saving and control via CLI and GUI and basic runtime on the "simulation" project.
+- After that: support for multiple fields and intractions between them.
 
 ## Dependencies and requirements:
 
-- Uses fAux as a utility library (included).
+- Uses fAux as a utility library (included). The "simulation" project doesn't need to link to it (but uses some headers).
 - The **GUI application** is built on top of fViz2D (also included), and **requires openGL 3.3** or better.
 - The build system is controlled by **premake5**.
 - **Expects 64 bit Windows or Linux**.

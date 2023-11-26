@@ -7,7 +7,7 @@
 #include "rateOfChangeFunctions.hpp"
 
 //Numerical integration
-namespace INT { 
+namespace N_INT { 
 	
 	enum class rungeKuttaOrder { TWO, FOUR };
 	inline int rkStepsFromOrder(rungeKuttaOrder order) { 
@@ -16,9 +16,9 @@ namespace INT {
 		else { assert("BAD RK ORDER"); return 0; }
 	}
 
-	double rungeKutaKnFinalCoef(rungeKuttaOrder order, int n);
-
-	double rungeKutaKnIntermediateCoef(rungeKuttaOrder order, int n);
+	//These correspond to tableus where a_ij = 0 for i != j and c_i = a_i
+	double rungeKutaKnBcoef(rungeKuttaOrder order, int n);
+	double rungeKutaKnAandCcoef(rungeKuttaOrder order, int n);
 
 //Numerical integration of 2D fields
 namespace TD {
@@ -27,17 +27,20 @@ namespace TD {
 namespace CH {
 	
 
-void fctsStep(PFM::PeriodicDoublesLattice2D* phiField, 
+void ftcsStep(PFM::PeriodicDoublesLattice2D* phiField, 
 			  PFM::PeriodicDoublesLattice2D* auxField,
 	          const double dt, const double chK, const double chA, 
 	          PFM::checkData_t* checks_ptr);
 
+//2 step Predictor Corrector, a RK2, the trapezoidal version of FTCS
 void heunStep(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
 	          PFM::PeriodicDoublesLattice2D* tempKs_ptr,
 	          const double dt, const double chK, const double chA, 
 	          PFM::checkData_t* checks_ptr);
 
-//So far only supports order 2 or 4. Will do nothing (or fail an assert) if another oreder is passed
+//So far only supports order 2 or 4 (with a single predefined tableu for each)
+//Will do nothing (or fail an assert) if another oreder is passed
+//Only supports tableus where a_ij = 0 for i != j and c_i = a_i
 //TODO: add more coeficient lists and order enumerations
 //TODO: eventually, maybe, generalize or something, idk
 void rungeKuttaStep(rungeKuttaOrder order, PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
