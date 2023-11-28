@@ -2,7 +2,7 @@
 
 #include "GLFW/glfw3.h" // Will drag system OpenGL headers
 
-#include "utils/imageUtils.hpp"
+#include "fViz2D/utils/imageUtils.hpp"
 
 GLFWwindow* initGlfwAndCreateWindow(GLFWerrorfun glfwErrorCallback, int width, int height, 
                                                      const char* title, bool vsync = true);

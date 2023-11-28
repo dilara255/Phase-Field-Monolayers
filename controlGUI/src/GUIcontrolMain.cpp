@@ -78,8 +78,12 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	bool works = false;
 
+	IMG::generic2DfieldPtr_t dynamicData;
+	dynamicData.storeFloatsField(&floatField);
+	GUI::menuDefinition_t testMenu = GUI::getTestMenuDefinition(&works, &clear.r, &tint.r);
+
 	LOG_DEBUG("Starting renderer...");
-	std::thread renderThread = F_V2::spawnRendererOnNewThreadF(&works, &floatField, &clear, &tint, &retCode);
+	std::thread renderThread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, testMenu);
 
 	LOG_INFO("Will run the simulation");
 	PFM::runForSteps(-1, simulationFunctionToRun, method);
@@ -88,7 +92,7 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	while (retCode == F_V2::rendererRetCode_st::STILL_RUNNING) {
 		for (size_t i = 0; i < elements; i++) {
-			floatField.data[i] = (float)PFM::getActiveFieldConstPtr()->getElement(i);
+			floatField.data.get()[i] = (float)PFM::getActiveFieldConstPtr()->getElement(i);
 		}
 
 		AZ::hybridBusySleepForMicros(std::chrono::microseconds(1000));
