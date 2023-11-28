@@ -9,7 +9,7 @@
 #include "PFM_API.hpp"
 #include "PFM_data.hpp"
 
-#define CELL_SEED_VAL (1.0)
+#define CELL_SEED_VAL (1.0) //used to mark a point as a cell to be expanded. TODO: deprecate?
 #define MS_TO_WAIT 10
 #define DEFAULT_STEPS_PER_CHECK 500
 
@@ -90,6 +90,8 @@ namespace PFM {
         void setDTused(double newK);
         void setStepsPerCheckSaved(int newStepsPerCheckSaved);
 
+        const simData_t* getLastSimDataPtr() const;
+
         bool isSimulationRunning() const;
         bool checkIfShouldStop();
         int getNumberCells() const;
@@ -111,23 +113,13 @@ namespace PFM {
         bool m_hasInitialized = false;
         bool m_isRunning = false;
         bool m_shouldStop = false;
-        int m_stepsRan = 0;
         int m_stepsToRun = 0;
         bool m_seedsNeedExpanding = false;
-        
+        int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
+
         std::thread m_stepsThread;
 
-        int m_cells = 0;
-        double m_lastCellSeedValue = CELL_SEED_VAL;
-        uint64_t m_initialSeed = DEFAULT_PRNG_SEED0;
-        PFM::simFuncEnum m_lastSimulFuncUsed = PFM::simFuncEnum::TOTAL_SIM_FUNCS;        
-        double m_lastK = -1;
-        double m_lastA = -1;
-        double m_lastDT = -1;
-        int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
-        initialConditions m_lastInitialContidion = initialConditions::TOTAL_INITIAL_CONDS;
-        double m_lastBias = -9999;
-        integrationMethods m_lastMethod = integrationMethods::TOTAL_METHODS;
+        simData_t m_lastSimData;
         
         //To be filled with actual data:
         std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr;

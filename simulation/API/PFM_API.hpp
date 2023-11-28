@@ -3,14 +3,11 @@
 //TODO: make sure no threads can be orphaned under normal circunstances
 //Also, thread safety is a crutch : )
 
+#include "PFM_API_enums.hpp"
 #include "PFM_data.hpp"
+#include "fAux/API/miscStdHeaders.h"
 
 namespace PFM {
-
-	enum class simFuncEnum { DATA_CONTROL_TEST, SINGLE_LAYER_CH_SIM, MULTI_LAYER_CH_SIM, TOTAL_SIM_FUNCS};
-	//TODO: Add BEST_CIRCULAR_PACKING, BEST_HEXAGONAL_PACKING e FORCED_CONCENTRATION_RANDOM
-	enum class initialConditions { EVENLY_SPACED_INDEX, LINEAR_RANDOM, TOTAL_INITIAL_CONDS};
-	enum class integrationMethods { FTCS, HEUN, RK2, RK4, TOTAL_METHODS };
 
 	//If anything fails, returns NULL. Otherwise, returns a const pointer to the active field simulated
 	PFM_API const PeriodicDoublesLattice2D* initializeSimulation(PFM::fieldDimensions_t dimensions, 
@@ -25,6 +22,8 @@ namespace PFM {
 	PFM_API int getStepsRan();
 	PFM_API void resetStepsRan();
 	PFM_API bool saveFieldToFile();
+	//Uses parameters and etc to build a default file-name. Compatible with GUI save button if sent as callback.
+    PFM_API std::string getFileName(int steps);
 	
 	//If steps <= 0, will run until manually stopped
 	//If the simulation is already running or the simFuncEnum or method is bad, will do nothing (*no warning*)
