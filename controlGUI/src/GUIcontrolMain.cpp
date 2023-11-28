@@ -83,10 +83,13 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	GUI::filenameCallback_func* filenameFunc = PFM::getFileName;
 	GUI::menuDefinition_t testMenu = GUI::getTestMenuDefinition(&works, &clear.r, &tint.r);
+	COLOR::colorInterpolation_t nullScheme;
 
 	LOG_DEBUG("Starting renderer...");
 	std::thread renderThread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, 
-		                                                              testMenu, filenameFunc);
+		                                                      testMenu, filenameFunc,
+		                                                      &nullScheme, "Phase Field Model: CH", 
+		                                                      512, 700);
 
 	LOG_INFO("Will run the simulation");
 	PFM::runForSteps(-1, simulationFunctionToRun, method);
