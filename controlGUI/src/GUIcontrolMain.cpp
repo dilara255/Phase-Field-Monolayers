@@ -77,13 +77,16 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	//****************************************************************
 
 	bool works = false;
-
+	
 	IMG::generic2DfieldPtr_t dynamicData;
 	dynamicData.storeFloatsField(&floatField);
+
+	GUI::filenameCallback_func* filenameFunc = PFM::getFileName;
 	GUI::menuDefinition_t testMenu = GUI::getTestMenuDefinition(&works, &clear.r, &tint.r);
 
 	LOG_DEBUG("Starting renderer...");
-	std::thread renderThread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, testMenu);
+	std::thread renderThread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, 
+		                                                              testMenu, filenameFunc);
 
 	LOG_INFO("Will run the simulation");
 	PFM::runForSteps(-1, simulationFunctionToRun, method);

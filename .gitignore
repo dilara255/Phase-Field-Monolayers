@@ -10,3 +10,5 @@ bin-int/
 *.make
 *.pgm
 *.bin
+*.png
+*.jpg

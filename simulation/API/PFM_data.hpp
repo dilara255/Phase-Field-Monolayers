@@ -2,6 +2,8 @@
 
 //TODO: *in case* this is turned into a shared library, what should or shouldn't get a PFM_API appended?
 
+#include "PFM_API_enums.hpp"
+
 #include <vector>
 #include <assert.h>
 #include <memory>
@@ -9,6 +11,20 @@
 #define ALL_CELLS_ID -1
 
 namespace PFM {
+
+	typedef struct simData_st {
+		int stepsRan = 0;
+		int cells = 0;
+        double lastCellSeedValue = 0;
+        uint64_t initialSeed = 0;
+        simFuncEnum lastSimulFuncUsed = simFuncEnum::TOTAL_SIM_FUNCS;        
+        double lastK = -1;
+        double lastA = -1;
+        double lastDT = -1;
+        initialConditions lastInitialContidion = initialConditions::TOTAL_INITIAL_CONDS;
+        double lastBias = -9999;
+        integrationMethods lastMethod = integrationMethods::TOTAL_METHODS;
+	} simData_t;
 
 	typedef struct coordinate_st {
 		int x, y;

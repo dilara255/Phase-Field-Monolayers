@@ -106,7 +106,7 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 			m_seedsNeedExpanding = true;
 		}
 		else {
-			uint64_t seed = m_initialSeed;
+			uint64_t seed = m_lastSimData.initialSeed;
 			for (size_t i = 0; i < elements; i++) {
 				//Each elemnt starts with a random value between -0.5 and 1.5:
 				double value = bias -0.5 + 2*(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
@@ -147,14 +147,14 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 		}
 	}
 
-	m_cells = numberCells;
+	m_lastSimData.cells = numberCells;
 	m_shouldStop = false;
-	m_stepsRan = 0;
+	m_lastSimData.stepsRan = 0;
     m_stepsToRun = 0;
 	setBaseAsActive();
 
-	m_lastInitialContidion = initialCond;
-	m_lastBias = bias;
+	m_lastSimData.lastInitialContidion = initialCond;
+	m_lastSimData.lastBias = bias;
 
 	m_hasInitialized = true;
 }
@@ -179,7 +179,7 @@ int PFM::SimulationControl::stop() {
 	m_isRunning = false;
 	m_shouldStop = false;
 
-	return m_stepsRan;
+	return m_lastSimData.stepsRan;
 }
 
 void PFM::SimulationControl::mirrorRotatingOnBase() {
@@ -188,6 +188,26 @@ void PFM::SimulationControl::mirrorRotatingOnBase() {
 
 void PFM::SimulationControl::mirrorBaseOnRotating() {
 	m_rotatingBaseLattice_ptr.get()->getPointerToCurrent()->mirrorAllDataFrom(m_baseLattice_ptr.get());
+}
+
+std::string PFM::getFileName(int steps) {
+	
+	//gather the relevant data:
+	auto dimensions = controller.getActiveFieldPtr()->getFieldDimensions();
+	const PFM::simData_t* simData_ptr = controller.getLastSimDataPtr();
+
+	std::string fileName = "";	
+	if(steps != simData_ptr->stepsRan) { fileName += "m"; } //to mark manual saves. Just an heuristic though.
+
+	return  "Sim" + std::to_string((int)simData_ptr->lastSimulFuncUsed) 
+		    + "m" + std::to_string((int)simData_ptr->lastMethod)
+		    + "_ini" + std::to_string((int)simData_ptr->lastInitialContidion) 
+			+ "_b" + std::to_string(simData_ptr->lastBias)
+		    + "_A" + std::to_string(simData_ptr->lastA) + "_k" + std::to_string(simData_ptr->lastK)
+		    + "_dt" + std::to_string(simData_ptr->lastDT)
+		    + "_" + std::to_string(simData_ptr->cells) + "_" + std::to_string(dimensions.width) 
+		    + "_" + std::to_string(dimensions.height) + "_" + std::to_string(simData_ptr->stepsRan) 
+		    + "_" + std::to_string(simData_ptr->initialSeed);
 }
 
 //TODO: an actual reasonable save system : p
@@ -202,15 +222,7 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 
 	auto dimensions = m_activeBaseField_ptr->getFieldDimensions();
 
-	std::string baseFilename = "sim" + std::to_string((int)m_lastSimulFuncUsed) 
-		                     + "m" + std::to_string((int)m_lastMethod)
-							 + "_ini" + std::to_string((int)m_lastInitialContidion) 
-							 + "_b" + std::to_string(m_lastBias)
-		                     + "_A" + std::to_string(m_lastA) + "_k" + std::to_string(m_lastK)
-		                     + "_dt" + std::to_string(m_lastDT)
-		                     + "_" + std::to_string(m_cells) + "_" + std::to_string(dimensions.width) 
-		                     + "_" + std::to_string(dimensions.height) + "_" + std::to_string(m_stepsRan) 
-		                     + "_" + std::to_string(m_initialSeed);
+	std::string baseFilename = getFileName(m_lastSimData.stepsRan);
 	
 	FILE* fp_pgm = fopen((baseFilename + ".pgm").c_str(), "wb");
 	if(fp_pgm == NULL) { return false; }
@@ -236,15 +248,15 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 }
 
 void PFM::SimulationControl::setAused(double newA) {
-	m_lastA = newA;
+	m_lastSimData.lastA = newA;
 }
 
 void PFM::SimulationControl::setKused(double newK) {
-	m_lastK = newK;
+	m_lastSimData.lastK = newK;
 }
 
 void PFM::SimulationControl::setDTused(double newDT) {
-	m_lastDT = newDT;
+	m_lastSimData.lastDT = newDT;
 }
 
 void PFM::SimulationControl::setStepsPerCheckSaved(int newStepsPerCheckSaved) {
@@ -252,7 +264,7 @@ void PFM::SimulationControl::setStepsPerCheckSaved(int newStepsPerCheckSaved) {
 }
 
 bool PFM::SimulationControl::checkIfShouldStop() {
-	if(m_shouldStop || (m_stepsToRun > 0 && m_stepsRan >= m_stepsToRun)) {
+	if(m_shouldStop || (m_stepsToRun > 0 && m_lastSimData.stepsRan >= m_stepsToRun)) {
 		m_shouldStop = true;
 	}
 
@@ -260,11 +272,11 @@ bool PFM::SimulationControl::checkIfShouldStop() {
 }
 
 int PFM::SimulationControl::getNumberCells() const {
-	return m_cells;
+	return m_lastSimData.cells;
 }
 
 double PFM::SimulationControl::getLastCellSeedValue() const {
-	return m_lastCellSeedValue;
+	return m_lastSimData.lastCellSeedValue;
 }
 
 bool PFM::SimulationControl::shouldStillExpandSeeds() const {
@@ -282,13 +294,17 @@ void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationT
 	if((int)method >=  (int)PFM::integrationMethods::TOTAL_METHODS) { return; }
 
 	m_stepsToRun = steps;
-	m_lastSimulFuncUsed = simulationToRun;
-	m_lastMethod = method;
+	m_lastSimData.lastSimulFuncUsed = simulationToRun;
+	m_lastSimData.lastMethod = method;
 	m_isRunning = true;
 
-	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_stepsRan, &m_isRunning,
-		                                                                                                method);
+	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_lastSimData.stepsRan, 
+		                                                                                &m_isRunning, method);
 	m_stepsThread.detach();
+}
+
+const simData_t* PFM::SimulationControl::getLastSimDataPtr() const {
+	return &m_lastSimData;
 }
 
 bool PFM::SimulationControl::isSimulationRunning() const {
@@ -296,11 +312,11 @@ bool PFM::SimulationControl::isSimulationRunning() const {
 }
 
 int PFM::SimulationControl::stepsAlreadyRan() const {
-	return m_stepsRan;
+	return m_lastSimData.stepsRan;
 }
 
 void PFM::SimulationControl::resetStepsAlreadyRan() {
-	m_stepsRan = 0;
+	m_lastSimData.stepsRan = 0;
 }
 
 ///These API calls are really just wrappers to calls to methods of the controller:
