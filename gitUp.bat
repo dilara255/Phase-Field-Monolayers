@@ -2,7 +2,7 @@ echo off
 
 set major=0
 set minor=2
-set sub=0
+set sub=1
 set build=0
 
 git status

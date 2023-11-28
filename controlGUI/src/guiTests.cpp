@@ -25,14 +25,20 @@ bool PFM_GUI_TESTS::fViz2DintegrationTests() {
 	IMG::floats2Dfield_t field = IMG::createFloats2Dfield(512, 512);
 	uint64_t seed = DEFAULT_PRNG_SEED0;
 	for (size_t i = 0; i < field.size.getTotalElements(); i++) {
-		field.data[i] = (float)(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
+		field.data.get()[i] = (float)(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
 	}
 
 	COLOR::rgbaF_t clear = COLOR::CLEAR;
 	COLOR::rgbaF_t tint = COLOR::FULL_WHITE;
 
 	bool works = false;
-	F_V2::rendererRetCode_st retCode = F_V2::spawnRendererOnThisThreadF(&works, &field, &clear, &tint);
+
+	IMG::generic2DfieldPtr_t dynamicData;
+	dynamicData.storeFloatsField(&field);
+
+	GUI::menuDefinition_t testMenu = GUI::getTestMenuDefinition(&works, &clear.r, &tint.r);
+
+	F_V2::rendererRetCode_st retCode = F_V2::spawnRendererOnThisThread(&dynamicData, &clear, testMenu);
 
 	bool result1 = (retCode == F_V2::rendererRetCode_st::OK && works);
 	if (result1) { LOG_INFO("OK"); }
@@ -44,12 +50,12 @@ bool PFM_GUI_TESTS::fViz2DintegrationTests() {
 
 	retCode = F_V2::rendererRetCode_st::STILL_RUNNING;
 	works = false;
-	std::thread renderTrhread = F_V2::spawnRendererOnNewThreadF(&works, &field, &clear, &tint, &retCode);
+	std::thread renderTrhread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, testMenu);
 
 	while (retCode == F_V2::rendererRetCode_st::STILL_RUNNING) {
 		for (size_t i = 0; i < field.size.getTotalElements(); i++) {
-			field.data[i] += 0.01 * (float)(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
-			field.data[i] -= 1 * (field.data[i] > 1.0);
+			field.data.get()[i] += 0.01 * (float)(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
+			field.data.get()[i] -= 1 * (field.data.get()[i] > 1.0);
 		}
 
 		AZ::hybridBusySleepForMicros(std::chrono::microseconds(1000));
