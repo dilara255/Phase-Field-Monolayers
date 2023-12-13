@@ -256,6 +256,11 @@ void PFM::SimulationControl::updateGammaLambda() {
 	m_lastSimParameters.lambda = 2*std::sqrt(m_lastSimParameters.k / m_lastSimParameters.A);
 }
 
+void PFM::SimulationControl::updateKandA() {
+	m_lastSimParameters.A = 12 * m_lastSimParameters.gamma / m_lastSimParameters.lambda;
+	m_lastSimParameters.k = 3 * m_lastSimParameters.gamma * m_lastSimParameters.lambda;
+}
+
 void PFM::SimulationControl::setAused(double newA) {
 	m_lastSimParameters.A = newA;
 
@@ -300,8 +305,9 @@ int PFM::SimulationControl::getStepsPerCheckSaved() const {
 	return m_stepsPerCheckSaved;
 }
 
-void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationToRun, 
-	                                                  PFM::integrationMethods method) {
+void PFM::SimulationControl::runForSteps(int steps, double lambda, double gamma, double dt,
+	                                     PFM::simFuncEnum simulationToRun, 
+	                                     PFM::integrationMethods method) {
 	if(controller.isSimulationRunning()) { return; }
 	if((int)simulationToRun >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) { return; }
 	if((int)method >=  (int)PFM::integrationMethods::TOTAL_METHODS) { return; }
@@ -309,6 +315,10 @@ void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationT
 	m_stepsToRun = steps;
 	m_lastSimData.lastSimulFuncUsed = simulationToRun;
 	m_lastSimData.lastMethod = method;
+	m_lastSimParameters.lambda = lambda;
+	m_lastSimParameters.gamma = gamma;
+	updateKandA();
+	m_lastSimParameters.dt = dt;
 	m_isRunning = true;
 
 	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_lastSimData.stepsRan, 
@@ -381,8 +391,9 @@ bool PFM::saveFieldToFile() {
 	return controller.saveFieldToFile();
 }
 	
-void PFM::runForSteps(int stepsToRun, PFM::simFuncEnum simulationToRun, PFM::integrationMethods method) {
-	controller.runForSteps(stepsToRun, simulationToRun, method);
+void PFM::runForSteps(int stepsToRun, double lambda, double gamma, double dt,
+	                  PFM::simFuncEnum simulationToRun, PFM::integrationMethods method) {
+	controller.runForSteps(stepsToRun, lambda, gamma, dt, simulationToRun, method);
 }
 
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {
