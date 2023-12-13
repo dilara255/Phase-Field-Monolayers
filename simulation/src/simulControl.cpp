@@ -78,6 +78,8 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 	releaseFields();
 
 	m_lastSimData.initialSeed = prngSeed;
+	m_lastSimData.width = dimensions.width;
+	m_lastSimData.height = dimensions.height;
 	size_t elements = dimensions.totalElements();
 	
 	m_lastDphisAndTempKsField_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
@@ -196,6 +198,7 @@ std::string PFM::getFileName(int steps, bool calledFromGUI) {
 	//gather the relevant data:
 	auto dimensions = controller.getActiveFieldPtr()->getFieldDimensions();
 	const PFM::simData_t* simData_ptr = controller.getLastSimDataPtr();
+	const PFM::simParameters_t* simParams_ptr = controller.getLastSimParametersPtr();
 
 	std::string fileName = "";	
 	if(steps != simData_ptr->stepsRan) { fileName += "m"; } //to mark manual saves. Just an heuristic though.
@@ -204,8 +207,8 @@ std::string PFM::getFileName(int steps, bool calledFromGUI) {
 		    + "m" + std::to_string((int)simData_ptr->lastMethod)
 		    + "_ini" + std::to_string((int)simData_ptr->lastInitialContidion) 
 			+ "_b" + std::to_string(simData_ptr->lastBias)
-		    + "_A" + std::to_string(simData_ptr->lastA) + "_k" + std::to_string(simData_ptr->lastK)
-		    + "_dt" + std::to_string(simData_ptr->lastDT)
+		    + "_A" + std::to_string(simParams_ptr->A) + "_k" + std::to_string(simParams_ptr->k)
+		    + "_dt" + std::to_string(simParams_ptr->dt)
 		    + "_" + std::to_string(simData_ptr->cells) + "_" + std::to_string(dimensions.width) 
 		    + "_" + std::to_string(dimensions.height) + "_" + std::to_string(simData_ptr->stepsRan) 
 		    + "_" + std::to_string(simData_ptr->initialSeed);
@@ -249,15 +252,15 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 }
 
 void PFM::SimulationControl::setAused(double newA) {
-	m_lastSimData.lastA = newA;
+	m_lastSimParameters.A = newA;
 }
 
 void PFM::SimulationControl::setKused(double newK) {
-	m_lastSimData.lastK = newK;
+	m_lastSimParameters.k = newK;
 }
 
 void PFM::SimulationControl::setDTused(double newDT) {
-	m_lastSimData.lastDT = newDT;
+	m_lastSimParameters.dt = newDT;
 }
 
 void PFM::SimulationControl::setStepsPerCheckSaved(int newStepsPerCheckSaved) {
@@ -306,6 +309,18 @@ void PFM::SimulationControl::runForSteps(int steps, PFM::simFuncEnum simulationT
 
 const simData_t* PFM::SimulationControl::getLastSimDataPtr() const {
 	return &m_lastSimData;
+}
+
+std::string PFM::SimulationControl::getSimDataString() const { 
+	return m_lastSimData.getSimDataString();
+}
+
+const simParameters_t* PFM::SimulationControl::getLastSimParametersPtr() const {
+	return &m_lastSimParameters;
+}
+
+std::string PFM::SimulationControl::getSimParamsString() const { 
+	return m_lastSimParameters.getSimParamsString();
 }
 
 bool PFM::SimulationControl::isSimulationRunning() const {

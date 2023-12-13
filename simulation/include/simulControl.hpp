@@ -93,6 +93,10 @@ namespace PFM {
         void setStepsPerCheckSaved(int newStepsPerCheckSaved);
 
         const simData_t* getLastSimDataPtr() const;
+        std::string getSimDataString() const;
+
+        const simParameters_t* getLastSimParametersPtr() const;
+        std::string getSimParamsString() const;
 
         bool isSimulationRunning() const;
         bool checkIfShouldStop();
@@ -122,6 +126,7 @@ namespace PFM {
         std::thread m_stepsThread;
 
         simData_t m_lastSimData;
+        simParameters_t m_lastSimParameters;
         
         //To be filled with actual data:
         std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr;
