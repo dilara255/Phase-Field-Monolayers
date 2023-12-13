@@ -73,7 +73,7 @@ namespace PFM {
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
         //Does nothing in case the simulation is already running or a bad simFuncEnum is passed.
-        void runForSteps(int steps, simFuncEnum simulationToRun, 
+        void runForSteps(int steps,  double lambda, double gamma, double dt, simFuncEnum simulationToRun, 
                          integrationMethods methodToUse = integrationMethods::FTCS);
         //Asks the controller to stop and waits for confirmation (in MS_TO_WAIT ms sleep cycles)
         //When the simulation actually stops, its thread is joined. Does nothing if the simulation isn't running.
@@ -118,6 +118,7 @@ namespace PFM {
         //WARNING: When the simulation actually stops, its thread is STILL HANGING. Does nothing not running.
         void nonBlockingStop();
         void updateGammaLambda();
+        void updateKandA();
 
         bool m_hasInitialized = false;
         bool m_isRunning = false;

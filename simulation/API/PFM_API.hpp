@@ -29,7 +29,7 @@ namespace PFM {
 	
 	//If steps <= 0, will run until manually stopped
 	//If the simulation is already running or the simFuncEnum or method is bad, will do nothing (*no warning*)
-	PFM_API void runForSteps(int stepsToRun, 
+	PFM_API void runForSteps(int stepsToRun, double lambda = 3.0, double gamma = 0.06, double dt = 1.0, 
 		                     PFM::simFuncEnum simulationToRun = PFM::simFuncEnum::SINGLE_LAYER_CH_SIM,
 		                     integrationMethods method = integrationMethods::FTCS);
 	

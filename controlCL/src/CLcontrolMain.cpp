@@ -41,7 +41,7 @@ bool PFM_CLI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	LOG_INFO("Simulation initialized");
 		
-	PFM::runForSteps(stepsToRun, simulationFunctionToRun);
+	PFM::runForSteps(stepsToRun, 3.0, 0.06, 1, simulationFunctionToRun);
 
 	LOG_TRACE("Simulation running");
 

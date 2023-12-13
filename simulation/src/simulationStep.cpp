@@ -31,19 +31,17 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	//Parameters for the steps:
 	//TODO: extract the parameters
 	const bool invertField = false;
-	double k_ini = 0.5;
-	double A_ini = 0.25;
-	constexpr double dt = 1;
+
 	//we're using fixed dx = dy = 1, h2 = 2
 	//TODO: add h as parameter
 	//static_assert(dt <= 1/(4*k), "dt too large for k"); //Max stable dt for FTCS heat diffusion, used as a ballpark
+	
 	const double initialCellDiameterDensity = 1.0/2;
 
-	double gamma = std::sqrt(A_ini*k_ini)/6.0;
-	double lambda = 2*std::sqrt(k_ini/A_ini);
-
-	const double A = 12 * gamma / lambda;
-	const double k = 3 * gamma * lambda;
+	const double dt = controller_ptr->getLastSimParametersPtr()->dt;
+	const double A = controller_ptr->getLastSimParametersPtr()->A;
+	const double k = controller_ptr->getLastSimParametersPtr()->k;
+	const double lambda = controller_ptr->getLastSimParametersPtr()->lambda;
 
 	//Preparation to start stepping:
 	preProccessFieldsAndUpdateController(controller_ptr, initialCellDiameterDensity, k, A, dt, lambda, invertField);

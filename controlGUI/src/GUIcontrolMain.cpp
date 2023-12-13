@@ -15,14 +15,17 @@
 #define RUN_MULTI_LAYER_CH_SIM 0
 #define TOTAL_SIM_FUNCS ((int)PFM::simFuncEnum::TOTAL_SIM_FUNCS)
 
-typedef struct parameters_st {
+typedef struct simConfig_st {
 	int width, height, cells;
 	PFM::initialConditions initialCond = PFM::initialConditions::EVENLY_SPACED_INDEX;
 	double bias = 0;
 	PFM::integrationMethods method = PFM::integrationMethods::FTCS;
-} parameters_t;
+	double dt = 1;
+	double lambda = 3;
+	double gamma = 0.06;
+} simConfig_t;
 
-parameters_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
+simConfig_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
 	{512, 512, 50},
 	{128, 128, 50, PFM::initialConditions::LINEAR_RANDOM, 0.33, PFM::integrationMethods::FTCS},
 	{128, 128, 5}
@@ -44,6 +47,7 @@ int main() {
 	return !result; //0 for ok
 }
 
+//TODO: receive config and param structs
 bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	if ((int)simulationFunctionToRun >= TOTAL_SIM_FUNCS) {
 		LOG_ERROR("Invalid simulation function selected");
@@ -59,7 +63,10 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	int cells = defaultParamsPerSimulType[simIndex].cells;
 	auto initialCondition = defaultParamsPerSimulType[simIndex].initialCond;
 	double bias = defaultParamsPerSimulType[simIndex].bias;	
-	PFM::integrationMethods method = defaultParamsPerSimulType[simIndex].method;	
+	PFM::integrationMethods method = defaultParamsPerSimulType[simIndex].method;
+	double dt = defaultParamsPerSimulType[simIndex].dt;
+	double lambda = defaultParamsPerSimulType[simIndex].lambda;
+	double gamma = defaultParamsPerSimulType[simIndex].gamma;
 
 	PFM::fieldDimensions_t dimensions = {(size_t)width, (size_t)height};
 	
@@ -95,7 +102,7 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 		                                                      512, 700);
 
 	LOG_INFO("Will run the simulation");
-	PFM::runForSteps(-1, simulationFunctionToRun, method);
+	PFM::runForSteps(-1, lambda, gamma, dt, simulationFunctionToRun, method);
 
 	size_t elements = floatField.size.getTotalElements();
 
