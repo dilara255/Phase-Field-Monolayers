@@ -72,11 +72,12 @@ void PFM::SimulationControl::releaseFields() {
 //TODO: this whole thing should be reimplemented, and probably split apart a bit
 void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
 													PFM::initialConditions initialCond, bool perCellLayer, 
-	                                                                    double bias, double cellSeedValue) {
+	                                                double bias, double cellSeedValue, uint64_t prngSeed) {
 	
 	if(isSimulationRunning()) { stop(); }
 	releaseFields();
 
+	m_lastSimData.initialSeed = prngSeed;
 	size_t elements = dimensions.totalElements();
 	
 	m_lastDphisAndTempKsField_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
@@ -190,7 +191,7 @@ void PFM::SimulationControl::mirrorBaseOnRotating() {
 	m_rotatingBaseLattice_ptr.get()->getPointerToCurrent()->mirrorAllDataFrom(m_baseLattice_ptr.get());
 }
 
-std::string PFM::getFileName(int steps) {
+std::string PFM::getFileName(int steps, bool calledFromGUI) {
 	
 	//gather the relevant data:
 	auto dimensions = controller.getActiveFieldPtr()->getFieldDimensions();
@@ -222,7 +223,7 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 
 	auto dimensions = m_activeBaseField_ptr->getFieldDimensions();
 
-	std::string baseFilename = getFileName(m_lastSimData.stepsRan);
+	std::string baseFilename = getFileName(m_lastSimData.stepsRan, false);
 	
 	FILE* fp_pgm = fopen((baseFilename + ".pgm").c_str(), "wb");
 	if(fp_pgm == NULL) { return false; }
@@ -325,9 +326,10 @@ const PeriodicDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dime
 	                                                      uint32_t numberCells, 
 	                                                      PFM::initialConditions initialCond, 
 														  double bias,												      
-														  bool perCellLayer) {
+														  bool perCellLayer, 
+	                                                      uint64_t seed) {
 	
-	controller.reinitializeController(dimensions, numberCells, initialCond, perCellLayer, bias);
+	controller.reinitializeController(dimensions, numberCells, initialCond, perCellLayer, bias, seed);
 	return controller.getActiveFieldPtr();
 }
 

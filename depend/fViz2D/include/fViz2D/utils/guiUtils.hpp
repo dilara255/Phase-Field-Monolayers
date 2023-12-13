@@ -10,9 +10,6 @@ namespace GUI {
 
     void imGuiDrawTexture(TEX::textureID_t* texID_ptr, const char* windowName = "Texture Drawing");
 
-    void imGuiCreateMenu(menuDefinition_t menuDefinition);
-
-    menuDefinition_t getTestMenuDefinition(bool* testBool_ptr,  float* clearColorFirstElement_ptr, 
-                                           float* noiseTintColorFirstElement_ptr);
+    void imGuiCreateMenu(menuDefinition_t menuDefinition, F_V2::rendererControlPtrs_t* rendererControl = {} );
 }
 

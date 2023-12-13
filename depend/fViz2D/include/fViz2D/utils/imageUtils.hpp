@@ -101,7 +101,16 @@ namespace COLOR {
 
 	//TODO: Add schemes for other formats
 
+	//TODO: actual support for shader schemes not yet implemented
+	typedef struct schemeRgba8bpcForShader_st {
+		int totalElements = 0;
+		std::vector<float> values;
+		std::vector<COLOR::rgbaC_t> colors;
+	} schemeRgba8bpcForShader_t;
+
 	//Insertions guarantee that values are in increasing order
+	//TODO: this has grown and should be a class
+	//TODO-CRITICAL: also please move the definitions to the .cpp file
 	typedef struct colorInterpolation_st {
 		private:
 			schemeVectorRgba8bpc_t m_correspondences;
@@ -156,6 +165,26 @@ namespace COLOR {
 
 			//Sets the values interval to [0.0, 1.0]
 			void normalizeSpan() { changeBiasTo(0.0); changeSpanTo(1.0); }
+
+			//Sets up the schemeRgba8bpcForShader_t pointed at by shaderScheme_ptr as a normalized copy of this
+			//Deletes any old data on shaderScheme_ptr
+			void setSchemeForShader(schemeRgba8bpcForShader_t* shaderScheme_ptr) {
+				
+				shaderScheme_ptr->values.clear();
+				shaderScheme_ptr->colors.clear();
+
+				shaderScheme_ptr->totalElements = m_correspondences.size();
+				shaderScheme_ptr->values.reserve(shaderScheme_ptr->totalElements);
+				shaderScheme_ptr->colors.reserve(shaderScheme_ptr->totalElements);
+
+				colorInterpolation_st tempScheme = *this;
+				tempScheme.normalizeSpan();
+
+				for (int i = 0; i < shaderScheme_ptr->totalElements; i++) {
+					shaderScheme_ptr->values.at(i) = (float)tempScheme.m_correspondences.at(i).value;
+					shaderScheme_ptr->colors.at(i) = tempScheme.m_correspondences.at(i).color;
+				}
+			}
 
 	} colorInterpolation_t;
 		

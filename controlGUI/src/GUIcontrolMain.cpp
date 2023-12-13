@@ -1,4 +1,5 @@
 #include "fViz2D/API/FV2_API.hpp"
+#include "fViz2D/API/GUI_API.hpp"
 #include "fAux/API/prng.hpp"
 #include "fAux/API/timeHelpers.hpp"
 
@@ -83,11 +84,13 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	GUI::filenameCallback_func* filenameFunc = PFM::getFileName;
 	GUI::menuDefinition_t testMenu = GUI::getTestMenuDefinition(&works, &clear.r, &tint.r);
+	GUI::menuDefinitionList_t menuList;
+	menuList.push_back(testMenu);
 	COLOR::colorInterpolation_t nullScheme;
 
 	LOG_DEBUG("Starting renderer...");
 	std::thread renderThread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, 
-		                                                      testMenu, filenameFunc,
+		                                                      &menuList, filenameFunc,
 		                                                      &nullScheme, "Phase Field Model: CH", 
 		                                                      512, 700);
 

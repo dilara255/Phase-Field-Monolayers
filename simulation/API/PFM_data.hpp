@@ -18,9 +18,11 @@ namespace PFM {
         double lastCellSeedValue = 0;
         uint64_t initialSeed = 0;
         simFuncEnum lastSimulFuncUsed = simFuncEnum::TOTAL_SIM_FUNCS;        
-        double lastK = -1;
-        double lastA = -1;
         double lastDT = -1;
+		double lastGamma = -1;
+		double lastLambda = -1;
+		double lastK = -1;
+        double lastA = -1;
         initialConditions lastInitialContidion = initialConditions::TOTAL_INITIAL_CONDS;
         double lastBias = -9999;
         integrationMethods lastMethod = integrationMethods::TOTAL_METHODS;
@@ -58,7 +60,7 @@ namespace PFM {
 		double lastDensity = 0;
 		double densityChange = 0;
 		double absoluteChange = 0;
-
+		
 		inline void clearChanges() {densityChange = 0; absoluteChange = 0;}
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0; }
 	} checkData_t;

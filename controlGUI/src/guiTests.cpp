@@ -5,6 +5,7 @@
 
 #include "fViz2D/API/FV2_testsAPI.hpp"
 #include "fViz2D/API/FV2_API.hpp"
+#include "fViz2D/API/GUI_API.hpp"
 
 #include "PFM_API.hpp"
 #include "PFM_tests.hpp"
@@ -37,8 +38,10 @@ bool PFM_GUI_TESTS::fViz2DintegrationTests() {
 	dynamicData.storeFloatsField(&field);
 
 	GUI::menuDefinition_t testMenu = GUI::getTestMenuDefinition(&works, &clear.r, &tint.r);
+	GUI::menuDefinitionList_t menuList;
+	menuList.push_back(testMenu);
 
-	F_V2::rendererRetCode_st retCode = F_V2::spawnRendererOnThisThread(&dynamicData, &clear, testMenu);
+	F_V2::rendererRetCode_st retCode = F_V2::spawnRendererOnThisThread(&dynamicData, &clear, &menuList);
 
 	bool result1 = (retCode == F_V2::rendererRetCode_st::OK && works);
 	if (result1) { LOG_INFO("OK"); }
@@ -50,7 +53,7 @@ bool PFM_GUI_TESTS::fViz2DintegrationTests() {
 
 	retCode = F_V2::rendererRetCode_st::STILL_RUNNING;
 	works = false;
-	std::thread renderTrhread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, testMenu);
+	std::thread renderTrhread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, &menuList);
 
 	while (retCode == F_V2::rendererRetCode_st::STILL_RUNNING) {
 		for (size_t i = 0; i < field.size.getTotalElements(); i++) {
