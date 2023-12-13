@@ -31,24 +31,22 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	//Parameters for the steps:
 	//TODO: extract the parameters
 	const bool invertField = false;
-	double k = 0.5;
-	double A = 0.25;
+	double k_ini = 0.5;
+	double A_ini = 0.25;
 	constexpr double dt = 1;
 	//we're using fixed dx = dy = 1, h2 = 2
 	//TODO: add h as parameter
 	//static_assert(dt <= 1/(4*k), "dt too large for k"); //Max stable dt for FTCS heat diffusion, used as a ballpark
-	const double expectedInterfaceWidth = std::sqrt(2*k/A);
 	const double initialCellDiameterDensity = 1.0/2;
 
-	double gamma = std::sqrt(A*k)/6.0;
-	double lambda = 2*std::sqrt(k/A);
+	double gamma = std::sqrt(A_ini*k_ini)/6.0;
+	double lambda = 2*std::sqrt(k_ini/A_ini);
 
-	A = 12 * gamma / lambda;
-	k = 3 * gamma * lambda;
+	const double A = 12 * gamma / lambda;
+	const double k = 3 * gamma * lambda;
 
 	//Preparation to start stepping:
-	preProccessFieldsAndUpdateController(controller_ptr, initialCellDiameterDensity, k, A, dt,
-		                                                  expectedInterfaceWidth, invertField);
+	preProccessFieldsAndUpdateController(controller_ptr, initialCellDiameterDensity, k, A, dt, lambda, invertField);
 	
 	controller_ptr->setBaseAsActive();
 	auto checks_ptr = controller_ptr->getActiveFieldsCheckDataPtr();
@@ -56,7 +54,7 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
 	auto tempKsAndDphis_ptr = controller_ptr->getLastDphisAndTempKsFieldPtr();
 
-	printf("A: %f, k: %f\n", A, k);
+	controller_ptr->printSimDataAndParams();
 	updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), dt);
 
 	//The actual steps:

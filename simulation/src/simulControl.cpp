@@ -251,12 +251,21 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 	return true;
 }
 
+void PFM::SimulationControl::updateGammaLambda() {
+	m_lastSimParameters.gamma = std::sqrt(m_lastSimParameters.A * m_lastSimParameters.k) / 6.0;
+	m_lastSimParameters.lambda = 2*std::sqrt(m_lastSimParameters.k / m_lastSimParameters.A);
+}
+
 void PFM::SimulationControl::setAused(double newA) {
 	m_lastSimParameters.A = newA;
+
+	updateGammaLambda();
 }
 
 void PFM::SimulationControl::setKused(double newK) {
 	m_lastSimParameters.k = newK;
+
+	updateGammaLambda();
 }
 
 void PFM::SimulationControl::setDTused(double newDT) {
@@ -321,6 +330,10 @@ const simParameters_t* PFM::SimulationControl::getLastSimParametersPtr() const {
 
 std::string PFM::SimulationControl::getSimParamsString() const { 
 	return m_lastSimParameters.getSimParamsString();
+}
+
+void PFM::SimulationControl::printSimDataAndParams() const {
+	printf("%s\n%s\n", getSimDataString().c_str(), getSimParamsString().c_str());
 }
 
 bool PFM::SimulationControl::isSimulationRunning() const {
