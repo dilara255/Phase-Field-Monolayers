@@ -4,9 +4,9 @@
 
 #include "PFM_API_enums.hpp"
 
-#include <vector>
+#include "fAux/API/miscStdHeaders.h"
+
 #include <assert.h>
-#include <memory>
 
 #define ALL_CELLS_ID -1
 
@@ -15,16 +15,50 @@ namespace PFM {
 	typedef struct simData_st {
 		int stepsRan = 0;
 		int cells = 0;
+		int width = 0;
+		int height = 0;
         double lastCellSeedValue = 0;
         uint64_t initialSeed = 0;
         simFuncEnum lastSimulFuncUsed = simFuncEnum::TOTAL_SIM_FUNCS;        
-        double lastK = -1;
-        double lastA = -1;
-        double lastDT = -1;
         initialConditions lastInitialContidion = initialConditions::TOTAL_INITIAL_CONDS;
         double lastBias = -9999;
         integrationMethods lastMethod = integrationMethods::TOTAL_METHODS;
+
+		inline std::string getSimDataString() const {
+			std::string str = "";
+			str += "Width: " + std::to_string(width) + "\n";
+			str += "Height: " + std::to_string(height) + "\n";
+			str += "Cells: " + std::to_string(cells) + "\n";
+			str += "Bias: " + std::to_string(lastBias) + "\n";
+			str += "PRNG Seed: " + std::to_string(initialSeed) + "\n";
+			str += "Initial Cell Seed: " + std::to_string(lastCellSeedValue) + "\n";
+			str += "Initial Condition: " + std::to_string((int)lastInitialContidion) + "\n";
+			str += "Method: " + std::to_string((int)lastMethod) + "\n";
+			str += "Simulation: " + std::to_string((int)lastSimulFuncUsed) + "\n";
+			str += "Steps: " + std::to_string(stepsRan);
+
+			return str;
+		}
 	} simData_t;
+
+	typedef struct simParameters_st {     
+        double dt = -1;
+		double gamma = -1;
+		double lambda = -1;
+		double k = -1;
+        double A = -1;
+
+		inline std::string getSimParamsString() const {
+			std::string str = "";
+			str += "dt: " + std::to_string(dt) + "\n";
+			str += "Gamma (surface tension): " + std::to_string(gamma) + "\n";
+			str += "Lambda (interface width): " + std::to_string(lambda) + "\n";
+			str += "k: " + std::to_string(k) + "\n";
+			str += "A: " + std::to_string(A) + "\n";
+
+			return str;
+		}
+	} simParameters_t;
 
 	typedef struct coordinate_st {
 		int x, y;
@@ -58,7 +92,7 @@ namespace PFM {
 		double lastDensity = 0;
 		double densityChange = 0;
 		double absoluteChange = 0;
-
+		
 		inline void clearChanges() {densityChange = 0; absoluteChange = 0;}
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0; }
 	} checkData_t;

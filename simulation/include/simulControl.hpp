@@ -9,6 +9,8 @@
 #include "PFM_API.hpp"
 #include "PFM_data.hpp"
 
+#include "fAux/API/prng.hpp"
+
 #define CELL_SEED_VAL (1.0) //used to mark a point as a cell to be expanded. TODO: deprecate?
 #define MS_TO_WAIT 10
 #define DEFAULT_STEPS_PER_CHECK 500
@@ -34,7 +36,6 @@ namespace PFM {
     //********************SimulationControl**************************
     //This class holds the data and references necessary to control the simulation
     class SimulationControl {
-    //TODO: probably should be a singleton : )
 
     public:
 
@@ -66,7 +67,8 @@ namespace PFM {
         //Defaults to initialConditions::EVENLY_SPACED_INDEX if a bad condition is passed
         void reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
                                     PFM::initialConditions initialCond, bool perCellLayer, 
-                                    double bias = 0, double cellSeedValue = CELL_SEED_VAL);
+                                    double bias = 0, double cellSeedValue = CELL_SEED_VAL,
+                                    uint64_t prngSeed = DEFAULT_PRNG_SEED0);
 
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
@@ -91,6 +93,10 @@ namespace PFM {
         void setStepsPerCheckSaved(int newStepsPerCheckSaved);
 
         const simData_t* getLastSimDataPtr() const;
+        std::string getSimDataString() const;
+
+        const simParameters_t* getLastSimParametersPtr() const;
+        std::string getSimParamsString() const;
 
         bool isSimulationRunning() const;
         bool checkIfShouldStop();
@@ -120,6 +126,7 @@ namespace PFM {
         std::thread m_stepsThread;
 
         simData_t m_lastSimData;
+        simParameters_t m_lastSimParameters;
         
         //To be filled with actual data:
         std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr;

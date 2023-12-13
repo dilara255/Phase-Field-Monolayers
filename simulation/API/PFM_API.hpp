@@ -6,6 +6,7 @@
 #include "PFM_API_enums.hpp"
 #include "PFM_data.hpp"
 #include "fAux/API/miscStdHeaders.h"
+#include "fAux/API/prng.hpp"
 
 namespace PFM {
 
@@ -15,7 +16,8 @@ namespace PFM {
 																	   PFM::initialConditions initialCond = 
 																			initialConditions::EVENLY_SPACED_INDEX,
 		                                                               double bias = 0, 
-																	   bool perCellLayer = false);
+																	   bool perCellLayer = false, 
+	                                                                   uint64_t seed = DEFAULT_PRNG_SEED0);
 
 	PFM_API bool isSimulationRunning();
 	PFM_API int stopSimulation();
@@ -23,7 +25,7 @@ namespace PFM {
 	PFM_API void resetStepsRan();
 	PFM_API bool saveFieldToFile();
 	//Uses parameters and etc to build a default file-name. Compatible with GUI save button if sent as callback.
-    PFM_API std::string getFileName(int steps);
+    PFM_API std::string getFileName(int steps, bool calledFromGui);
 	
 	//If steps <= 0, will run until manually stopped
 	//If the simulation is already running or the simFuncEnum or method is bad, will do nothing (*no warning*)
