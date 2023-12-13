@@ -98,6 +98,8 @@ namespace PFM {
         const simParameters_t* getLastSimParametersPtr() const;
         std::string getSimParamsString() const;
 
+        void printSimDataAndParams() const;
+
         bool isSimulationRunning() const;
         bool checkIfShouldStop();
         int getNumberCells() const;
@@ -115,6 +117,7 @@ namespace PFM {
         //Asks the controller to stop, but otherwise keeps going. *Use with caution*.
         //WARNING: When the simulation actually stops, its thread is STILL HANGING. Does nothing not running.
         void nonBlockingStop();
+        void updateGammaLambda();
 
         bool m_hasInitialized = false;
         bool m_isRunning = false;
