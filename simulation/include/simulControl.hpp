@@ -89,13 +89,17 @@ namespace PFM {
         bool saveFieldToFile() const;
         void setAused(double newA);
         void setKused(double newK);
+        void setLambdaUsed(double newLambda);
+        void setGammaUsed(double newGamma);
+        //Just returns in case the new lambda = 0
+        void updatePhysicalParametersFromInternals();
         void setDTused(double newK);
         void setStepsPerCheckSaved(int newStepsPerCheckSaved);
 
-        const simData_t* getLastSimDataPtr() const;
+        const simConfig_t* getLastSimConfigPtr() const;
         std::string getSimDataString() const;
 
-        const simParameters_t* getLastSimParametersPtr() const;
+        simParameters_t* getLastSimParametersPtr();
         std::string getSimParamsString() const;
 
         void printSimDataAndParams() const;
@@ -111,12 +115,13 @@ namespace PFM {
         void resetStepsAlreadyRan();
 
     private:
-            
+
         void releaseFields();
         void stepsEnded();
         //Asks the controller to stop, but otherwise keeps going. *Use with caution*.
-        //WARNING: When the simulation actually stops, its thread is STILL HANGING. Does nothing not running.
+        //WARNING: When the simulation actually stops, its thread is STILL HANGING. Does nothing if not running.
         void nonBlockingStop();
+        //These will just return in case their dividend is zero:
         void updateGammaLambda();
         void updateKandA();
 
@@ -129,7 +134,7 @@ namespace PFM {
 
         std::thread m_stepsThread;
 
-        simData_t m_lastSimData;
+        simConfig_t m_lastSimData;
         simParameters_t m_lastSimParameters;
         
         //To be filled with actual data:

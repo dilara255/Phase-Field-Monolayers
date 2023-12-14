@@ -9,6 +9,8 @@
 #include "guiTests.hpp"
 #include "guiControlMain.hpp"
 
+#include "guiMenus.hpp"
+
 #define RUN_GUI_TESTS 0
 #define RUN_SIM_DATACTRL_TESTS 0
 #define RUN_SINGLE_LAYER_CH_SIM 1
@@ -89,20 +91,33 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	IMG::generic2DfieldPtr_t dynamicData;
 	dynamicData.storeFloatsField(&floatField);
 
+	COLOR::colorInterpolation_t scheme;
+	scheme.loadScheme(&COLOR::defaultBlueYellowRedScheme);
+
+	LOG_INFO("Will run the simulation");
+	PFM::runForSteps(-1, lambda, gamma, dt, simulationFunctionToRun, method);
+
+	if(simulationFunctionToRun != PFM::simFuncEnum::DATA_CONTROL_TEST) { works = true; }
+
+	auto checks_ptr = PFM::getCheckDataPtr();
+	auto config_ptr = PFM::getSimConfigPtr();
+	auto params_ptr = PFM::getSimParamsPtr();
+
+	if(checks_ptr == nullptr || config_ptr == nullptr || params_ptr == nullptr) {
+		LOG_ERROR("Could get the pointers to form the menus");
+		return false;
+	}
+
 	GUI::filenameCallback_func* filenameFunc = PFM::getFileName;
-	GUI::menuDefinition_t testMenu = GUI::getTestMenuDefinition(&works, &clear.r, &tint.r);
 	GUI::menuDefinitionList_t menuList;
-	menuList.push_back(testMenu);
-	COLOR::colorInterpolation_t nullScheme;
+	menuList.push_back(PFM_GUI::getChecksMenuDefinition(checks_ptr));
+	menuList.push_back(PFM_GUI::getConfigAndParamsMenuDefinition(config_ptr, params_ptr));
 
 	LOG_DEBUG("Starting renderer...");
 	std::thread renderThread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, 
 		                                                      &menuList, filenameFunc,
-		                                                      &nullScheme, "Phase Field Model: CH", 
-		                                                      512, 700);
-
-	LOG_INFO("Will run the simulation");
-	PFM::runForSteps(-1, lambda, gamma, dt, simulationFunctionToRun, method);
+		                                                      &scheme, "Phase Field Model: CH", 
+		                                                      768, 704);
 
 	size_t elements = floatField.size.getTotalElements();
 

@@ -38,10 +38,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	
 	const double initialCellDiameterDensity = 1.0/2;
 
-	const double dt = controller_ptr->getLastSimParametersPtr()->dt;
-	const double A = controller_ptr->getLastSimParametersPtr()->A;
-	const double k = controller_ptr->getLastSimParametersPtr()->k;
-	const double lambda = controller_ptr->getLastSimParametersPtr()->lambda;
+	double dt = controller_ptr->getLastSimParametersPtr()->dt;
+	double A = controller_ptr->getLastSimParametersPtr()->A;
+	double k = controller_ptr->getLastSimParametersPtr()->k;
+	double lambda = controller_ptr->getLastSimParametersPtr()->lambda;
 
 	//Preparation to start stepping:
 	preProccessFieldsAndUpdateController(controller_ptr, initialCellDiameterDensity, k, A, dt, lambda, invertField);
@@ -55,9 +55,15 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	controller_ptr->printSimDataAndParams();
 	updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), dt);
 
+	auto params_ptr = controller_ptr->getLastSimParametersPtr();
 	//The actual steps:
 	while(!controller_ptr->checkIfShouldStop()) {
 	
+		//TODO: maybe pull into an "updateLocalParameters" function?
+		dt = params_ptr->dt;
+		A = params_ptr->A;
+		k = params_ptr->k;
+
 		switch (method)
 		{
 		case PFM::integrationMethods::FTCS:
@@ -251,6 +257,9 @@ void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int steps
 		checks_ptr->lastDensity += checks_ptr->densityChange;
 		checks_ptr->absoluteChange /= elements;
 		checks_ptr->step = step;
+
+		checks_ptr->lastDensityChange = checks_ptr->densityChange;
+		checks_ptr->lastAbsoluteChange = checks_ptr->absoluteChange;
 	
 		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
 
