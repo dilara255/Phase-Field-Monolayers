@@ -117,7 +117,8 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	std::thread renderThread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, 
 		                                                      &menuList, filenameFunc,
 		                                                      &scheme, "Phase Field Model: CH", 
-		                                                      768, 704);
+		                                                      768, 704, true, F_V2::defaultSynchCallback,
+		                                                      PFM_GUI::pfmGuiBannerPathFromBinary);
 
 	size_t elements = floatField.size.getTotalElements();
 
