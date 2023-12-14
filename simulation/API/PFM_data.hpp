@@ -39,7 +39,7 @@ namespace PFM {
 
 			return str;
 		}
-	} simData_t;
+	} simConfig_t;
 
 	typedef struct simParameters_st {     
         double dt = -1;
@@ -93,8 +93,12 @@ namespace PFM {
 		double densityChange = 0;
 		double absoluteChange = 0;
 		
+		double lastDensityChange = 0;
+		double lastAbsoluteChange = 0;
+		
 		inline void clearChanges() {densityChange = 0; absoluteChange = 0;}
-		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0; }
+		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
+		                        lastDensityChange = 0; lastAbsoluteChange = 0; }
 	} checkData_t;
 
 	typedef struct fieldDimensions_st {

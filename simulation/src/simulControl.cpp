@@ -197,7 +197,7 @@ std::string PFM::getFileName(int steps, bool calledFromGUI) {
 	
 	//gather the relevant data:
 	auto dimensions = controller.getActiveFieldPtr()->getFieldDimensions();
-	const PFM::simData_t* simData_ptr = controller.getLastSimDataPtr();
+	const PFM::simConfig_t* simData_ptr = controller.getLastSimConfigPtr();
 	const PFM::simParameters_t* simParams_ptr = controller.getLastSimParametersPtr();
 
 	std::string fileName = "";	
@@ -252,11 +252,13 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 }
 
 void PFM::SimulationControl::updateGammaLambda() {
+	if(m_lastSimParameters.A == 0) { return; }
 	m_lastSimParameters.gamma = std::sqrt(m_lastSimParameters.A * m_lastSimParameters.k) / 6.0;
 	m_lastSimParameters.lambda = 2*std::sqrt(m_lastSimParameters.k / m_lastSimParameters.A);
 }
 
 void PFM::SimulationControl::updateKandA() {
+	if(m_lastSimParameters.lambda == 0) { return; }
 	m_lastSimParameters.A = 12 * m_lastSimParameters.gamma / m_lastSimParameters.lambda;
 	m_lastSimParameters.k = 3 * m_lastSimParameters.gamma * m_lastSimParameters.lambda;
 }
@@ -270,6 +272,22 @@ void PFM::SimulationControl::setAused(double newA) {
 void PFM::SimulationControl::setKused(double newK) {
 	m_lastSimParameters.k = newK;
 
+	updateGammaLambda();
+}
+
+void PFM::SimulationControl::setLambdaUsed(double newLambda) {
+	m_lastSimParameters.lambda = newLambda;
+
+	updateKandA();
+}
+
+void PFM::SimulationControl::setGammaUsed(double newGamma) {
+	m_lastSimParameters.gamma = newGamma;
+
+	updateKandA();
+}
+
+void PFM::SimulationControl::updatePhysicalParametersFromInternals() {
 	updateGammaLambda();
 }
 
@@ -326,7 +344,7 @@ void PFM::SimulationControl::runForSteps(int steps, double lambda, double gamma,
 	m_stepsThread.detach();
 }
 
-const simData_t* PFM::SimulationControl::getLastSimDataPtr() const {
+const simConfig_t* PFM::SimulationControl::getLastSimConfigPtr() const {
 	return &m_lastSimData;
 }
 
@@ -334,7 +352,7 @@ std::string PFM::SimulationControl::getSimDataString() const {
 	return m_lastSimData.getSimDataString();
 }
 
-const simParameters_t* PFM::SimulationControl::getLastSimParametersPtr() const {
+simParameters_t* PFM::SimulationControl::getLastSimParametersPtr() {
 	return &m_lastSimParameters;
 }
 
@@ -402,4 +420,24 @@ PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {
 
 const PeriodicDoublesLattice2D* PFM::getActiveFieldConstPtr() {
 	return (const PeriodicDoublesLattice2D*)controller.getActiveFieldPtr();
+}
+
+PFM::checkData_t* PFM::getCheckDataPtr() {
+	if (!controller.isInitialized() && controller.getActiveFieldPtr()->isInitialized()) { return nullptr; }
+	return &controller.getActiveFieldPtr()->checks;
+}
+
+const PFM::simConfig_t* PFM::getSimConfigPtr() {
+	if (!controller.isInitialized()) { return nullptr; }
+	return controller.getLastSimConfigPtr();
+}
+
+PFM::simParameters_t* PFM::getSimParamsPtr() {
+	if (!controller.isInitialized()) { return nullptr; }
+	return controller.getLastSimParametersPtr();
+}
+
+void PFM::updatePhysicalParameters() {
+	if (!controller.isInitialized()) { return; }
+	controller.updatePhysicalParametersFromInternals();
 }
