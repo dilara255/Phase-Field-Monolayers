@@ -9,9 +9,9 @@ static const PFM::simConfig_t* g_simConfig_ptr = nullptr;
 static PFM::simParameters_t* g_simParams_ptr = nullptr;
 
 void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
-	ImGui::Text("Checks @ step %d:\nDensity: %f\nchange: %f, absolute change: %f",
-		        g_checkData_ptr->step, g_checkData_ptr->lastDensity, 
-		        g_checkData_ptr->lastDensityChange, g_checkData_ptr->lastAbsoluteChange);
+	if(g_checkData_ptr == nullptr) { return; }
+
+	ImGui::Text("%s", g_checkData_ptr->getChecksStr().c_str());
 }
 
 void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {

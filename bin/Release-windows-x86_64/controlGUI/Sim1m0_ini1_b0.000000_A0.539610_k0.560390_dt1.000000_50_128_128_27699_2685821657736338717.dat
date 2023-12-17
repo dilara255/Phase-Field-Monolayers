@@ -1,0 +1,22 @@
+Width: 128
+Height: 128
+Cells: 50
+Bias: 0.000000
+PRNG Seed: 2685821657736338717
+Initial Cell Seed: 0.000000
+Initial Condition: 1
+Method: 0
+Simulation: 1
+Steps: 27699
+dt: 1.000000
+Gamma (surface tension): 0.091650
+Lambda (interface width): 2.038146
+k: 0.560390
+A: 0.539610
+
+
+Checks @ step 27500
+Density: 0.507536
+Change: 0.000000, absolute change: 0.000015
+
+

@@ -1,8 +1,8 @@
 echo off
 
 set major=0
-set minor=2
-set sub=2
+set minor=3
+set sub=0
 set build=1
 
 git status

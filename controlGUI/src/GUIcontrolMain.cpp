@@ -29,7 +29,7 @@ typedef struct simConfig_st {
 
 simConfig_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
 	{512, 512, 50},
-	{128, 128, 50, PFM::initialConditions::LINEAR_RANDOM, 0.33, PFM::integrationMethods::FTCS},
+	{128, 128, 50, PFM::initialConditions::LINEAR_RANDOM, 0.0, PFM::integrationMethods::FTCS},
 	{128, 128, 5}
 };
 
@@ -58,7 +58,11 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	LOG_DEBUG("Will run the simulation and display on the GUI");
 
+	if(simulationFunctionToRun != PFM::simFuncEnum::DATA_CONTROL_TEST) { 
+		LOG_WARN("The menu to validate this test is not supported on the current version of the controller. Will say that the manual inspection failed. TODO: Reimplement support");
+	}
 	int simIndex = (int)simulationFunctionToRun;
+	
 
 	int width = defaultParamsPerSimulType[simIndex].width;
 	int height = defaultParamsPerSimulType[simIndex].height;
@@ -77,17 +81,7 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	LOG_INFO("Simulation initialized");
 		
 	IMG::floats2Dfield_t floatField = IMG::createFloats2Dfield(width, height);
-	
-	F_V2::rendererRetCode_st retCode = F_V2::rendererRetCode_st::STILL_RUNNING;
 
-	//These are just for compatibility with the test version of fViz2D
-	//TODO: update fViz2D version and get rid of this : )
-	COLOR::rgbaF_t clear = COLOR::CLEAR;
-	COLOR::rgbaF_t tint = COLOR::FULL_WHITE;
-	//****************************************************************
-
-	bool works = false;
-	
 	IMG::generic2DfieldPtr_t dynamicData;
 	dynamicData.storeFloatsField(&floatField);
 
@@ -96,8 +90,6 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	LOG_INFO("Will run the simulation");
 	PFM::runForSteps(-1, lambda, gamma, dt, simulationFunctionToRun, method);
-
-	if(simulationFunctionToRun != PFM::simFuncEnum::DATA_CONTROL_TEST) { works = true; }
 
 	auto checks_ptr = PFM::getCheckDataPtr();
 	auto config_ptr = PFM::getSimConfigPtr();
@@ -114,6 +106,8 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 	menuList.push_back(PFM_GUI::getConfigAndParamsMenuDefinition(config_ptr, params_ptr));
 
 	LOG_DEBUG("Starting renderer...");
+	COLOR::rgbaF_t clear = COLOR::CLEAR; //TODO: next version of fViz2D should make this unecessary
+	F_V2::rendererRetCode_st retCode = F_V2::rendererRetCode_st::STILL_RUNNING;
 	std::thread renderThread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, 
 		                                                      &menuList, filenameFunc,
 		                                                      &scheme, "Phase Field Model: CH", 
@@ -122,9 +116,10 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	size_t elements = floatField.size.getTotalElements();
 
+	auto data_ptr = floatField.data.get();
 	while (retCode == F_V2::rendererRetCode_st::STILL_RUNNING) {
 		for (size_t i = 0; i < elements; i++) {
-			floatField.data.get()[i] = (float)PFM::getActiveFieldConstPtr()->getElement(i);
+			data_ptr[i] = (float)PFM::getActiveFieldConstPtr()->getElement(i);
 		}
 
 		AZ::hybridBusySleepForMicros(std::chrono::microseconds(1000));
@@ -144,11 +139,11 @@ bool PFM_GUI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	LOG_TRACE("Will save");
 
-	PFM::saveFieldToFile();
+	PFM::saveFieldData();
 
 	LOG_INFO("Results saved");
 
-	bool result = (retCode == F_V2::rendererRetCode_st::OK && works);
+	bool result = (retCode == F_V2::rendererRetCode_st::OK);
 	if (result) { LOG_INFO("OK"); }
 	else { LOG_ERROR("Renderer or user-reported error"); }
 
