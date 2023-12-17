@@ -56,7 +56,7 @@ bool PFM_CLI::runSimulation(PFM::simFuncEnum simulationFunctionToRun) {
 
 	LOG_TRACE("Will save");
 
-	PFM::saveFieldToFile();
+	PFM::saveFieldData();
 
 	LOG_INFO("Results saved");
 

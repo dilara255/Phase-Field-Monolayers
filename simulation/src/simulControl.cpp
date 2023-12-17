@@ -215,8 +215,8 @@ std::string PFM::getFileName(int steps, bool calledFromGUI) {
 }
 
 //TODO: an actual reasonable save system : p
-//NOTE: values are clamped to [0, 1]
-bool PFM::SimulationControl::saveFieldToFile() const {
+//NOTE: values are clamped to [0, 1] for the .pgm image
+bool PFM::SimulationControl::saveFieldData(bool savePgmImage) const {
 
 	if (!m_hasInitialized || m_activeBaseField_ptr == NULL) { return false; }
 	
@@ -228,25 +228,36 @@ bool PFM::SimulationControl::saveFieldToFile() const {
 
 	std::string baseFilename = getFileName(m_lastSimData.stepsRan, false);
 	
-	FILE* fp_pgm = fopen((baseFilename + ".pgm").c_str(), "wb");
-	if(fp_pgm == NULL) { return false; }
+	int maxColor = 255;
+	FILE* fp_pgm = nullptr;
+	if(savePgmImage) {
+		fp_pgm = fopen((baseFilename + ".pgm").c_str(), "wb");
+		if(fp_pgm == NULL) { return false; }
+		fprintf(fp_pgm, "P5\n%d %d\n%d\n", (int)dimensions.width, (int)dimensions.height, maxColor);
+	}
 
 	FILE* fp_bin = fopen((baseFilename + ".bin").c_str(), "wb");
 	if(fp_bin == NULL) { return false; }
-
-	int maxColor = 255;
-	fprintf(fp_pgm, "P5\n%d %d\n%d\n", (int)dimensions.width, (int)dimensions.height, maxColor);
 
 	double value;
 	for (int j = 0; j < (int)dimensions.height; j++) {
 		for (int i = 0; i < (int)dimensions.width; i++) {
 		  value = m_activeBaseField_ptr->getDataPoint({i,j});
-		  fprintf(fp_pgm, "%c", (char)(std::clamp(value, 0.0, 1.0) * maxColor));
-		  fprintf(fp_bin, "%f", value);
+		  fprintf(fp_bin, "%f ", value);
+		  if(savePgmImage) { fprintf(fp_pgm, "%c", (char)(std::clamp(value, 0.0, 1.0) * maxColor)); }
 		}
 	}
-	fclose(fp_pgm);
 	fclose(fp_bin);
+	if(savePgmImage) { fclose(fp_pgm); }
+
+	FILE* fp_dat = fopen((baseFilename + ".dat").c_str(), "w");
+	if(fp_dat == NULL) { return false; }
+
+	fprintf(fp_dat, "%s\n", getSimDataString().c_str());
+	fprintf(fp_dat, "%s\n\n", getSimParamsString().c_str());
+	fprintf(fp_dat, "%s\n\n", getActiveFieldsChecksString().c_str());
+
+	fclose(fp_dat);
 
 	return true;
 }
@@ -360,6 +371,10 @@ std::string PFM::SimulationControl::getSimParamsString() const {
 	return m_lastSimParameters.getSimParamsString();
 }
 
+std::string PFM::SimulationControl::getActiveFieldsChecksString() const {
+	return getActiveFieldConstPtr()->checks.getChecksStr();
+}
+
 void PFM::SimulationControl::printSimDataAndParams() const {
 	printf("%s\n%s\n", getSimDataString().c_str(), getSimParamsString().c_str());
 }
@@ -405,8 +420,8 @@ void PFM::resetStepsRan() {
 	controller.resetStepsAlreadyRan();
 }
 
-bool PFM::saveFieldToFile() {
-	return controller.saveFieldToFile();
+bool PFM::saveFieldData(bool savePgmImage) {
+	return controller.saveFieldData(savePgmImage);
 }
 	
 void PFM::runForSteps(int stepsToRun, double lambda, double gamma, double dt,

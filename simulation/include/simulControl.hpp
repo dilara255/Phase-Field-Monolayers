@@ -86,7 +86,7 @@ namespace PFM {
         void mirrorBaseOnRotating();
 
         //Returns false in case the field was unitialized or unallocated
-        bool saveFieldToFile() const;
+        bool saveFieldData(bool savePgmImage = true) const;
         void setAused(double newA);
         void setKused(double newK);
         void setLambdaUsed(double newLambda);
@@ -101,6 +101,8 @@ namespace PFM {
 
         simParameters_t* getLastSimParametersPtr();
         std::string getSimParamsString() const;
+
+        std::string getActiveFieldsChecksString() const;
 
         void printSimDataAndParams() const;
 

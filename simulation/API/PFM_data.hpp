@@ -99,6 +99,15 @@ namespace PFM {
 		inline void clearChanges() {densityChange = 0; absoluteChange = 0;}
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
 		                        lastDensityChange = 0; lastAbsoluteChange = 0; }
+		inline const std::string getChecksStr() const {
+			std::string str = "Checks @ step ";
+			str += std::to_string(step) + "\n";
+			str += "Density: " + std::to_string(lastDensity) + "\n";
+			str += "Change: " + std::to_string(lastDensityChange);
+			str += ", absolute change: " + std::to_string(lastAbsoluteChange) + "\n";
+
+			return str;
+		}
 	} checkData_t;
 
 	typedef struct fieldDimensions_st {
