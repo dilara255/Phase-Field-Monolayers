@@ -23,7 +23,7 @@ namespace PFM {
 	PFM_API int stopSimulation();
 	PFM_API int getStepsRan();
 	PFM_API void resetStepsRan();
-	PFM_API bool saveFieldData(bool savePgmImage = true);
+	PFM_API bool saveFieldData(bool savePGM = true, bool saveBIN = false, bool saveDAT = false);
 	//Uses parameters and etc to build a default file-name. Compatible with GUI save button if sent as callback.
     PFM_API std::string getFileName(int steps, bool calledFromGui);
 	

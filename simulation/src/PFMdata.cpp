@@ -207,7 +207,7 @@ void PFM::PeriodicDoublesLattice2D::addFieldCheckData(PFM::checkData_t checkData
 	return true;
 }
 
-  bool PFM::PeriodicDoublesLattice2D::mirrorAllDataFrom(PeriodicDoublesLattice2D* otherField_ptr) {
+ bool PFM::PeriodicDoublesLattice2D::mirrorAllDataFrom(PeriodicDoublesLattice2D* otherField_ptr) {
 	if(!m_hasIntialized || !m_hasAllocated) { return false; }
 	if(!otherField_ptr->isInitialized() || !otherField_ptr->hasAllocated()) { return false; }
 	if(m_data.size() != otherField_ptr->getNumberOfActualElements()) { return false; }
@@ -217,4 +217,8 @@ void PFM::PeriodicDoublesLattice2D::addFieldCheckData(PFM::checkData_t checkData
 	}
 	return true;
 }
+
+ const std::vector<checkData_t>* PFM::PeriodicDoublesLattice2D::getCheckVectorConstPtr() const {
+	 return (const std::vector<checkData_t>*)&m_fieldChecks;
+ }
  

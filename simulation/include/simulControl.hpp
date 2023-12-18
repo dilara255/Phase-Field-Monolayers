@@ -39,12 +39,6 @@ namespace PFM {
 
     public:
 
-        //TODO:
-        //add an activeField_ptr. This will be the one the API will give the caller
-        //add method to set getBaseFieldPtr to return pointer to m_rotatingBaseLattice_ptr's currentLayer
-        //add method to set getBaseFieldPtr to return pointer to it's own field
-        //These should also affect what the activeField_ptr actually points to
-
         bool isInitialized() const;
         CurrentAndLastPerioricDoublesLattice2D* getRotatingBaseFieldPtr();
         PeriodicDoublesLattice2D* getBaseFieldPtr();
@@ -86,7 +80,7 @@ namespace PFM {
         void mirrorBaseOnRotating();
 
         //Returns false in case the field was unitialized or unallocated
-        bool saveFieldData(bool savePgmImage = true) const;
+        bool saveFieldData(bool savePGM = true, bool saveBIN = false, bool saveDAT = false) const;
         void setAused(double newA);
         void setKused(double newK);
         void setLambdaUsed(double newLambda);
@@ -102,7 +96,10 @@ namespace PFM {
         simParameters_t* getLastSimParametersPtr();
         std::string getSimParamsString() const;
 
-        std::string getActiveFieldsChecksString() const;
+        size_t getActiveFieldsCheckVectorElements() const;
+        //Returns an empty string in case the checkNumber is bad
+        std::string getActiveFieldsChecksString(size_t checkNumber) const;
+        
 
         void printSimDataAndParams() const;
 
