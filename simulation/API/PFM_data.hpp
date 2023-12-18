@@ -95,16 +95,22 @@ namespace PFM {
 		
 		double lastDensityChange = 0;
 		double lastAbsoluteChange = 0;
+
+		int stepsLastCheck = 0;
+		double totalTime = 0;
+		double totalAbsoluteChangeSinceLastSave = 0;
 		
-		inline void clearChanges() {densityChange = 0; absoluteChange = 0;}
+		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; }
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
-		                        lastDensityChange = 0; lastAbsoluteChange = 0; }
+		                        lastDensityChange = 0; lastAbsoluteChange = 0; stepsLastCheck = 0;
+		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0; }
 		inline const std::string getChecksStr() const {
 			std::string str = "Checks @ step ";
-			str += std::to_string(step) + "\n";
+			str += std::to_string(stepsLastCheck) + " (time: " + std::to_string(totalTime) + ")\n";
 			str += "Density: " + std::to_string(lastDensity) + "\n";
 			str += "Change: " + std::to_string(lastDensityChange);
-			str += ", absolute change: " + std::to_string(lastAbsoluteChange) + "\n";
+			str += ", absolute change: " + std::to_string(lastAbsoluteChange);
+			str += " (since last save: " + std::to_string(totalAbsoluteChangeSinceLastSave) + ")\n";
 
 			return str;
 		}
@@ -140,7 +146,7 @@ namespace PFM {
 		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.
 		void incrementDataPoint(coordinate_t coordinate, double changeInValue);
 		
-		//Adds a density and it's step to a vector with the previous field densities;
+		//Adds to the checkData vector;
 		void addFieldCheckData(checkData_t checkData);
 
 		//Allocates a new buffer and passes the data. *dimensions_ptr will hold the dimensions of the new buffer.
@@ -159,6 +165,8 @@ namespace PFM {
 		//If the fields don't have the exact same size, returns false.
 		//If either of the field are not yet initialized or allocated, also returns false.
 		bool mirrorAllDataFrom(PeriodicDoublesLattice2D* otherField_ptr);
+
+		const std::vector<checkData_t>* getCheckVectorConstPtr() const;
 
 		//To hold check data for the field. Is initialized on field initialization
 		//Other than that, is of responsability of the user of the class

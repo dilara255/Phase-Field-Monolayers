@@ -5,6 +5,12 @@
 #include "numericalIntegration.hpp"
 #include "derivatives.hpp"
 
+//TODO: Make into parameters in the sim func, which should come from the run method used
+#define TOTAL_CHANGE_PER_ELEMENT_PER_SAVE 0.00003
+#define SAVE_INTERMEDIATE_DATS 0
+#define SAVE_INTERMEDIATE_PGMS 0
+#define SAVE_INTERMEDIATE_BINS 0
+
 //TODO: version which accepts the controller and deals with the data (eg, currentAndLast, multi-layers, etc)
 void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius, 
 	                                 double cellSeedValue, bool invertValueOn);
@@ -92,6 +98,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 		*stepCount_ptr += 1;
 
 		updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), dt);
+		if (checks_ptr->totalAbsoluteChangeSinceLastSave >= TOTAL_CHANGE_PER_ELEMENT_PER_SAVE) {
+			controller_ptr->saveFieldData(SAVE_INTERMEDIATE_PGMS, SAVE_INTERMEDIATE_BINS, SAVE_INTERMEDIATE_DATS);
+			checks_ptr->totalAbsoluteChangeSinceLastSave = 0;
+		}
 	}
 
 	//Done:
@@ -258,21 +268,23 @@ void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int steps
 		checks_ptr->absoluteChange /= elements;
 		checks_ptr->step = step;
 
+		checks_ptr->totalAbsoluteChangeSinceLastSave += checks_ptr->absoluteChange;
+		checks_ptr->stepsLastCheck = checks_ptr->step;
 		checks_ptr->lastDensityChange = checks_ptr->densityChange;
 		checks_ptr->lastAbsoluteChange = checks_ptr->absoluteChange;
+		
+		checks_ptr->totalTime = checks_ptr->stepsLastCheck * dt;
 	
 		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
 
-		int checksPerPrintout = 5;
+		int checksPerPrintout = 5; //TODO: parametrize this
 		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
 			checksPerPrintout = 1;
 		#endif
 		if(checks_ptr->step % (stepsPerCheckSaved * checksPerPrintout) == 0) {
-			printf("t: %d - steps: %d - density: %f - absolute change (last step): %f\n", 
-						(int)(checks_ptr->step * dt), checks_ptr->step, checks_ptr->lastDensity, 
-				        checks_ptr->absoluteChange); 
+			printf("%s", checks_ptr->getChecksStr().c_str());
 		}
 	}	
 
-	checks_ptr->clearChanges();
+	checks_ptr->clearCurrentChanges();
 }

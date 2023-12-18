@@ -2,5 +2,5 @@
 
 namespace PFM_GUI {
 
-	bool runSimulation(PFM::simFuncEnum simulationFunctionToRun);
+	bool runSimulationWithGUI(PFM::simFuncEnum simulationFunctionToRun);
 }
