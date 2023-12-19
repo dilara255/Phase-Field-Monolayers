@@ -11,13 +11,7 @@
 namespace PFM {
 
 	//If anything fails, returns NULL. Otherwise, returns a const pointer to the active field simulated
-	PFM_API const PeriodicDoublesLattice2D* initializeSimulation(PFM::fieldDimensions_t dimensions, 
-																	   uint32_t numberCells, 
-																	   PFM::initialConditions initialCond = 
-																			initialConditions::EVENLY_SPACED_INDEX,
-		                                                               double bias = 0, 
-																	   bool perCellLayer = false, 
-	                                                                   uint64_t seed = DEFAULT_PRNG_SEED0);
+	PFM_API const PeriodicDoublesLattice2D* initializeSimulation(simConfig_t config);
 
 	PFM_API bool isSimulationRunning();
 	PFM_API int stopSimulation();
@@ -29,9 +23,7 @@ namespace PFM {
 	
 	//If steps <= 0, will run until manually stopped
 	//If the simulation is already running or the simFuncEnum or method is bad, will do nothing (*no warning*)
-	PFM_API void runForSteps(int stepsToRun, double lambda = 3.0, double gamma = 0.06, double dt = 1.0,
-		                     PFM::simFuncEnum simulationToRun = PFM::simFuncEnum::SINGLE_LAYER_CH_SIM,
-		                     integrationMethods method = integrationMethods::FTCS);
+	PFM_API void runForSteps(int stepsToRun, simParameters_t parameters, simConfig_t config);
 	
 	//Returns NULL in case no field is active or the simulation hasn't been initialized
 	PFM_API PeriodicDoublesLattice2D* getActiveFieldPtr();

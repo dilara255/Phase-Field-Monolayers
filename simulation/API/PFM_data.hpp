@@ -5,6 +5,7 @@
 #include "PFM_API_enums.hpp"
 
 #include "fAux/API/miscStdHeaders.h"
+#include "fAux/API/prng.hpp"
 
 #include <assert.h>
 
@@ -12,30 +13,46 @@
 
 namespace PFM {
 
-	typedef struct simData_st {
+	typedef struct simConfig_st {
 		int stepsRan = 0;
 		int cells = 0;
 		int width = 0;
 		int height = 0;
-        double lastCellSeedValue = 0;
+        double cellSeedValue = 0;
         uint64_t initialSeed = 0;
-        simFuncEnum lastSimulFuncUsed = simFuncEnum::TOTAL_SIM_FUNCS;        
-        initialConditions lastInitialContidion = initialConditions::TOTAL_INITIAL_CONDS;
-        double lastBias = -9999;
-        integrationMethods lastMethod = integrationMethods::TOTAL_METHODS;
+        simFuncEnum simulFunc = simFuncEnum::TOTAL_SIM_FUNCS;        
+        initialConditions initialContidion = initialConditions::TOTAL_INITIAL_CONDS;
+        double bias = -9999;
+        integrationMethods method = integrationMethods::TOTAL_METHODS;
+		bool perCellLayer = false;
+
+		inline void loadDefaults() {
+			stepsRan = 0;
+			cells = 50;
+			width = 128;
+			height = 128;
+			cellSeedValue = 1;
+			initialSeed = DEFAULT_PRNG_SEED0;
+			simulFunc = simFuncEnum::SINGLE_LAYER_CH_SIM;        
+			initialContidion = initialConditions::LINEAR_RANDOM;
+			bias = -0.3;
+			method = integrationMethods::FTCS;
+			perCellLayer = false;
+		}
 
 		inline std::string getSimDataString() const {
 			std::string str = "";
 			str += "Width: " + std::to_string(width) + "\n";
 			str += "Height: " + std::to_string(height) + "\n";
 			str += "Cells: " + std::to_string(cells) + "\n";
-			str += "Bias: " + std::to_string(lastBias) + "\n";
+			str += "Bias: " + std::to_string(bias) + "\n";
 			str += "PRNG Seed: " + std::to_string(initialSeed) + "\n";
-			str += "Initial Cell Seed: " + std::to_string(lastCellSeedValue) + "\n";
-			str += "Initial Condition: " + std::to_string((int)lastInitialContidion) + "\n";
-			str += "Method: " + std::to_string((int)lastMethod) + "\n";
-			str += "Simulation: " + std::to_string((int)lastSimulFuncUsed) + "\n";
-			str += "Steps: " + std::to_string(stepsRan);
+			str += "Initial Cell Seed: " + std::to_string(cellSeedValue) + "\n";
+			str += "Initial Condition: " + std::to_string((int)initialContidion) + "\n";
+			str += "Method: " + std::to_string((int)method) + "\n";
+			str += "Simulation: " + std::to_string((int)simulFunc) + "\n";
+			str += "Steps: " + std::to_string(stepsRan) + "\n";
+			str += "Per cell layer? " + std::to_string(perCellLayer);
 
 			return str;
 		}
@@ -47,6 +64,12 @@ namespace PFM {
 		double lambda = -1;
 		double k = -1;
         double A = -1;
+
+		inline void loadDefaults() {
+			dt = 1;
+			lambda = 3; //3 //7.824813
+			gamma = 0.06; //0.06 //0.043986
+		}
 
 		inline std::string getSimParamsString() const {
 			std::string str = "";
