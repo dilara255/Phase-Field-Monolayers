@@ -6,7 +6,7 @@
 #include "derivatives.hpp"
 
 //TODO: Make into parameters in the sim func, which should come from the run method used
-#define TOTAL_CHANGE_PER_ELEMENT_PER_SAVE 0.00003
+#define TOTAL_CHANGE_PER_ELEMENT_PER_SAVE 0.01
 #define SAVE_INTERMEDIATE_DATS 0
 #define SAVE_INTERMEDIATE_PGMS 0
 #define SAVE_INTERMEDIATE_BINS 0
@@ -15,7 +15,8 @@
 void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius, 
 	                                 double cellSeedValue, bool invertValueOn);
 
-void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved, double dt);
+void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved, 
+	                      const double absoluteChangePerElementPerCheckSaved, const double dt);
 
 void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr, 
 	                                      const double initialCellDiameterDensity, 
@@ -59,7 +60,8 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	auto tempKsAndDphis_ptr = controller_ptr->getLastDphisAndTempKsFieldPtr();
 
 	controller_ptr->printSimDataAndParams();
-	updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), dt);
+	updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
+		                                               TOTAL_CHANGE_PER_ELEMENT_PER_SAVE, dt);
 
 	auto params_ptr = controller_ptr->getLastSimParametersPtr();
 	//The actual steps:
@@ -97,7 +99,9 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 
 		*stepCount_ptr += 1;
 
-		updatedChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), dt);
+		updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
+			                                               TOTAL_CHANGE_PER_ELEMENT_PER_SAVE, dt);
+
 		if (checks_ptr->totalAbsoluteChangeSinceLastSave >= TOTAL_CHANGE_PER_ELEMENT_PER_SAVE) {
 			controller_ptr->saveFieldData(SAVE_INTERMEDIATE_PGMS, SAVE_INTERMEDIATE_BINS, SAVE_INTERMEDIATE_DATS);
 			checks_ptr->totalAbsoluteChangeSinceLastSave = 0;
@@ -258,23 +262,37 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 		             radiusToWidth, initialCellRadius, expectedInterfaceWidth );
 }
 
-void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved, double dt) {
+void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved, 
+	                      const double absoluteChangePerElementPerCheckSaved, const double dt) {
 	
-	if(step % stepsPerCheckSaved == 0) { 
-		int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
+	const int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
 
-		checks_ptr->densityChange /= elements;
-		checks_ptr->lastDensity += checks_ptr->densityChange;
-		checks_ptr->absoluteChange /= elements;
-		checks_ptr->step = step;
-
-		checks_ptr->totalAbsoluteChangeSinceLastSave += checks_ptr->absoluteChange;
-		checks_ptr->stepsLastCheck = checks_ptr->step;
-		checks_ptr->lastDensityChange = checks_ptr->densityChange;
-		checks_ptr->lastAbsoluteChange = checks_ptr->absoluteChange;
+	checks_ptr->step = step;
+	checks_ptr->totalAbsoluteChangeSinceLastSave = 
+				checks_ptr->remainingChangeSinceSaveOnLastCheck  + checks_ptr->absoluteChange / elements;
+	
+	if(( (step - checks_ptr->stepsAtLastCheck) % stepsPerCheckSaved == 0) || 
+		checks_ptr->totalAbsoluteChangeSinceLastSave >= absoluteChangePerElementPerCheckSaved) { 
 		
-		checks_ptr->totalTime = checks_ptr->stepsLastCheck * dt;
+		//The max is there in case update is called before the simulation begins (to record initial condition)
+		checks_ptr->stepsDuringLastCheckPeriod = std::max(1, checks_ptr->step - checks_ptr->stepsAtLastCheck);
+		checks_ptr->stepsAtLastCheck = checks_ptr->step;
+		checks_ptr->totalTime = checks_ptr->stepsAtLastCheck * dt;
+
+		checks_ptr->lastDensity += checks_ptr->densityChange / elements;
+		checks_ptr->lastDensityChange = checks_ptr->densityChange;
+		checks_ptr->lastAbsoluteChange = checks_ptr->absoluteChange / elements;
 	
+		//How much did the change overshoot the threshold?
+		checks_ptr->remainingChangeSinceSaveOnLastCheck = 
+			checks_ptr->totalAbsoluteChangeSinceLastSave - absoluteChangePerElementPerCheckSaved;
+
+		//In case change was actually *smaller* than the threshold:
+		if (checks_ptr->remainingChangeSinceSaveOnLastCheck < 0) {
+			//Just keep the change for the next cycle:
+			checks_ptr->remainingChangeSinceSaveOnLastCheck = checks_ptr->totalAbsoluteChangeSinceLastSave;
+		}
+
 		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
 
 		int checksPerPrintout = 5; //TODO: parametrize this
@@ -284,7 +302,7 @@ void updatedChecks(PFM::checkData_t* checks_ptr, const int step, const int steps
 		if(checks_ptr->step % (stepsPerCheckSaved * checksPerPrintout) == 0) {
 			printf("%s", checks_ptr->getChecksStr().c_str());
 		}
-	}	
 
-	checks_ptr->clearCurrentChanges();
+		checks_ptr->clearCurrentChanges();
+	}	
 }

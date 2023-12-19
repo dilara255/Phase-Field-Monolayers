@@ -24,14 +24,14 @@ typedef struct simConfig_st {
 	double bias = 0;
 	PFM::integrationMethods method = PFM::integrationMethods::FTCS;
 	double dt = 1;
-	double lambda = 7.824813; //3
-	double gamma = 0.043986; //0.06
+	double lambda = 3; //3 //7.824813
+	double gamma = 0.06; //0.06 //0.043986
 } simConfig_t;
 
 //TODO: These should exist in the simulation project, not here
 simConfig_t defaultParamsPerSimulType[TOTAL_SIM_FUNCS] = {
 	{512, 512, 50},
-	{128, 128, 50, PFM::initialConditions::LINEAR_RANDOM, 0.0, PFM::integrationMethods::FTCS},
+	{128, 128, 50, PFM::initialConditions::LINEAR_RANDOM, -0.3, PFM::integrationMethods::FTCS},
 	{128, 128, 5}
 };
 

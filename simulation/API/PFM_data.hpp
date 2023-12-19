@@ -96,21 +96,41 @@ namespace PFM {
 		double lastDensityChange = 0;
 		double lastAbsoluteChange = 0;
 
-		int stepsLastCheck = 0;
+		int stepsAtLastCheck = 0;
+		int stepsDuringLastCheckPeriod = 0;
 		double totalTime = 0;
 		double totalAbsoluteChangeSinceLastSave = 0;
+
+		double remainingChangeSinceSaveOnLastCheck = 0;
 		
 		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; }
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
-		                        lastDensityChange = 0; lastAbsoluteChange = 0; stepsLastCheck = 0;
-		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0; }
+		                        lastDensityChange = 0; lastAbsoluteChange = 0; stepsAtLastCheck = 0;
+		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
+		                        remainingChangeSinceSaveOnLastCheck = 0; }
 		inline const std::string getChecksStr() const {
+			
+			assert(stepsDuringLastCheckPeriod > 0 && "Bad number of steps on last Check");
+			
+			const size_t precision = 10;
+			char fmtValsBuffer[2*precision + 1];
+
 			std::string str = "Checks @ step ";
-			str += std::to_string(stepsLastCheck) + " (time: " + std::to_string(totalTime) + ")\n";
-			str += "Density: " + std::to_string(lastDensity) + "\n";
-			str += "Change: " + std::to_string(lastDensityChange);
-			str += ", absolute change: " + std::to_string(lastAbsoluteChange);
-			str += " (since last save: " + std::to_string(totalAbsoluteChangeSinceLastSave) + ")\n";
+			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + ")\n";
+			str += "Density: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensity);
+			str += fmtValsBuffer;
+			str += "\n";
+			str += "Change: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensityChange);
+			str += fmtValsBuffer;
+			str += ", absolute change / step: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, (lastAbsoluteChange / stepsDuringLastCheckPeriod));
+			str += fmtValsBuffer;
+			str += " (since last save: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
+			str += fmtValsBuffer;
+			str += ")\n";
 
 			return str;
 		}
