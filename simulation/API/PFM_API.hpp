@@ -18,7 +18,7 @@ namespace PFM {
 	//If steps <= 0, will run until manually stopped
 	//If the simulation is already running or the simFuncEnum or method is bad, will do nothing (*no warning*)
 	//Note that changes in config won't be applied to new calls to runForSteps unless initializeSimulation is called
-	PFM_API void runForSteps(int stepsToRun, simParameters_t parameters, simConfig_t config);
+	PFM_API void runForSteps(uint64_t stepsToRun, simParameters_t parameters, simConfig_t config);
 	//In case the simulation is paused, it will first be resumed before actually stopping
 	PFM_API int stopSimulation();
 	PFM_API void pauseSimulation();
@@ -28,7 +28,7 @@ namespace PFM {
 	PFM_API bool isSimulationRunning();
 	//Only returns true if the simulation isSimulationRunning() is also true
 	PFM_API bool isSimulationPaused();
-	PFM_API int getStepsRan();
+	PFM_API uint64_t getStepsRan();
 	PFM_API void resetStepsRan();
 
 	//Returns false in case the field was unitialized or unallocated

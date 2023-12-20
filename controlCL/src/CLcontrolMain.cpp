@@ -7,10 +7,10 @@
 #include "PFM_tests.hpp"
 #include "CLcontrolMain.hpp"
 
-#define RUN_CLI_TESTS -1
-#define DEFAULT_CHANGE_PER_ELEMENT_PER_STEP_TO_STOP (0.001)
-#define DEFAULT_MAX_STEPS (5000000)
-#define STEPS_AT_CHANGE_THRESHOLD_TO_ACTUALLY_STOP 1000
+#define RUN_CLI_TESTS -1                            
+#define DEFAULT_CHANGE_PER_ELEMENT_PER_STEP_TO_STOP (0.0000000015)
+#define DEFAULT_MAX_STEPS (6000000)
+#define STEPS_AT_CHANGE_THRESHOLD_TO_ACTUALLY_STOP 1
 
 double g_changePerElementPerStepToStop = DEFAULT_CHANGE_PER_ELEMENT_PER_STEP_TO_STOP;
 uint64_t g_maximumSteps = DEFAULT_MAX_STEPS;
@@ -64,9 +64,16 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 		switch (i) {
 		
 			default: 
-				LOG_ERROR("Absurd error parsing command line input");
+				LOG_ERROR("A valid argument is not being handled in processClInput");
+				printf("arg: %d\n", i);
 				return false;
 		
+			case PFM_CLI::mainsArgumentList::PROG_CALL: {
+			} break;
+
+			case PFM_CLI::mainsArgumentList::SIM_TO_RUN: {
+			} break;
+
 			case PFM_CLI::mainsArgumentList::LAMBDA: {
 				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(params_ptr->lambda));
@@ -109,7 +116,7 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 
 			case PFM_CLI::mainsArgumentList::BIAS: {
 				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
-				scanf(argv[i], "%lf", &(config_ptr->bias));
+				sscanf(argv[i], "%lf", &(config_ptr->bias));
 			} break;
 
 			case PFM_CLI::mainsArgumentList::SEED: {
@@ -131,6 +138,16 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
 				config_ptr->startPaused = atoi(argv[i]);
 			} break;
+
+			case PFM_CLI::mainsArgumentList::CHANGE_PER_ELEMENT_PER_STEP_TO_STOP: {
+				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+				sscanf(argv[i], "%lf", &g_changePerElementPerStepToStop);
+			} break;
+
+			case PFM_CLI::mainsArgumentList::MAXIMUM_STEPS: {
+				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+				g_maximumSteps = strtoll(argv[i], NULL, 10);
+			} break;
 		}
 	}
 
@@ -151,7 +168,8 @@ int main(int argc, char **argv) {
 
 	bool result = false;
 	LOG_INFO("Input processed. Will call the selected simulation function...");
-	
+	printf("maxSteps = %llu\nchangePerElementPerStepToStop: %f\n", g_maximumSteps, g_changePerElementPerStepToStop);
+
 	switch ((int)simToRun) {
 		case RUN_CLI_TESTS:
 			result = PFM::linkingTest();
@@ -211,11 +229,17 @@ bool PFM_CLI::runSimulationFromCL(PFM::simParameters_t* parameters_ptr, PFM::sim
 	PFM::runForSteps(stepsToRun, *parameters_ptr, *config_ptr);
 	
 	auto check_ptr = PFM::getCheckDataPtr();
-	g_checksAtChangeTreshold = 0;
-	int stepsRan;
+	g_checksAtChangeTreshold = 0; //in case restart or something like taht is implemented
+	uint64_t stepsRan = PFM::getStepsRan(); //"initial" step
 	while (PFM::isSimulationRunning()) {
-		if(shouldStop(check_ptr)) { LOG_TRACE("Stop criteria reached"); stepsRan = PFM::stopSimulation(); }
-		AZ::hybridBusySleepForMicros(std::chrono::microseconds(15*MICROS_IN_A_MILLI));
+		//Wait for a new step in the simulation:
+		while(stepsRan == PFM::getStepsRan()) { 
+			AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI/2));
+		}
+		//Update current step:
+		stepsRan = PFM::getStepsRan(); 
+		//And check if we should stop:
+		if(shouldStop(check_ptr)) { LOG_INFO("Stop criteria reached"); stepsRan = PFM::stopSimulation(); }
 	}
 
 	LOG_DEBUG("Simulation ended and thread joined");

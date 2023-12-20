@@ -20,16 +20,18 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 	                                      const double expectedInterfaceWidth, const bool invertField);
 
 //Runs Chan-Hiliard on one layer per cell and adds the results into a base layer
-void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, const bool* shouldPause_ptr,
-	                                  bool* isRunning_ptr, integrationMethods method = integrationMethods::FTCS) {
+void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepCount_ptr, 
+	                         const bool* shouldPause_ptr, bool* isRunning_ptr, 
+	                         integrationMethods method = integrationMethods::FTCS) {
 	//TODO: Implement : )
 	puts("multi-layer simulation not it implemented");
 	*isRunning_ptr = false;
 }
 
 //Runs Chan-Hiliard on a single layer. Keeps current and last step and uses both to calculate change
-void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, const bool* shouldPause_ptr,
-	                                   bool* isRunning_ptr, integrationMethods method = integrationMethods::FTCS) {
+void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepCount_ptr, 
+							  const bool* shouldPause_ptr, bool* isRunning_ptr, 
+							  integrationMethods method = integrationMethods::FTCS) {
 
 	//Parameters for the steps:
 	//TODO: extract the parameters
@@ -113,8 +115,9 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 
 //Test simulation: the pixels initialized as non-zero should "diffuse" up and to the right
 //(not really diffuse, more like reinforce - eventually everything should be "maximal" and then loop)
-void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepCount_ptr, const bool* shouldPause_ptr,
-	                               bool* isRunning_ptr, integrationMethods method = integrationMethods::FTCS) {
+void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, uint64_t* stepCount_ptr, 
+								   const bool* shouldPause_ptr, bool* isRunning_ptr, 
+								   integrationMethods method = integrationMethods::FTCS) {
 	
 	const double diffusionFactor = 0.025;
 	const double maxValue = 1;

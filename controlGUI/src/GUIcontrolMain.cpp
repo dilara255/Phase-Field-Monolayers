@@ -79,9 +79,16 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 		switch (i) {
 		
 			default: 
-				LOG_ERROR("Absurd error parsing command line input");
+				LOG_ERROR("A valid argument is not being handled in processClInput");
+				printf("arg: %d\n", i);
 				return false;
 		
+			case PFM_GUI::mainsArgumentList::PROG_CALL: {
+			} break;
+
+			case PFM_GUI::mainsArgumentList::SIM_TO_RUN: {
+			} break;
+
 			case PFM_GUI::mainsArgumentList::LAMBDA: {
 				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(params_ptr->lambda));
