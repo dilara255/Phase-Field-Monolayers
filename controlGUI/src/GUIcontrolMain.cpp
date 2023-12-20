@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
 			break;
 
 			case (int)PFM::simFuncEnum::SINGLE_LAYER_CH_SIM:
-				result = PFM_GUI::runSimulationWithGUI(&params, &config, PFM::getFileName); 
+				result = PFM_GUI::runSimulationWithGUI(&params, &config, PFM::getDirAndFileName); 
 			break;
 
 			case (int)PFM::simFuncEnum::MULTI_LAYER_CH_SIM:
