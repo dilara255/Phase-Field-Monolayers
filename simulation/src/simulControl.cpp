@@ -156,8 +156,8 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
     m_stepsToRun = 0;
 	setBaseAsActive();
 
-	m_lastSimData.lastInitialContidion = initialCond;
-	m_lastSimData.lastBias = bias;
+	m_lastSimData.initialContidion = initialCond;
+	m_lastSimData.bias = bias;
 
 	m_hasInitialized = true;
 }
@@ -201,12 +201,12 @@ std::string PFM::getFileName(int steps, bool calledFromGUI) {
 	const PFM::simParameters_t* simParams_ptr = controller.getLastSimParametersPtr();
 
 	std::string fileName = "";	
-	if(steps != simData_ptr->stepsRan) { fileName += "m"; } //to mark manual saves. Just an heuristic though.
+	if(calledFromGUI) { fileName += "m"; }
 
-	return  "Sim" + std::to_string((int)simData_ptr->lastSimulFuncUsed) 
-		    + "m" + std::to_string((int)simData_ptr->lastMethod)
-		    + "_ini" + std::to_string((int)simData_ptr->lastInitialContidion) 
-			+ "_b" + std::to_string(simData_ptr->lastBias)
+	return  "Sim" + std::to_string((int)simData_ptr->simulFunc) 
+		    + "m" + std::to_string((int)simData_ptr->method)
+		    + "_ini" + std::to_string((int)simData_ptr->initialContidion) 
+			+ "_b" + std::to_string(simData_ptr->bias)
 		    + "_A" + std::to_string(simParams_ptr->A) + "_k" + std::to_string(simParams_ptr->k)
 		    + "_dt" + std::to_string(simParams_ptr->dt)
 		    + "_" + std::to_string(simData_ptr->cells) + "_" + std::to_string(dimensions.width) 
@@ -335,7 +335,7 @@ int PFM::SimulationControl::getNumberCells() const {
 }
 
 double PFM::SimulationControl::getLastCellSeedValue() const {
-	return m_lastSimData.lastCellSeedValue;
+	return m_lastSimData.cellSeedValue;
 }
 
 bool PFM::SimulationControl::shouldStillExpandSeeds() const {
@@ -354,8 +354,8 @@ void PFM::SimulationControl::runForSteps(int steps, double lambda, double gamma,
 	if((int)method >=  (int)PFM::integrationMethods::TOTAL_METHODS) { return; }
 
 	m_stepsToRun = steps;
-	m_lastSimData.lastSimulFuncUsed = simulationToRun;
-	m_lastSimData.lastMethod = method;
+	m_lastSimData.simulFunc = simulationToRun;
+	m_lastSimData.method = method;
 	m_lastSimParameters.lambda = lambda;
 	m_lastSimParameters.gamma = gamma;
 	updateKandA();
@@ -413,14 +413,14 @@ void PFM::SimulationControl::resetStepsAlreadyRan() {
 
 ///These API calls are really just wrappers to calls to methods of the controller:
 
-const PeriodicDoublesLattice2D* PFM::initializeSimulation(fieldDimensions_t dimensions, 
-	                                                      uint32_t numberCells, 
-	                                                      PFM::initialConditions initialCond, 
-														  double bias,												      
-														  bool perCellLayer, 
-	                                                      uint64_t seed) {
+const PeriodicDoublesLattice2D* PFM::initializeSimulation(simConfig_t config) {
 	
-	controller.reinitializeController(dimensions, numberCells, initialCond, perCellLayer, bias, seed);
+	PFM::fieldDimensions_t dimensions;
+	dimensions.width = config.width;
+	dimensions.height = config.height;
+
+	controller.reinitializeController(dimensions, config.cells, config.initialContidion, 
+		                              config.perCellLayer, config.bias, config.initialSeed);
 	return controller.getActiveFieldPtr();
 }
 
@@ -444,9 +444,10 @@ bool PFM::saveFieldData(bool savePGM, bool saveBIN, bool saveDAT) {
 	return controller.saveFieldData(savePGM, saveBIN, saveDAT);
 }
 	
-void PFM::runForSteps(int stepsToRun, double lambda, double gamma, double dt,
-	                  PFM::simFuncEnum simulationToRun, PFM::integrationMethods method) {
-	controller.runForSteps(stepsToRun, lambda, gamma, dt, simulationToRun, method);
+void PFM::runForSteps(int stepsToRun, simParameters_t parameters, simConfig_t config) {
+
+	controller.runForSteps(stepsToRun, parameters.lambda, parameters.gamma, parameters.dt, 
+		                                      config.simulFunc, config.method);
 }
 
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {

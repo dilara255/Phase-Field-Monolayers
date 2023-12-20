@@ -5,6 +5,7 @@
 #include "PFM_API_enums.hpp"
 
 #include "fAux/API/miscStdHeaders.h"
+#include "fAux/API/prng.hpp"
 
 #include <assert.h>
 
@@ -12,30 +13,46 @@
 
 namespace PFM {
 
-	typedef struct simData_st {
+	typedef struct simConfig_st {
 		int stepsRan = 0;
 		int cells = 0;
 		int width = 0;
 		int height = 0;
-        double lastCellSeedValue = 0;
+        double cellSeedValue = 0;
         uint64_t initialSeed = 0;
-        simFuncEnum lastSimulFuncUsed = simFuncEnum::TOTAL_SIM_FUNCS;        
-        initialConditions lastInitialContidion = initialConditions::TOTAL_INITIAL_CONDS;
-        double lastBias = -9999;
-        integrationMethods lastMethod = integrationMethods::TOTAL_METHODS;
+        simFuncEnum simulFunc = simFuncEnum::TOTAL_SIM_FUNCS;        
+        initialConditions initialContidion = initialConditions::TOTAL_INITIAL_CONDS;
+        double bias = -9999;
+        integrationMethods method = integrationMethods::TOTAL_METHODS;
+		bool perCellLayer = false;
+
+		inline void loadDefaults() {
+			stepsRan = 0;
+			cells = 50;
+			width = 128;
+			height = 128;
+			cellSeedValue = 1;
+			initialSeed = DEFAULT_PRNG_SEED0;
+			simulFunc = simFuncEnum::SINGLE_LAYER_CH_SIM;        
+			initialContidion = initialConditions::LINEAR_RANDOM;
+			bias = -0.3;
+			method = integrationMethods::FTCS;
+			perCellLayer = false;
+		}
 
 		inline std::string getSimDataString() const {
 			std::string str = "";
 			str += "Width: " + std::to_string(width) + "\n";
 			str += "Height: " + std::to_string(height) + "\n";
 			str += "Cells: " + std::to_string(cells) + "\n";
-			str += "Bias: " + std::to_string(lastBias) + "\n";
+			str += "Bias: " + std::to_string(bias) + "\n";
 			str += "PRNG Seed: " + std::to_string(initialSeed) + "\n";
-			str += "Initial Cell Seed: " + std::to_string(lastCellSeedValue) + "\n";
-			str += "Initial Condition: " + std::to_string((int)lastInitialContidion) + "\n";
-			str += "Method: " + std::to_string((int)lastMethod) + "\n";
-			str += "Simulation: " + std::to_string((int)lastSimulFuncUsed) + "\n";
-			str += "Steps: " + std::to_string(stepsRan);
+			str += "Initial Cell Seed: " + std::to_string(cellSeedValue) + "\n";
+			str += "Initial Condition: " + std::to_string((int)initialContidion) + "\n";
+			str += "Method: " + std::to_string((int)method) + "\n";
+			str += "Simulation: " + std::to_string((int)simulFunc) + "\n";
+			str += "Steps: " + std::to_string(stepsRan) + "\n";
+			str += "Per cell layer? " + std::to_string(perCellLayer);
 
 			return str;
 		}
@@ -47,6 +64,12 @@ namespace PFM {
 		double lambda = -1;
 		double k = -1;
         double A = -1;
+
+		inline void loadDefaults() {
+			dt = 1;
+			lambda = 3; //3 //7.824813
+			gamma = 0.06; //0.06 //0.043986
+		}
 
 		inline std::string getSimParamsString() const {
 			std::string str = "";
@@ -96,21 +119,41 @@ namespace PFM {
 		double lastDensityChange = 0;
 		double lastAbsoluteChange = 0;
 
-		int stepsLastCheck = 0;
+		int stepsAtLastCheck = 0;
+		int stepsDuringLastCheckPeriod = 0;
 		double totalTime = 0;
 		double totalAbsoluteChangeSinceLastSave = 0;
+
+		double remainingChangeSinceSaveOnLastCheck = 0;
 		
 		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; }
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
-		                        lastDensityChange = 0; lastAbsoluteChange = 0; stepsLastCheck = 0;
-		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0; }
+		                        lastDensityChange = 0; lastAbsoluteChange = 0; stepsAtLastCheck = 0;
+		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
+		                        remainingChangeSinceSaveOnLastCheck = 0; }
 		inline const std::string getChecksStr() const {
+			
+			assert(stepsDuringLastCheckPeriod > 0 && "Bad number of steps on last Check");
+			
+			const size_t precision = 10;
+			char fmtValsBuffer[2*precision + 1];
+
 			std::string str = "Checks @ step ";
-			str += std::to_string(stepsLastCheck) + " (time: " + std::to_string(totalTime) + ")\n";
-			str += "Density: " + std::to_string(lastDensity) + "\n";
-			str += "Change: " + std::to_string(lastDensityChange);
-			str += ", absolute change: " + std::to_string(lastAbsoluteChange);
-			str += " (since last save: " + std::to_string(totalAbsoluteChangeSinceLastSave) + ")\n";
+			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + ")\n";
+			str += "Density: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensity);
+			str += fmtValsBuffer;
+			str += "\n";
+			str += "Change: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensityChange);
+			str += fmtValsBuffer;
+			str += ", absolute change / step: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, (lastAbsoluteChange / stepsDuringLastCheckPeriod));
+			str += fmtValsBuffer;
+			str += " (since last save: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
+			str += fmtValsBuffer;
+			str += ")\n";
 
 			return str;
 		}

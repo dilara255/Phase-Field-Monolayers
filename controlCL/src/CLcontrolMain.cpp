@@ -42,11 +42,16 @@ bool PFM_CLI::runSimulationFromCL(PFM::simFuncEnum simulationFunctionToRun) {
 
 	PFM::fieldDimensions_t dimensions = {(size_t)width, (size_t)height};
 
-	PFM::initializeSimulation(dimensions, cells);
+	PFM::simConfig_t config;
+	config.loadDefaults();
+	PFM::simParameters_t params;
+	params.loadDefaults();
+
+	PFM::initializeSimulation(config);
 
 	LOG_INFO("Simulation initialized");
 		
-	PFM::runForSteps(stepsToRun, 3.0, 0.06, 1, simulationFunctionToRun);
+	PFM::runForSteps(stepsToRun, params, config);
 
 	LOG_TRACE("Simulation running");
 	//^^^^ This should be "standardized" with the GUi counterpart through SIM API ^^^^
