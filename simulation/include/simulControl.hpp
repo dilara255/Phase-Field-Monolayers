@@ -14,6 +14,7 @@
 #define CELL_SEED_VAL (1.0) //used to mark a point as a cell to be expanded. TODO: deprecate?
 #define MS_TO_WAIT 10
 #define DEFAULT_STEPS_PER_CHECK 500
+#define DEFAULT_ABSOLUTE_CHANGE_PER_CHECK (0.01)
 
 namespace PFM {
 
@@ -80,7 +81,10 @@ namespace PFM {
         void mirrorBaseOnRotating();
 
         //Returns false in case the field was unitialized or unallocated
-        bool saveFieldData(bool savePGM = true, bool saveBIN = false, bool saveDAT = false) const;
+        bool saveFieldData(bool savePGM, bool saveBIN, bool saveDAT) const;
+        //Same as above, but uses the controllers values to decide what is saved or not
+        //Set using the "setIntermediateXXXsaves" methods - they're all false by default (this does nothing then)
+        bool saveFieldData() const;
         void setAused(double newA);
         void setKused(double newK);
         void setLambdaUsed(double newLambda);
@@ -88,7 +92,14 @@ namespace PFM {
         //Just returns in case the new lambda = 0
         void updatePhysicalParametersFromInternals();
         void setDTused(double newK);
-        void setStepsPerCheckSaved(int newStepsPerCheckSaved);
+
+        void setMaxStepsPerCheckAdded(size_t newStepsPerCheckSaved);
+        //Set to zero in case newMaxTotalChangePerCheck < 0 (will save every step)
+        void setMaxTotalChangePerElementPerCheckAdded(double newMaxTotalChangePerCheck);
+
+	    void setIntermediateDATsaves(bool shouldSave);
+	    void setIntermediatePGMsaves(bool shouldSave);
+	    void setIntermediateBINsaves(bool shouldSave);
 
         const simConfig_t* getLastSimConfigPtr() const;
         std::string getSimDataString() const;
@@ -109,6 +120,7 @@ namespace PFM {
         double getLastCellSeedValue() const;
         bool shouldStillExpandSeeds() const;
         int getStepsPerCheckSaved() const;
+        double getAbsoluteChangePerCheckSaved() const;
 
         int stepsAlreadyRan() const;
         void resetStepsAlreadyRan();
@@ -130,6 +142,11 @@ namespace PFM {
         int m_stepsToRun = 0;
         bool m_seedsNeedExpanding = false;
         int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
+        double m_absoluteChangePerCheckSaved = DEFAULT_ABSOLUTE_CHANGE_PER_CHECK;
+
+        bool m_saveDATonIntermediateChecks = false;
+        bool m_savePGMonIntermediateChecks = false;
+        bool m_saveBINonIntermediateChecks = false;
 
         std::thread m_stepsThread;
 

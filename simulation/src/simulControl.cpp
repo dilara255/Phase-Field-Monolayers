@@ -274,6 +274,11 @@ bool PFM::SimulationControl::saveFieldData(bool savePGM, bool saveBIN, bool save
 	return true;
 }
 
+bool PFM::SimulationControl::saveFieldData() const {
+	return saveFieldData(m_savePGMonIntermediateChecks, m_saveBINonIntermediateChecks, 
+		                                                m_saveDATonIntermediateChecks);
+}
+
 void PFM::SimulationControl::updateGammaLambda() {
 	if(m_lastSimParameters.A == 0) { return; }
 	m_lastSimParameters.gamma = std::sqrt(m_lastSimParameters.A * m_lastSimParameters.k) / 6.0;
@@ -318,8 +323,24 @@ void PFM::SimulationControl::setDTused(double newDT) {
 	m_lastSimParameters.dt = newDT;
 }
 
-void PFM::SimulationControl::setStepsPerCheckSaved(int newStepsPerCheckSaved) {
+void PFM::SimulationControl::setMaxStepsPerCheckAdded(size_t newStepsPerCheckSaved) {
 	m_stepsPerCheckSaved = newStepsPerCheckSaved;
+}
+
+void PFM::SimulationControl::setMaxTotalChangePerElementPerCheckAdded(double newMaxTotalChangePerCheck) {
+	m_absoluteChangePerCheckSaved = std::max(0.0, newMaxTotalChangePerCheck);
+}
+
+void PFM::SimulationControl::setIntermediateDATsaves(bool shouldSave) {
+	m_saveDATonIntermediateChecks = shouldSave;
+}
+
+void PFM::SimulationControl::setIntermediatePGMsaves(bool shouldSave) {
+	m_savePGMonIntermediateChecks = shouldSave;
+}
+
+void PFM::SimulationControl::setIntermediateBINsaves(bool shouldSave)  {
+	m_saveBINonIntermediateChecks = shouldSave;
 }
 
 bool PFM::SimulationControl::checkIfShouldStop() {
@@ -344,6 +365,10 @@ bool PFM::SimulationControl::shouldStillExpandSeeds() const {
 
 int PFM::SimulationControl::getStepsPerCheckSaved() const {
 	return m_stepsPerCheckSaved;
+}
+
+double PFM::SimulationControl::getAbsoluteChangePerCheckSaved() const {
+	return m_absoluteChangePerCheckSaved;
 }
 
 void PFM::SimulationControl::runForSteps(int steps, double lambda, double gamma, double dt,
@@ -476,4 +501,24 @@ PFM::simParameters_t* PFM::getSimParamsPtr() {
 void PFM::updatePhysicalParameters() {
 	if (!controller.isInitialized()) { return; }
 	controller.updatePhysicalParametersFromInternals();
+}
+
+void PFM::setMaxStepsPerCheckAdded(size_t newMaxStepsPerCheck) {
+
+}
+
+void PFM::setMaxTotalChangePerElementPerCheckAdded(double newMaxTotalChangePerCheck) {
+
+}
+
+void PFM::setIntermediateDATsaves(bool shouldSave) {
+
+}
+
+void PFM::setIntermediatePGMsaves(bool shouldSave) {
+
+}
+
+void PFM::setIntermediateBINsaves(bool shouldSave) {
+
 }
