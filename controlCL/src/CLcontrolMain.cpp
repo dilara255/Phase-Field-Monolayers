@@ -11,10 +11,13 @@
 #define DEFAULT_CHANGE_PER_ELEMENT_PER_STEP_TO_STOP (0.0000000015)
 #define DEFAULT_MAX_STEPS (6000000)
 #define STEPS_AT_CHANGE_THRESHOLD_TO_ACTUALLY_STOP 1
+#define BAD_ORIGINAL_DT (-999.999)
 
 double g_changePerElementPerStepToStop = DEFAULT_CHANGE_PER_ELEMENT_PER_STEP_TO_STOP;
 uint64_t g_maximumSteps = DEFAULT_MAX_STEPS;
 int g_checksAtChangeTreshold = 0;
+bool g_dtLoweredForFirstSteps = false;
+double g_originalDt = BAD_ORIGINAL_DT;
 
 bool isArgumentDefault(int argument, char **argv) {
 	return (strcmp(PFM_CLI::deafultArgument, argv[argument]) == 0);
@@ -207,6 +210,20 @@ bool shouldStop(PFM::checkData_t* check_ptr) {
 		   (g_checksAtChangeTreshold >= STEPS_AT_CHANGE_THRESHOLD_TO_ACTUALLY_STOP);
 }
 
+void sanitizeParams(PFM::simParameters_t* params_ptr, uint64_t stepsRan) {
+	
+	assert(g_originalDt != BAD_ORIGINAL_DT);
+
+	PFM::parameterBounds_t bounds = PFM::calculateParameterBounds(params_ptr->k, params_ptr->A,
+		                                                                g_originalDt, stepsRan);
+
+	params_ptr->dt = g_originalDt;
+	if(params_ptr->dt > bounds.maxDt) { 
+		params_ptr->dt = bounds.maxDt; 
+		g_dtLoweredForFirstSteps = true; 
+	}
+}
+
 //TODO: Pass stuff in just like to the GUI counterpart
 bool PFM_CLI::runSimulationFromCL(PFM::simParameters_t* parameters_ptr, PFM::simConfig_t* config_ptr,
 		                                                             int stepsToRun, bool saveOnExit) {
@@ -224,25 +241,32 @@ bool PFM_CLI::runSimulationFromCL(PFM::simParameters_t* parameters_ptr, PFM::sim
 
 	//Set up and run the simulation:
 	PFM::setIntermediateBINsaves(true);
+	PFM::setIntermediatePGMsaves(true);
 	PFM::initializeSimulation(*config_ptr);
+	g_originalDt = parameters_ptr->dt;
+	sanitizeParams(parameters_ptr, PFM::getStepsRan());
 	LOG_INFO("Simulation initialized. Will run the simulation");
 	PFM::runForSteps(stepsToRun, *parameters_ptr, *config_ptr);
 	
 	auto check_ptr = PFM::getCheckDataPtr();
 	g_checksAtChangeTreshold = 0; //in case restart or something like taht is implemented
 	uint64_t stepsRan = PFM::getStepsRan(); //"initial" step
+
+	auto simulParams_ptr = PFM::getSimParamsPtr();
 	while (PFM::isSimulationRunning()) {
-		//Wait for a new step in the simulation:
+		//We make sure to keep dt as close as possible to the desired value witouth exploding stuff:
+		sanitizeParams(simulParams_ptr, stepsRan);
+		//Then we wait for a new step in the simulation:
 		while(stepsRan == PFM::getStepsRan()) { 
 			AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI/2));
 		}
-		//Update current step:
+		//Update the current step:
 		stepsRan = PFM::getStepsRan(); 
 		//And check if we should stop:
-		if(shouldStop(check_ptr)) { LOG_INFO("Stop criteria reached"); stepsRan = PFM::stopSimulation(); }
+		if(shouldStop(check_ptr)) { LOG_DEBUG("Stop criteria reached"); stepsRan = PFM::stopSimulation(); }
 	}
 
-	LOG_DEBUG("Simulation ended and thread joined");
+	LOG_INFO("Simulation ended and thread joined");
 	printf("Ran for %d steps\n", stepsRan);
 
 	if(saveOnExit) { 

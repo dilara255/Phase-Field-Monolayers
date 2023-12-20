@@ -146,7 +146,7 @@ namespace PFM {
         bool m_isRunning = false;
         bool m_shouldStop = false;
         bool m_shouldBePaused = false;
-        int m_stepsToRun = 0;
+        uint64_t m_stepsToRun = 0;
         bool m_seedsNeedExpanding = false;
         int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
         double m_absoluteChangePerCheckSaved = DEFAULT_ABSOLUTE_CHANGE_PER_CHECK;

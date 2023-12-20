@@ -13,6 +13,15 @@
 
 namespace PFM {
 
+	typedef struct parameterBounds_st {
+		double minK = 0;
+		double minA = 0;
+		double minDt = 0;
+		double maxK;
+		double maxA;
+		double maxDt;
+	} parameterBounds_t;
+
 	typedef struct simConfig_st {
 		uint64_t stepsRan = 0;
 		int cells = 0;
