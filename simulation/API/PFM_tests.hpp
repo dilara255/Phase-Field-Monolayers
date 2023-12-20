@@ -1,6 +1,5 @@
 #pragma once
 
 namespace PFM {
-
-	PFM_API void linkingTest();	
+	PFM_API bool linkingTest();	
 }

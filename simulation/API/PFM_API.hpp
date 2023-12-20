@@ -31,7 +31,11 @@ namespace PFM {
 	PFM_API int getStepsRan();
 	PFM_API void resetStepsRan();
 
+	//Returns false in case the field was unitialized or unallocated
 	PFM_API bool saveFieldData(bool savePGM, bool saveBIN, bool saveDAT);
+	//Same as above, but uses the controllers values to decide what is saved or not
+    //Set using the "setIntermediateXXXsaves" methods - they're all false by default (this does nothing then)
+	PFM_API bool saveFieldDataAccordingToController();
 	//Uses parameters and etc to build a default file-name. Compatible with GUI save button if sent as callback.
 	//If the directory doesnt exist, it is created. Does not include extension.
     PFM_API std::string getDirAndFileName(int steps, bool calledFromGui);

@@ -1,8 +1,4 @@
 #include "PFM_API.hpp"
-#include "simulTests.hpp"
+#include "PFM_tests.hpp"
 
-namespace PFM {
-	void linkingTest(){
-			PFM::putsLinking();
-	}
-}
+bool PFM::linkingTest() { return true; }
