@@ -47,6 +47,8 @@ namespace PFM {
 	//Update internal parameters bases on (potentially) new "external" parameters, sent previously by the user
 	//Does nothing in case the controller is not initialized
 	PFM_API void updatePhysicalParameters();
+	PFM_API double getLambdaFromKandA(double k, double A);
+	PFM_API double getGammaFromKandA(double k, double A);
 
 	//The values set by the following two functions are used to decide when to add a new checkData entry
 	//The entry is triggered when either condition is met
