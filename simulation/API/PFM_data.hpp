@@ -25,6 +25,7 @@ namespace PFM {
         double bias = -9999;
         integrationMethods method = integrationMethods::TOTAL_METHODS;
 		bool perCellLayer = false;
+		bool startPaused = false;
 
 		inline std::string getSimDataString() const {
 			std::string str = "";
@@ -38,7 +39,8 @@ namespace PFM {
 			str += "Method: " + std::to_string((int)method) + "\n";
 			str += "Simulation: " + std::to_string((int)simulFunc) + "\n";
 			str += "Steps: " + std::to_string(stepsRan) + "\n";
-			str += "Per cell layer? " + std::to_string(perCellLayer);
+			str += "Per cell layer? " + std::to_string(perCellLayer) + "\n";
+			str += "Start paused? " + std::to_string(startPaused);
 
 			return str;
 		}

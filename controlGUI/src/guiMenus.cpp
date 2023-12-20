@@ -30,12 +30,12 @@ void controlFlowMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 
 	//TODO: make pause/resume and restart actually work (PFM/GUI API support needed)
 
-	static bool paused = false;
+	bool paused = PFM::isSimulationPaused();
 	if (paused) {
-		if (ImGui::Button("Resume")) { paused = false; }
+		if (ImGui::Button("Resume")) { PFM::resumeSimulation(); }
 	}
 	else {
-		if (ImGui::Button("Pause ")) { paused = true; }
+		if (ImGui::Button("Pause ")) { PFM::pauseSimulation(); }
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Restart w/ these values")) { puts("\nrestart!\n"); }
