@@ -2,6 +2,7 @@
 #include "fAux/API/timeHelpers.hpp"
 
 #include "PFM_API.hpp"
+#include "PFM_defaults.hpp"
 #include "PFM_tests.hpp"
 #include "CLcontrolMain.hpp"
 
@@ -35,17 +36,11 @@ bool PFM_CLI::runSimulationFromCL(PFM::simFuncEnum simulationFunctionToRun) {
 	//TODO: should check that there is a stop condition (either stepsToRun > 0 or minimumAbsoluteChange > 0)
 
 	//vvvv This should be "standardized" with the GUi counterpart through SIM API vvvv
-	int width = 512;
-	int height = 512;
-	int cells = 50;
 	int stepsToRun = 166;
 
-	PFM::fieldDimensions_t dimensions = {(size_t)width, (size_t)height};
-
-	PFM::simConfig_t config;
-	config.loadDefaults();
-	PFM::simParameters_t params;
-	params.loadDefaults();
+	int simToRun = (int)PFM::defaultSimToRun;
+	PFM::simConfig_t config = PFM::defaultConfigs[simToRun];
+	PFM::simParameters_t params = PFM::defaultSimParams[simToRun];
 
 	PFM::initializeSimulation(config);
 
