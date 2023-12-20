@@ -5,6 +5,7 @@
 
 #include "PFM_API.hpp"
 #include "PFM_tests.hpp"
+#include "PFM_defaults.hpp"
 #include "simulControl.hpp"
 
 #include <filesystem>
@@ -150,6 +151,7 @@ void PFM::SimulationControl::reinitializeController(PFM::simConfig_t config) {
 
 	m_shouldStop = false;
 	setBaseAsActive();
+	m_simConfigs.stepsRan = 0;
 
 	m_hasInitialized = true;
 }
@@ -562,6 +564,34 @@ double PFM::getLambdaFromKandA(double k, double A) {
 
 double PFM::getGammaFromKandA(double k, double A) {
 	return std::sqrt(A * k) / 6.0;
+}
+
+PFM::parameterBounds_t PFM::calculateParameterBounds(double k, double A, double dt, uint64_t steps) {
+	parameterBounds_t bounds;
+
+	double completelyArbitraryMaxKplusATimesDt = 1.1;
+	double completelyArbitraryMaxDtRatioAtStepZero = 0.1;
+
+	//These will be used to find the maximum allowed value of each parameter
+	double minValuesForLimitCalc = 0.000001;
+	double dividendForLimitCalc = std::max(minValuesForLimitCalc, dt);
+
+	bounds.maxK = completelyArbitraryMaxKplusATimesDt/dividendForLimitCalc - A;
+
+	bounds.maxA = completelyArbitraryMaxKplusATimesDt/dividendForLimitCalc - k;
+
+	dividendForLimitCalc = std::max(minValuesForLimitCalc, A + k);
+	bounds.maxDt = completelyArbitraryMaxKplusATimesDt/dividendForLimitCalc;
+
+	uint64_t stepsRemainingToUnlockDt = PFM::completelyArbitraryStepToUnlockFullDt - steps;
+	if(steps > PFM::completelyArbitraryStepToUnlockFullDt) { stepsRemainingToUnlockDt = 0; }
+	double fractionOfArbitraryStepsRemaining = 
+						  (double)stepsRemainingToUnlockDt/PFM::completelyArbitraryStepToUnlockFullDt;
+
+	bounds.maxDt *= 1.0 - (fractionOfArbitraryStepsRemaining * (1 - completelyArbitraryMaxDtRatioAtStepZero));
+	assert(bounds.maxDt > 0 && "Max dt should always be larger than zero");
+	
+	return bounds;
 }
 
 void PFM::setMaxStepsPerCheckAdded(size_t newMaxStepsPerCheck) {

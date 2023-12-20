@@ -54,6 +54,7 @@ namespace PFM {
 	PFM_API void updatePhysicalParameters();
 	PFM_API double getLambdaFromKandA(double k, double A);
 	PFM_API double getGammaFromKandA(double k, double A);
+	PFM_API parameterBounds_t calculateParameterBounds(double k, double A, double dt, uint64_t steps);
 
 	//The values set by the following two functions are used to decide when to add a new checkData entry
 	//The entry is triggered when either condition is met

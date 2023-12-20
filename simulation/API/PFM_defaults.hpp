@@ -5,6 +5,8 @@
 
 namespace PFM {
 
+	static const uint64_t completelyArbitraryStepToUnlockFullDt = 50;
+
 	static const simFuncEnum defaultSimToRun = simFuncEnum::SINGLE_LAYER_CH_SIM;
 
 	static const simConfig_t defaultConfigs[(int)simFuncEnum::TOTAL_SIM_FUNCS] = {

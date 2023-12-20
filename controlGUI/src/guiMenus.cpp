@@ -21,44 +21,10 @@ void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	ImGui::Text("%s", g_checkData_ptr->getChecksStr().c_str());
 }
 
-typedef struct parameterBounds_st {
-	double minK = 0;
-	double minA = 0;
-	double minDt = 0;
-	double maxK;
-	double maxA;
-	double maxDt;
-} parameterBounds_t;
-
-parameterBounds_t calculateParameterBounds(double k, double A, double dt, int steps) {
-	parameterBounds_t bounds;
-
-	double completelyArbitraryMaxKplusATimesDt = 1.1;
-	int completelyArbitraryStepToUnlockFullDt = 50;
-	double completelyArbitraryMaxDtRatioAtStepZero = 0.1;
-
-	//These will be used to find the maximum allowed value of each parameter
-	double minValuesForLimitCalc = 0.000001;
-	double dividendForLimitCalc = std::max(minValuesForLimitCalc, dt);
-
-	bounds.maxK = completelyArbitraryMaxKplusATimesDt/dividendForLimitCalc - A;
-
-	bounds.maxA = completelyArbitraryMaxKplusATimesDt/dividendForLimitCalc - k;
-
-	dividendForLimitCalc = std::max(minValuesForLimitCalc, A + k);
-	bounds.maxDt = completelyArbitraryMaxKplusATimesDt/dividendForLimitCalc;
-
-	int stepsRemainingToUnlockDt = std::max(0, completelyArbitraryStepToUnlockFullDt - steps);
-	double fractionOfArbitraryStepsRemaining = (double)stepsRemainingToUnlockDt/completelyArbitraryStepToUnlockFullDt;
-	bounds.maxDt *= 1.0 - (fractionOfArbitraryStepsRemaining * (1 - completelyArbitraryMaxDtRatioAtStepZero));
-	assert(bounds.maxDt > 0 && "Max dt should always be larger than zero");
+PFM::parameterBounds_t createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr) {
 	
-	return bounds;
-}
-
-parameterBounds_t createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr) {
-	
-	parameterBounds_t bounds = calculateParameterBounds(param_ptr->k, param_ptr->A, param_ptr->dt, stepsRan);
+	PFM::parameterBounds_t bounds = 
+		PFM::calculateParameterBounds(param_ptr->k, param_ptr->A, param_ptr->dt, stepsRan);
 
 	ImGui::SliderScalar("k", ImGuiDataType_Double, &param_ptr->k, &bounds.minK, &bounds.maxK);
 	ImGui::SliderScalar("A", ImGuiDataType_Double, &param_ptr->A, &bounds.minA, &bounds.maxA);
@@ -157,7 +123,7 @@ void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	if(PFM_GUI::g_dtLoweredForFirstSteps) { g_simParams_ptr->dt = PFM_GUI::g_originalDt; }
 	const double dtBeforeSlider = g_simParams_ptr->dt; //to know wether the user issued a change
 
-	parameterBounds_t bounds = createParameterSliders(g_simConfig_ptr->stepsRan, g_simParams_ptr);
+	PFM::parameterBounds_t bounds = createParameterSliders(g_simConfig_ptr->stepsRan, g_simParams_ptr);
 
 	if (g_simParams_ptr->dt != dtBeforeSlider) {
 		//A change was actually issued by the user, so:

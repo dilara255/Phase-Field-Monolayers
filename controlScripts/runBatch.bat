@@ -1,5 +1,5 @@
 @echo off
 
-python batchRun.py
+python runner1.py
 
 timeout /t -1
