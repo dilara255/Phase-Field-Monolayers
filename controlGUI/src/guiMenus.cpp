@@ -108,9 +108,14 @@ void controlFlowMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	int minSimFunc = (int)PFM::simFuncEnum::SINGLE_LAYER_CH_SIM;
 	int maxSimFunc = (int)PFM::simFuncEnum::SINGLE_LAYER_CH_SIM;
 	
-	ImGui::SliderScalar("Width", ImGuiDataType_S32, &g_simConfigNextStart_ptr->width, &minDimension, &maxDimension);
-	ImGui::SliderScalar("Height", ImGuiDataType_S32, &g_simConfigNextStart_ptr->height, &minDimension, &maxDimension);
-	ImGui::SliderScalar("Cells", ImGuiDataType_S32, &g_simConfigNextStart_ptr->cells, &minCells, &maxCells);
+	ImGui::InputInt("Width", &g_simConfigNextStart_ptr->width, 1, 64);
+	g_simConfigNextStart_ptr->width = std::clamp(g_simConfigNextStart_ptr->width, minDimension, maxDimension);
+	
+	ImGui::InputInt("Height", &g_simConfigNextStart_ptr->height, 1, 64);
+	g_simConfigNextStart_ptr->height = std::clamp(g_simConfigNextStart_ptr->height, minDimension, maxDimension);
+	
+	ImGui::InputInt("Cells", &g_simConfigNextStart_ptr->cells, 1, 8);
+	g_simConfigNextStart_ptr->cells = std::clamp(g_simConfigNextStart_ptr->cells, minCells, maxCells);
 	
 	ImGui::SliderScalar("Bias", ImGuiDataType_Double, &g_simConfigNextStart_ptr->bias, &minBias, &maxBias);
 	ImGui::SliderScalar("Initial Condition", ImGuiDataType_S32, &g_simConfigNextStart_ptr->initialContidion, 
