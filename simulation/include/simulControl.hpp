@@ -21,8 +21,8 @@ namespace PFM {
     //*******************SimulationFunctions*************************
     //These are the definitions of the possible simulation functions:
     class SimulationControl;
-    typedef void SimulationSteps_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr,
-                                                                                     integrationMethods method);
+    typedef void SimulationSteps_fn(SimulationControl* controller_ptr, int* stepCount_ptr, 
+                                    const bool* shouldPause_ptr, bool* isRunning_ptr, integrationMethods method);
     
     //WARNING: these should always be kept in synch with PFM::simFuncEnum (@PFM_API.hpp)
     SimulationSteps_fn dataAndControllerTest_fn;
@@ -60,10 +60,7 @@ namespace PFM {
         //If not yet initialized, initializes and creates a new field
         //Otherwise, destroys the old field, reinitializes and creates a new field with "dimensions"
         //Defaults to initialConditions::EVENLY_SPACED_INDEX if a bad condition is passed
-        void reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
-                                    PFM::initialConditions initialCond, bool perCellLayer, 
-                                    double bias = 0, double cellSeedValue = CELL_SEED_VAL,
-                                    uint64_t prngSeed = DEFAULT_PRNG_SEED0);
+        void reinitializeController(PFM::simConfig_t config);
 
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
@@ -74,6 +71,10 @@ namespace PFM {
         //When the simulation actually stops, its thread is joined. Does nothing if the simulation isn't running.
         //Returns the amount of steps ran
         int stop();
+
+        void pause();
+        void resume();
+        bool shouldBePaused() const;
 
         //Copies the data from the currentStep of the rotating fields into the baseField
         void mirrorRotatingOnBase();
@@ -118,6 +119,7 @@ namespace PFM {
         void printSimDataAndParams() const;
 
         bool isSimulationRunning() const;
+        const bool* getIsPaused_ptr() const;
         bool checkIfShouldStop();
         int getNumberCells() const;
         double getLastCellSeedValue() const;
@@ -142,6 +144,7 @@ namespace PFM {
         bool m_hasInitialized = false;
         bool m_isRunning = false;
         bool m_shouldStop = false;
+        bool m_shouldBePaused = false;
         int m_stepsToRun = 0;
         bool m_seedsNeedExpanding = false;
         int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
@@ -154,8 +157,8 @@ namespace PFM {
 
         std::thread m_stepsThread;
 
-        simConfig_t m_lastSimData;
-        simParameters_t m_lastSimParameters;
+        simConfig_t m_simConfigs;
+        simParameters_t m_simParameters;
         
         //To be filled with actual data:
         std::unique_ptr<PeriodicDoublesLattice2D> m_baseLattice_ptr;

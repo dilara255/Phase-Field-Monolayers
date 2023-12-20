@@ -1,4 +1,6 @@
-#include <assert.h>
+#include "fAux/API/miscStdHeaders.h"
+#include "fAux/API/miscDefines.hpp"
+#include "fAux/API/timeHelpers.hpp"
 
 #include "simulControl.hpp"
 #include "rateOfChangeFunctions.hpp"
@@ -18,16 +20,16 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 	                                      const double expectedInterfaceWidth, const bool invertField);
 
 //Runs Chan-Hiliard on one layer per cell and adds the results into a base layer
-void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr,
-	                                               integrationMethods method = integrationMethods::FTCS) {
+void PFM::multiLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, const bool* shouldPause_ptr,
+	                                  bool* isRunning_ptr, integrationMethods method = integrationMethods::FTCS) {
 	//TODO: Implement : )
 	puts("multi-layer simulation not it implemented");
 	*isRunning_ptr = false;
 }
 
 //Runs Chan-Hiliard on a single layer. Keeps current and last step and uses both to calculate change
-void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr,
-	                                                integrationMethods method = integrationMethods::FTCS) {
+void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_ptr, const bool* shouldPause_ptr,
+	                                   bool* isRunning_ptr, integrationMethods method = integrationMethods::FTCS) {
 
 	//Parameters for the steps:
 	//TODO: extract the parameters
@@ -58,8 +60,11 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
 		                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
 
-	auto params_ptr = controller_ptr->getLastSimParametersPtr();
+	//Start paused?
+	while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
+
 	//The actual steps:
+	auto params_ptr = controller_ptr->getLastSimParametersPtr();
 	while(!controller_ptr->checkIfShouldStop()) {
 	
 		//TODO: maybe pull into an "updateLocalParameters" function?
@@ -98,10 +103,8 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 			                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
 		checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
 
-		if (checks_ptr->totalAbsoluteChangeSinceLastSave >= controller_ptr->getAbsoluteChangePerCheckSaved()) {
-			controller_ptr->saveFieldData();
-			checks_ptr->totalAbsoluteChangeSinceLastSave = 0;
-		}
+		//Pause?
+		while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
 	}
 
 	//Done:
@@ -110,8 +113,8 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 
 //Test simulation: the pixels initialized as non-zero should "diffuse" up and to the right
 //(not really diffuse, more like reinforce - eventually everything should be "maximal" and then loop)
-void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepCount_ptr, bool* isRunning_ptr,
-	                                                     integrationMethods method = integrationMethods::FTCS) {
+void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepCount_ptr, const bool* shouldPause_ptr,
+	                               bool* isRunning_ptr, integrationMethods method = integrationMethods::FTCS) {
 	
 	const double diffusionFactor = 0.025;
 	const double maxValue = 1;
@@ -125,6 +128,9 @@ void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepC
 	const int height = (int)field_ptr->getFieldDimensions().height;
 	
 	double value, valueAbove, valueToTheRight;
+
+	//Start paused?
+	while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
 
 	while(!controller_ptr->checkIfShouldStop()) {
 		for (int j = 0; j < height; j++) {
@@ -145,6 +151,9 @@ void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, int* stepC
 		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
 			if(*stepCount_ptr % 100 == 0) { printf("steps: %d\n", *stepCount_ptr); }
 		#endif
+
+		//Pause?
+		while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
 	}
 	
 	*isRunning_ptr = false;

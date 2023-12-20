@@ -70,16 +70,13 @@ void PFM::SimulationControl::releaseFields() {
 }
 
 //TODO: this whole thing should be reimplemented, and probably split apart a bit
-void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions, uint32_t numberCells, 
-													PFM::initialConditions initialCond, bool perCellLayer, 
-	                                                double bias, double cellSeedValue, uint64_t prngSeed) {
+void PFM::SimulationControl::reinitializeController(PFM::simConfig_t config) {
 	
 	if(isSimulationRunning()) { stop(); }
 	releaseFields();
 
-	m_lastSimData.initialSeed = prngSeed;
-	m_lastSimData.width = dimensions.width;
-	m_lastSimData.height = dimensions.height;
+	m_simConfigs = config;
+	PFM::fieldDimensions_t dimensions = { (size_t)m_simConfigs.width, (size_t)m_simConfigs.height};
 	size_t elements = dimensions.totalElements();
 	
 	m_lastDphisAndTempKsField_ptr = std::unique_ptr<PeriodicDoublesLattice2D>(
@@ -92,27 +89,27 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 
 	//The data to be used on initialization:
 	int cellSpacing = elements;
-	if(numberCells > 1) { cellSpacing /= numberCells; }
+	if(m_simConfigs.cells > 1) { cellSpacing /= m_simConfigs.cells; }
 	bool centerSingleCell = false; //TODO: pass as parameter
 
-	if(!perCellLayer) {
-		if (initialCond == PFM::initialConditions::EVENLY_SPACED_INDEX) {
+	if(!m_simConfigs.perCellLayer) {
+		if (m_simConfigs.initialContidion == PFM::initialConditions::EVENLY_SPACED_INDEX) {
 			for (size_t i = 0; i < elements; i++) {
 				//To "seed" numberCells equally spaced cells with initialValue, and all others with zero:
-				if (numberCells == 1 && centerSingleCell) {
-					initialData.push_back(cellSeedValue * ( i == (elements + dimensions.width)/2) );
+				if (m_simConfigs.cells == 1 && centerSingleCell) {
+					initialData.push_back(m_simConfigs.cellSeedValue * ( i == (elements + dimensions.width)/2) );
 				}
 				else {
-					initialData.push_back(cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
+					initialData.push_back(m_simConfigs.cellSeedValue * ( (i/cellSpacing) == (i/(double)cellSpacing) ) );
 				}
 			}
 			m_seedsNeedExpanding = true;
 		}
 		else {
-			uint64_t seed = m_lastSimData.initialSeed;
+			uint64_t seed = m_simConfigs.initialSeed;
 			for (size_t i = 0; i < elements; i++) {
 				//Each elemnt starts with a random value between -0.5 and 1.5:
-				double value = bias -0.5 + 2*(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
+				double value = m_simConfigs.bias -0.5 + 2*(AZ::draw1spcg32(&seed)/(double)UINT32_MAX);
 				initialData.push_back(value);
 			}
 			m_seedsNeedExpanding = false;
@@ -134,8 +131,8 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 			new PeriodicDoublesLattice2D(dimensions, ALL_CELLS_ID, initialData)
 		);
 
-		m_perCellLaticePtrs.reserve(numberCells);
-		for (uint32_t cell = 0; cell < numberCells; cell++) {
+		m_perCellLaticePtrs.reserve(m_simConfigs.cells);
+		for (uint32_t cell = 0; cell < m_simConfigs.cells; cell++) {
 			for (size_t i = 0; i < elements; i++) {
 				//To "seed" numberCells equally spaced cells with initialValue, and all others with zero:
 				initialData.push_back((double)(i == cellSpacing * cell));
@@ -150,20 +147,15 @@ void PFM::SimulationControl::reinitializeController(fieldDimensions_t dimensions
 		}
 	}
 
-	m_lastSimData.cells = numberCells;
 	m_shouldStop = false;
-	m_lastSimData.stepsRan = 0;
-    m_stepsToRun = 0;
 	setBaseAsActive();
-
-	m_lastSimData.initialContidion = initialCond;
-	m_lastSimData.bias = bias;
 
 	m_hasInitialized = true;
 }
 
 void PFM::SimulationControl::nonBlockingStop() {
 	m_shouldStop = true;
+	m_shouldBePaused = false;
 }
 
 void PFM::SimulationControl::stepsEnded() {
@@ -182,7 +174,19 @@ int PFM::SimulationControl::stop() {
 	m_isRunning = false;
 	m_shouldStop = false;
 
-	return m_lastSimData.stepsRan;
+	return m_simConfigs.stepsRan;
+}
+
+void PFM::SimulationControl::pause() {
+	m_shouldBePaused = true;
+}
+
+void PFM::SimulationControl::resume() {
+	m_shouldBePaused = false;
+}
+
+bool PFM::SimulationControl::shouldBePaused() const {
+	return m_shouldBePaused;
 }
 
 void PFM::SimulationControl::mirrorRotatingOnBase() {
@@ -229,7 +233,7 @@ bool PFM::SimulationControl::saveFieldData(bool savePGM, bool saveBIN, bool save
 
 	auto dimensions = m_activeBaseField_ptr->getFieldDimensions();
 
-	std::string baseFilename = getFileName(m_lastSimData.stepsRan, false);
+	std::string baseFilename = getFileName(m_simConfigs.stepsRan, false);
 	
 	int maxColor = 255;
 	FILE* fp_pgm = nullptr;
@@ -284,37 +288,37 @@ bool PFM::SimulationControl::saveFieldData() const {
 }
 
 void PFM::SimulationControl::updateGammaLambda() {
-	if(m_lastSimParameters.A == 0) { return; }
-	m_lastSimParameters.gamma = std::sqrt(m_lastSimParameters.A * m_lastSimParameters.k) / 6.0;
-	m_lastSimParameters.lambda = 2*std::sqrt(m_lastSimParameters.k / m_lastSimParameters.A);
+	if(m_simParameters.A == 0) { return; }
+	m_simParameters.gamma = std::sqrt(m_simParameters.A * m_simParameters.k) / 6.0;
+	m_simParameters.lambda = 2*std::sqrt(m_simParameters.k / m_simParameters.A);
 }
 
 void PFM::SimulationControl::updateKandA() {
-	if(m_lastSimParameters.lambda == 0) { return; }
-	m_lastSimParameters.A = 12 * m_lastSimParameters.gamma / m_lastSimParameters.lambda;
-	m_lastSimParameters.k = 3 * m_lastSimParameters.gamma * m_lastSimParameters.lambda;
+	if(m_simParameters.lambda == 0) { return; }
+	m_simParameters.A = 12 * m_simParameters.gamma / m_simParameters.lambda;
+	m_simParameters.k = 3 * m_simParameters.gamma * m_simParameters.lambda;
 }
 
 void PFM::SimulationControl::setAused(double newA) {
-	m_lastSimParameters.A = newA;
+	m_simParameters.A = newA;
 
 	updateGammaLambda();
 }
 
 void PFM::SimulationControl::setKused(double newK) {
-	m_lastSimParameters.k = newK;
+	m_simParameters.k = newK;
 
 	updateGammaLambda();
 }
 
 void PFM::SimulationControl::setLambdaUsed(double newLambda) {
-	m_lastSimParameters.lambda = newLambda;
+	m_simParameters.lambda = newLambda;
 
 	updateKandA();
 }
 
 void PFM::SimulationControl::setGammaUsed(double newGamma) {
-	m_lastSimParameters.gamma = newGamma;
+	m_simParameters.gamma = newGamma;
 
 	updateKandA();
 }
@@ -324,7 +328,7 @@ void PFM::SimulationControl::updatePhysicalParametersFromInternals() {
 }
 
 void PFM::SimulationControl::setDTused(double newDT) {
-	m_lastSimParameters.dt = newDT;
+	m_simParameters.dt = newDT;
 }
 
 void PFM::SimulationControl::setMaxStepsPerCheckAdded(size_t newStepsPerCheckSaved) {
@@ -352,7 +356,7 @@ void PFM::SimulationControl::setSavingOnDATofTheParamsBeforeEachCheck(bool shoul
 }
 
 bool PFM::SimulationControl::checkIfShouldStop() {
-	if(m_shouldStop || (m_stepsToRun > 0 && m_lastSimData.stepsRan >= m_stepsToRun)) {
+	if(m_shouldStop || (m_stepsToRun > 0 && m_simConfigs.stepsRan >= m_stepsToRun)) {
 		m_shouldStop = true;
 	}
 
@@ -360,11 +364,11 @@ bool PFM::SimulationControl::checkIfShouldStop() {
 }
 
 int PFM::SimulationControl::getNumberCells() const {
-	return m_lastSimData.cells;
+	return m_simConfigs.cells;
 }
 
 double PFM::SimulationControl::getLastCellSeedValue() const {
-	return m_lastSimData.cellSeedValue;
+	return m_simConfigs.cellSeedValue;
 }
 
 bool PFM::SimulationControl::shouldStillExpandSeeds() const {
@@ -380,40 +384,42 @@ double PFM::SimulationControl::getAbsoluteChangePerCheckSaved() const {
 }
 
 void PFM::SimulationControl::runForSteps(int steps, double lambda, double gamma, double dt,
-	                                     PFM::simFuncEnum simulationToRun, 
-	                                     PFM::integrationMethods method) {
+	                                     PFM::simFuncEnum simulationToRun, PFM::integrationMethods method) {
+
 	if(controller.isSimulationRunning()) { return; }
 	if((int)simulationToRun >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) { return; }
 	if((int)method >=  (int)PFM::integrationMethods::TOTAL_METHODS) { return; }
 
 	m_stepsToRun = steps;
-	m_lastSimData.simulFunc = simulationToRun;
-	m_lastSimData.method = method;
-	m_lastSimParameters.lambda = lambda;
-	m_lastSimParameters.gamma = gamma;
+	m_simConfigs.simulFunc = simulationToRun;
+	m_simConfigs.method = method;
+	m_simParameters.lambda = lambda;
+	m_simParameters.gamma = gamma;
 	updateKandA();
-	m_lastSimParameters.dt = dt;
+	m_simParameters.dt = dt;
 	m_isRunning = true;
 
-	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_lastSimData.stepsRan, 
-		                                                                                &m_isRunning, method);
+	m_shouldBePaused = m_simConfigs.startPaused;
+
+	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_simConfigs.stepsRan, 
+	                                                      controller.getIsPaused_ptr(), &m_isRunning, method);
 	m_stepsThread.detach();
 }
 
 const simConfig_t* PFM::SimulationControl::getLastSimConfigPtr() const {
-	return &m_lastSimData;
+	return &m_simConfigs;
 }
 
 std::string PFM::SimulationControl::getSimDataString() const { 
-	return m_lastSimData.getSimDataString();
+	return m_simConfigs.getSimDataString();
 }
 
 simParameters_t* PFM::SimulationControl::getLastSimParametersPtr() {
-	return &m_lastSimParameters;
+	return &m_simParameters;
 }
 
 std::string PFM::SimulationControl::getSimParamsString() const { 
-	return m_lastSimParameters.getSimParamsString();
+	return m_simParameters.getSimParamsString();
 }
 
 size_t PFM::SimulationControl::getActiveFieldsCheckVectorElements() const {
@@ -444,24 +450,24 @@ bool PFM::SimulationControl::isSimulationRunning() const {
 	return m_isRunning;
 }
 
+const bool* PFM::SimulationControl::getIsPaused_ptr() const {
+	return &m_shouldBePaused;
+}
+
 int PFM::SimulationControl::stepsAlreadyRan() const {
-	return m_lastSimData.stepsRan;
+	return m_simConfigs.stepsRan;
 }
 
 void PFM::SimulationControl::resetStepsAlreadyRan() {
-	m_lastSimData.stepsRan = 0;
+	m_simConfigs.stepsRan = 0;
 }
 
 ///These API calls are really just wrappers to calls to methods of the controller:
 
 const PeriodicDoublesLattice2D* PFM::initializeSimulation(simConfig_t config) {
-	
-	PFM::fieldDimensions_t dimensions;
-	dimensions.width = config.width;
-	dimensions.height = config.height;
+	if(isSimulationRunning()) { return controller.getActiveFieldPtr(); }
 
-	controller.reinitializeController(dimensions, config.cells, config.initialContidion, 
-		                              config.perCellLayer, config.bias, config.initialSeed);
+	controller.reinitializeController(config);
 	return controller.getActiveFieldPtr();
 }
 
@@ -469,8 +475,20 @@ bool PFM::isSimulationRunning() {
 	return controller.isSimulationRunning();
 }
 
+bool PFM::isSimulationPaused() {
+	return PFM::isSimulationRunning() && controller.shouldBePaused();
+}
+
 int PFM::stopSimulation() {
 	return controller.stop();
+}
+
+void PFM::pauseSimulation() {
+	controller.pause();
+}
+
+void PFM::resumeSimulation() {
+	controller.resume();
 }
 
 int PFM::getStepsRan() {
@@ -488,7 +506,7 @@ bool PFM::saveFieldData(bool savePGM, bool saveBIN, bool saveDAT) {
 void PFM::runForSteps(int stepsToRun, simParameters_t parameters, simConfig_t config) {
 
 	controller.runForSteps(stepsToRun, parameters.lambda, parameters.gamma, parameters.dt, 
-		                                      config.simulFunc, config.method);
+		                                                  config.simulFunc, config.method);
 }
 
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {

@@ -1,4 +1,5 @@
 #include "fAux/API/miscStdHeaders.h"
+#include "fAux/API/miscDefines.hpp"
 #include "fAux/API/prng.hpp"
 #include "fAux/API/timeHelpers.hpp"
 
@@ -15,6 +16,8 @@
 
 #define RUN_GUI_TESTS (-1)
 #define SAVE_PARAMETERS_BEFOR_EACH_CHECK 1
+#define OVERRIDE_DEFAULT_AND_TRY_TO_START_PAUSED 1 //unless specified by command line argument
+#define SKIP_PAUSE_WHEN_SAVING_GUI_IMAGE 0
 
 //TODO: A LOT OF THE PARSING COULD BE HANDLED VIA THE SIMULATION PROJECT
 
@@ -31,7 +34,7 @@ void printArgumentsList() {
 
 //TODO: Sanitize input : )
 bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr, 
-	                             PFM::simConfig_t* config_ptr, int argc, char **argv) {
+	                PFM::simConfig_t* config_ptr, int argc, char **argv) {
 
 	LOG_TRACE("Will preccess command line inputs...");
 
@@ -62,6 +65,8 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 	//Otherwise, lets first load the defaults for the chosen simulation
 	*params_ptr = PFM::defaultSimParams[*simToRun_ptr];
 	*config_ptr = PFM::defaultConfigs[*simToRun_ptr];
+
+	if(OVERRIDE_DEFAULT_AND_TRY_TO_START_PAUSED) { config_ptr->startPaused = true; }
 
 	//And then proceed to change any non-default values passed:
 	for (int i = 1; i < argc; i++) {
@@ -129,6 +134,11 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 					return false;
 				}
 				config_ptr->method = (PFM::integrationMethods)method;
+			} break;
+
+			case PFM_GUI::mainsArgumentList::START_PAUSED: {
+				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
+				config_ptr->startPaused = atoi(argv[i]);
 			} break;
 		}
 	}
@@ -266,11 +276,13 @@ bool PFM_GUI::runSimulationWithGUI(PFM::simParameters_t* parameters_ptr, PFM::si
 
 		if (PFM::getCheckDataPtr()->totalAbsoluteChangeSinceLastSave < lastReadTotalAbsoluteChangeSinceSaving) {
 			//the total change was reset: a save was triggered: let's also save the renderer's image
+			if(!SKIP_PAUSE_WHEN_SAVING_GUI_IMAGE) { PFM::pauseSimulation(); }
 			F_V2::saveCurrentImage();
+			if(!SKIP_PAUSE_WHEN_SAVING_GUI_IMAGE) { PFM::resumeSimulation(); }
 		}
 		lastReadTotalAbsoluteChangeSinceSaving = PFM::getCheckDataPtr()->totalAbsoluteChangeSinceLastSave;
 
-		AZ::hybridBusySleepForMicros(std::chrono::microseconds(500));
+		AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI/2));
 	}
 
 	renderThread.join();

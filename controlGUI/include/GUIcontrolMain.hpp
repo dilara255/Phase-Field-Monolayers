@@ -4,7 +4,7 @@
 namespace PFM_GUI {
 
 	enum mainsArgumentList { PROG_CALL, SIM_TO_RUN, LAMBDA, GAMMA, DT, 
-		                     CELLS, WIDTH, HEIGHT, INITIAL_COND, BIAS, SEED, METHOD,
+		                     CELLS, WIDTH, HEIGHT, INITIAL_COND, BIAS, SEED, METHOD, START_PAUSED,
 	                         TOTAL_ARGS};
 	const char* argumentNames[TOTAL_ARGS] = { "ProgramCall", "SimFuncToRun(uint)", "Lamba(double)", "Gamma(double)",
 		                                      "dt(double)", "Cells(uint)", "Width(uint)", "Height(uint)", 

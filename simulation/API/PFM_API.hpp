@@ -11,14 +11,23 @@
 namespace PFM {
 
 	//If anything fails, returns NULL. Otherwise, returns a const pointer to the active field simulated
+	//In case the simulation is already running, will return a pointr to the current active field and do nothing
+	//(even if paused - make sure to call stopSimulation() first, or check with isSimulationRunning());
 	PFM_API const PeriodicDoublesLattice2D* initializeSimulation(simConfig_t config);
 
 	//If steps <= 0, will run until manually stopped
 	//If the simulation is already running or the simFuncEnum or method is bad, will do nothing (*no warning*)
+	//Note that changes in config won't be applied to new calls to runForSteps unless initializeSimulation is called
 	PFM_API void runForSteps(int stepsToRun, simParameters_t parameters, simConfig_t config);
+	//In case the simulation is paused, it will first be resumed before actually stopping
 	PFM_API int stopSimulation();
+	PFM_API void pauseSimulation();
+	PFM_API void resumeSimulation();
 
+	//Returns true even if the simulation is actually paused
 	PFM_API bool isSimulationRunning();
+	//Only returns true if the simulation isSimulationRunning() is also true
+	PFM_API bool isSimulationPaused();
 	PFM_API int getStepsRan();
 	PFM_API void resetStepsRan();
 
