@@ -2,6 +2,8 @@
 #include "fAux/API/miscDefines.hpp"
 #include "fAux/API/timeHelpers.hpp"
 
+#include "PFM_defaults.hpp"
+
 #include "simulControl.hpp"
 #include "rateOfChangeFunctions.hpp"
 #include "numericalIntegration.hpp"
@@ -293,8 +295,8 @@ void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, con
 		checks_ptr->lastAbsoluteChange = checks_ptr->absoluteChange / elements;
 	
 		//How much did the change overshoot the threshold?
-		checks_ptr->remainingChangeSinceSaveOnLastCheck = 
-			checks_ptr->totalAbsoluteChangeSinceLastSave - absoluteChangePerElementPerCheckSaved;
+		checks_ptr->remainingChangeSinceSaveOnLastCheck = PFM::absoluteChangeRemainingFactor 
+				* (checks_ptr->totalAbsoluteChangeSinceLastSave - absoluteChangePerElementPerCheckSaved);
 
 		//In case change was actually *smaller* than the threshold:
 		if (checks_ptr->remainingChangeSinceSaveOnLastCheck < 0) {

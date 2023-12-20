@@ -19,6 +19,10 @@
 #define OVERRIDE_DEFAULT_AND_TRY_TO_START_PAUSED 1 //unless specified by command line argument
 #define SKIP_PAUSE_WHEN_SAVING_GUI_IMAGE 0
 
+double g_changePerElementPerStepToStop = PFM::defaultAbsChangePerStepToStop;
+uint64_t g_maximumSteps = PFM::defaulMaxSteps;
+int g_checksAtChangeTreshold = 0;
+
 namespace PFM_GUI { 
 	bool g_restartSimulationAfterStopped = false;
 	bool g_dtLoweredForFirstSteps = false;
@@ -131,7 +135,7 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 
 			case PFM_GUI::mainsArgumentList::BIAS: {
 				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
-				scanf(argv[i], "%lf", &(config_ptr->bias));
+				sscanf(argv[i], "%lf", &(config_ptr->bias));
 			} break;
 
 			case PFM_GUI::mainsArgumentList::SEED: {
@@ -152,6 +156,33 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 			case PFM_GUI::mainsArgumentList::START_PAUSED: {
 				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
 				config_ptr->startPaused = atoi(argv[i]);
+			} break;
+			
+			case PFM_GUI::mainsArgumentList::CHANGE_PER_ELEMENT_PER_STEP_TO_STOP: {
+				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
+				sscanf(argv[i], "%lf", &g_changePerElementPerStepToStop);
+			} break;
+
+			case PFM_GUI::mainsArgumentList::MAXIMUM_STEPS: {
+				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
+				g_maximumSteps = strtoll(argv[i], NULL, 10);
+			} break;
+
+			case PFM_GUI::mainsArgumentList::STEPS_PER_CHECK: {
+				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
+				int64_t steps = strtol(argv[i], NULL, 10);
+				bool valid = (steps > 0) && (steps <= UINT32_MAX);
+				if(!valid) { LOG_ERROR("Bad number of steps per check"); return false;}
+
+				PFM::setMaxStepsPerCheckAdded((uint32_t)steps);
+			} break;
+
+			case PFM_GUI::mainsArgumentList::ABSOLUTE_CHANGE_PER_CHECK: {
+				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
+				double change = sscanf(argv[i], "%lf", &g_changePerElementPerStepToStop);
+				if(change <= 0) { LOG_ERROR("Bad change per check"); return false; }
+
+				PFM::setMaxTotalChangePerElementPerCheckAdded(change);
 			} break;
 		}
 	}
@@ -247,6 +278,7 @@ bool PFM_GUI::runSimulationWithGUI(PFM::simParameters_t* parameters_ptr, PFM::si
 	LOG_DEBUG("Will run the simulation and display on the GUI");
 
 	//Set up and run the simulation:
+	PFM::setIntermediateBINsaves(true);
 	PFM::initializeSimulation(*config_ptr);
 	LOG_INFO("Simulation initialized. Will run the simulation");
 	PFM::runForSteps(stepsToRun, *parameters_ptr, *config_ptr);

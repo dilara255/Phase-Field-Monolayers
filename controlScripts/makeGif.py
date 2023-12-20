@@ -6,6 +6,8 @@
 import glob
 from PIL import Image
 
+gifFrameDuration = 40
+
 def pgmToColoredJpg(source_path, dest_path):
     im = Image.open(source_path)
     im = im.convert("RGB")
@@ -77,4 +79,4 @@ for path in jpgPaths:
     im = Image.open(path)
     images.append(im)
 images[0].save('out.gif', save_all=True, append_images=images[1:], 
-               optimize=True, duration=40, loop=0)
+               optimize=True, duration=gifFrameDuration, loop=0, comment=jpgPaths[0])

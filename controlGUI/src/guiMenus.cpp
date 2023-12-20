@@ -137,6 +137,16 @@ void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	}
 
 	PFM::updatePhysicalParameters();
+
+	double changeToSave = PFM::getMaxTotalChangePerElementPerCheckAdded();
+	ImGui::InputDouble("Total Change/Element to save", &changeToSave, 0.0001, 0.005);
+	changeToSave = std::clamp(changeToSave, 0.0000000000001, 0.5);
+	PFM::setMaxTotalChangePerElementPerCheckAdded(changeToSave);
+
+	int stepsPerCheck = PFM::getMaxStepsPerCheckAdded();
+	ImGui::InputInt("Max steps/check", &stepsPerCheck, 10, 100);
+	stepsPerCheck = std::clamp(stepsPerCheck, 1, INT32_MAX);
+	PFM::setMaxStepsPerCheckAdded((uint32_t)stepsPerCheck);
 }
 
 GUI::menuDefinition_t PFM_GUI::getChecksMenuDefinition(PFM::checkData_t* checks_ptr) {

@@ -602,6 +602,14 @@ void PFM::setMaxTotalChangePerElementPerCheckAdded(double newMaxTotalChangePerCh
 	controller.setMaxTotalChangePerElementPerCheckAdded(newMaxTotalChangePerCheck);
 }
 
+size_t PFM::getMaxStepsPerCheckAdded() {
+	return controller.getStepsPerCheckSaved();
+}
+
+double PFM::getMaxTotalChangePerElementPerCheckAdded() {
+	return controller.getAbsoluteChangePerCheckSaved();
+}
+
 void PFM::setIntermediateDATsaves(bool shouldSave) {
 	controller.setIntermediateDATsaves(shouldSave);
 }
