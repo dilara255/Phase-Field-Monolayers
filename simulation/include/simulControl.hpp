@@ -8,13 +8,12 @@
 
 #include "PFM_API.hpp"
 #include "PFM_data.hpp"
+#include "PFM_defaults.hpp"
 
 #include "fAux/API/prng.hpp"
 
 #define CELL_SEED_VAL (1.0) //used to mark a point as a cell to be expanded. TODO: deprecate?
 #define MS_TO_WAIT 10
-#define DEFAULT_STEPS_PER_CHECK 500
-#define DEFAULT_ABSOLUTE_CHANGE_PER_CHECK (0.01)
 
 namespace PFM {
 
@@ -148,8 +147,8 @@ namespace PFM {
         bool m_shouldBePaused = false;
         uint64_t m_stepsToRun = 0;
         bool m_seedsNeedExpanding = false;
-        int m_stepsPerCheckSaved = DEFAULT_STEPS_PER_CHECK;
-        double m_absoluteChangePerCheckSaved = DEFAULT_ABSOLUTE_CHANGE_PER_CHECK;
+        uint32_t m_stepsPerCheckSaved = PFM::defaulStepsPerCheck;
+        double m_absoluteChangePerCheckSaved = PFM::defaultAbsChangePerCheck;
 
         bool m_saveDATonIntermediateChecks = false;
         bool m_savePGMonIntermediateChecks = false;

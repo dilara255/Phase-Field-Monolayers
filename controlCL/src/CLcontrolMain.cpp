@@ -8,13 +8,10 @@
 #include "CLcontrolMain.hpp"
 
 #define RUN_CLI_TESTS -1                            
-#define DEFAULT_CHANGE_PER_ELEMENT_PER_STEP_TO_STOP (0.0000000015)
-#define DEFAULT_MAX_STEPS (6000000)
-#define STEPS_AT_CHANGE_THRESHOLD_TO_ACTUALLY_STOP 1
 #define BAD_ORIGINAL_DT (-999.999)
 
-double g_changePerElementPerStepToStop = DEFAULT_CHANGE_PER_ELEMENT_PER_STEP_TO_STOP;
-uint64_t g_maximumSteps = DEFAULT_MAX_STEPS;
+double g_changePerElementPerStepToStop = PFM::defaultAbsChangePerStepToStop;
+uint64_t g_maximumSteps = PFM::defaulMaxSteps;
 int g_checksAtChangeTreshold = 0;
 bool g_dtLoweredForFirstSteps = false;
 double g_originalDt = BAD_ORIGINAL_DT;
@@ -38,6 +35,7 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 
 	if (argc > 1 && argc != PFM_CLI::mainsArgumentList::TOTAL_ARGS) {
 		LOG_ERROR("BAD NUBER OF CL ARGUMENTS: either just run the program or specify all arguments");
+		printf("Expected %d, got %d. Arguments expected are:\n", PFM_CLI::mainsArgumentList::TOTAL_ARGS, argc);
 		printArgumentsList();
 		return false;
 	}
@@ -151,6 +149,23 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
 				g_maximumSteps = strtoll(argv[i], NULL, 10);
 			} break;
+
+			case PFM_CLI::mainsArgumentList::STEPS_PER_CHECK: {
+				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+				int64_t steps = strtol(argv[i], NULL, 10);
+				bool valid = (steps > 0) && (steps <= UINT32_MAX);
+				if(!valid) { LOG_ERROR("Bad number of steps per check"); return false;}
+
+				PFM::setMaxStepsPerCheckAdded((uint32_t)steps);
+			} break;
+
+			case PFM_CLI::mainsArgumentList::ABSOLUTE_CHANGE_PER_CHECK: {
+				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+				double change = sscanf(argv[i], "%lf", &g_changePerElementPerStepToStop);
+				if(change <= 0) { LOG_ERROR("Bad change per check"); return false; }
+
+				PFM::setMaxTotalChangePerElementPerCheckAdded(change);
+			} break;
 		}
 	}
 
@@ -207,7 +222,7 @@ bool shouldStop(PFM::checkData_t* check_ptr) {
 		g_checksAtChangeTreshold++;
 	}
 	return (check_ptr->stepsAtLastCheck >= g_maximumSteps) || 
-		   (g_checksAtChangeTreshold >= STEPS_AT_CHANGE_THRESHOLD_TO_ACTUALLY_STOP);
+		   (g_checksAtChangeTreshold >= PFM::stepsAtChangeThresholdToStop);
 }
 
 void sanitizeParams(PFM::simParameters_t* params_ptr, uint64_t stepsRan) {

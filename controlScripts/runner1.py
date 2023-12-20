@@ -15,8 +15,10 @@ bias = '0.0' #bias only applies to randomized initial conditions
 seed = 'default' #some known-good seeds are available on depend/fAux/include/fAux/API/prng.hpp
 method = '1' #Numerical method. 0-3, each slower then the previous : )
 startPaused = 'default' #starting paused here will just hang forever
-changePerElmPerStepToStop = '0.00001' #default waits for fairly minimal changes
-maxSteps = '100' #default gives enough time for most tested networks to converge
+changePerElmPerStepToStop = 'default' #default waits for fairly minimal changes
+maxSteps = '315000' #default gives enough time for most tested networks to converge
+stepsPerCheck = 'default' #default is 5k on debug and 25k on release (~100s)
+changePerCheck = 'default' #default is 5k on debug and 25k on release (~100s)
 
 argumentsString = (r'..\bin\Release-windows-x86_64\controlCL\controlCL.exe '
 + simToRun + ' '
@@ -32,7 +34,9 @@ argumentsString = (r'..\bin\Release-windows-x86_64\controlCL\controlCL.exe '
 + method + ' '
 + startPaused + ' '
 + changePerElmPerStepToStop + ' '
-+ maxSteps)
++ maxSteps + ' '
++ stepsPerCheck + ' '
++ changePerCheck)
 
 print(argumentsString)
 

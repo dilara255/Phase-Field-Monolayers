@@ -6,6 +6,15 @@
 namespace PFM {
 
 	static const uint64_t completelyArbitraryStepToUnlockFullDt = 50;
+	//This is used to help avoid having way too many save in the first few frames
+	static const double absoluteChangeRemainingFactor = 0.2;
+
+	static const uint32_t defaulStepsPerCheck = 5000;
+	static const double defaultAbsChangePerCheck = 0.0025;
+
+	static const double defaultAbsChangePerStepToStop = 0.0000000015;
+	static const uint64_t defaulMaxSteps = 6000000;
+	static const int stepsAtChangeThresholdToStop = 100; 
 
 	static const simFuncEnum defaultSimToRun = simFuncEnum::SINGLE_LAYER_CH_SIM;
 

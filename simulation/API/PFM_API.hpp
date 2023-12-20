@@ -66,6 +66,9 @@ namespace PFM {
 	//Will be set to 0 if a smaller value is passed: entries will be added every step (not reccomended)
 	PFM_API void setMaxTotalChangePerElementPerCheckAdded(double newMaxTotalChangePerCheck);
 
+	PFM_API size_t getMaxStepsPerCheckAdded();
+	PFM_API double getMaxTotalChangePerElementPerCheckAdded();
+
 	//These change wether intermediate saves of each data are made when each new checkData is added
 	PFM_API void setIntermediateDATsaves(bool shouldSave); //The DATs have config, param and CUMMULATIVE check data
 	PFM_API void setIntermediatePGMsaves(bool shouldSave); //The PGMs are simple 0-255 images of the network
