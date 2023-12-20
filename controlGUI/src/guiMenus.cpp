@@ -13,13 +13,32 @@ static PFM::checkData_t* g_checkData_ptr = nullptr;
 static const PFM::simConfig_t* g_simConfig_ptr = nullptr;
 static PFM::simParameters_t* g_simParams_ptr = nullptr;
 
+static PFM::simConfig_t* g_simConfigNextStart_ptr = nullptr;
+static PFM::simParameters_t* g_simParamsNextStart_ptr = nullptr;
+
 void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	if(g_checkData_ptr == nullptr) { return; }
 
 	ImGui::Text("%s", g_checkData_ptr->getChecksStr().c_str());
 }
 
+void controlFlowMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
+	if(g_simConfigNextStart_ptr == nullptr) { return; }
+	if(g_simParamsNextStart_ptr == nullptr) { return; }
+
+	//TODO:
+	//Buttons to copy "current" params and config
+	//Button to pause/resume simulation
+	//Button to restart simulation with new config and params
+	//Get rid of the strings and instead expose the actual field for change
+
+	ImGui::Text("Configuration for restart:\n%s", g_simConfigNextStart_ptr->getSimDataString().c_str());
+	ImGui::Text("Parameters for restart:\n%s", g_simParamsNextStart_ptr->getSimParamsString().c_str());
+}
+
 void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
+	if(g_simConfig_ptr == nullptr) { return; }
+	if(g_simParams_ptr == nullptr) { return; }
 
 	ImGui::Text("Simulation configuration:\n%s", g_simConfig_ptr->getSimDataString().c_str());
 	ImGui::Text("Simulation parameters:\n%s", g_simParams_ptr->getSimParamsString().c_str());
@@ -53,8 +72,15 @@ GUI::menuDefinition_t PFM_GUI::getChecksMenuDefinition(PFM::checkData_t* checks_
 }
 
 GUI::menuDefinition_t PFM_GUI::getConfigAndParamsMenuDefinition(const PFM::simConfig_t* simConfig_ptr, 
-		                                                        PFM::simParameters_t* simParams_ptr) {
+		                                                          PFM::simParameters_t* simParams_ptr) {
 	g_simConfig_ptr = simConfig_ptr;
 	g_simParams_ptr = simParams_ptr;
 	return { configAndParamsMenuFunc, "Config menu" };
+}
+
+GUI::menuDefinition_t PFM_GUI::getcontrolFlowMenuDefinition(PFM::simConfig_t* simConfigFromMain_ptr, 
+		                                                    PFM::simParameters_t* simParamsFromMain_ptr) {
+	g_simConfigNextStart_ptr = simConfigFromMain_ptr;
+	g_simParamsNextStart_ptr = simParamsFromMain_ptr;
+	return { controlFlowMenuFunc, "Control Flow menu" };
 }

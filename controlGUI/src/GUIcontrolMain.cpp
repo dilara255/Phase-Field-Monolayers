@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 		break;
 
 		case (int)PFM::simFuncEnum::SINGLE_LAYER_CH_SIM:
-			result = PFM_GUI::runSimulationWithGUI(params, config, PFM::getFileName); 
+			result = PFM_GUI::runSimulationWithGUI(&params, &config, PFM::getFileName); 
 		break;
 
 		case (int)PFM::simFuncEnum::MULTI_LAYER_CH_SIM:
@@ -181,7 +181,8 @@ int main(int argc, char **argv) {
 }
 
 //Returns empty menuList in case something goes wrong
-void populateMenuList(GUI::menuDefinitionList_t* menuList_ptr) {
+void populateMenuList(GUI::menuDefinitionList_t* menuList_ptr, PFM::simConfig_t* simConfigFromMain_ptr, 
+		                                                   PFM::simParameters_t* simParamsFromMain_ptr) {
 
 	auto checks_ptr = PFM::getCheckDataPtr();
 	auto config_ptr = PFM::getSimConfigPtr();
@@ -193,6 +194,7 @@ void populateMenuList(GUI::menuDefinitionList_t* menuList_ptr) {
 
 	menuList_ptr->push_back(PFM_GUI::getChecksMenuDefinition(checks_ptr));
 	menuList_ptr->push_back(PFM_GUI::getConfigAndParamsMenuDefinition(config_ptr, params_ptr));
+	menuList_ptr->push_back(PFM_GUI::getcontrolFlowMenuDefinition(simConfigFromMain_ptr, simParamsFromMain_ptr));
 
 	return;
 }
@@ -203,27 +205,28 @@ void populateMenuList(GUI::menuDefinitionList_t* menuList_ptr) {
 //Make sure if a posite number of steps was passed, manually closing the renderer still stops the simulation
 //Add option for data saves to also save the image from the GUI
 //See config and params, receive those plus whatever
-bool PFM_GUI::runSimulationWithGUI(PFM::simParameters_t parameters, PFM::simConfig_t config,
+bool PFM_GUI::runSimulationWithGUI(PFM::simParameters_t* parameters_ptr, PFM::simConfig_t* config_ptr,
 	                               GUI::filenameCallback_func* filenameFunc, int stepsToRun, bool saveOnExit) {
-	if ((int)config.simulFunc >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) {
+	
+	if ((int)config_ptr->simulFunc >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) {
 		LOG_ERROR("Invalid simulation function selected");
 		return false;
 	}
 
-	if(config.simulFunc == PFM::simFuncEnum::DATA_CONTROL_TEST) { 
+	if(config_ptr->simulFunc == PFM::simFuncEnum::DATA_CONTROL_TEST) { 
 		LOG_WARN("The menu to validate this test is not supported on the current version of the controller. Will say that the manual inspection failed. TODO: Reimplement support");
 	}
 
 	LOG_DEBUG("Will run the simulation and display on the GUI");
 
 	//Set up and run the simulation:
-	PFM::initializeSimulation(config);
+	PFM::initializeSimulation(*config_ptr);
 	LOG_INFO("Simulation initialized. Will run the simulation");
-	PFM::runForSteps(stepsToRun, parameters, config);
+	PFM::runForSteps(stepsToRun, *parameters_ptr, *config_ptr);
 	
 	//Form the menus:
 	GUI::menuDefinitionList_t menuList;
-	populateMenuList(&menuList);
+	populateMenuList(&menuList, config_ptr, parameters_ptr);
 	if (menuList.size() == 0) {
 		LOG_ERROR("Could not form the menus");
 		return false;
@@ -236,7 +239,7 @@ bool PFM_GUI::runSimulationWithGUI(PFM::simParameters_t parameters, PFM::simConf
 
 	//These are for internal use of the GUI program
 	IMG::generic2DfieldPtr_t dynamicData; //to mediate between simulation and renderer data
-	IMG::floats2Dfield_t floatField = IMG::createFloats2Dfield(config.width, config.height);
+	IMG::floats2Dfield_t floatField = IMG::createFloats2Dfield(config_ptr->width, config_ptr->height);
 	dynamicData.storeFloatsField(&floatField);
 
 	//TODO: next version of fViz2D should make this unecessary
@@ -247,7 +250,7 @@ bool PFM_GUI::runSimulationWithGUI(PFM::simParameters_t parameters, PFM::simConf
 	std::thread renderThread = F_V2::spawnRendererOnNewThread(&dynamicData, &retCode, &clear, 
 		                                                      &menuList, filenameFunc,
 		                                                      &scheme, "Phase Field Model: CH", 
-		                                                      768, 704, true, F_V2::defaultSynchCallback,
+		                                                      1000, 704, true, F_V2::defaultSynchCallback,
 		                                                      PFM_GUI::pfmGuiBannerPathFromBinary);
 	F_V2::saveCurrentImage(); //save initial state
 

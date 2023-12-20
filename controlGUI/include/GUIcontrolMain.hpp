@@ -12,6 +12,6 @@ namespace PFM_GUI {
 	const char* deafultArgument = "default";
 
 	//stepsToRun <= 0: run until manually stopped
-	bool runSimulationWithGUI(PFM::simParameters_t parameters, PFM::simConfig_t config,
+	bool runSimulationWithGUI(PFM::simParameters_t* parameters_ptr, PFM::simConfig_t* config_ptr,
 		                      GUI::filenameCallback_func* filenameFunc, int stepsToRun = -1, bool saveOnExit = true);
 }
