@@ -1,12 +1,13 @@
 #include "fAux/API/miscStdHeaders.h"
+#include "fAux/API/timeHelpers.hpp"
+#include "fAux/API/miscDefines.hpp"
+#include "fAux/API/prng.hpp"
 
 #include "PFM_API.hpp"
 #include "PFM_tests.hpp"
 #include "simulControl.hpp"
 
-#include "fAux/API/timeHelpers.hpp"
-#include "fAux/API/miscDefines.hpp"
-#include "fAux/API/prng.hpp"
+#include <filesystem>
 
 using namespace PFM;
 
@@ -197,26 +198,34 @@ void PFM::SimulationControl::mirrorBaseOnRotating() {
 	m_rotatingBaseLattice_ptr.get()->getPointerToCurrent()->mirrorAllDataFrom(m_baseLattice_ptr.get());
 }
 
-std::string PFM::getFileName(int steps, bool calledFromGUI) {
+std::string PFM::getDirAndFileName(int steps, bool calledFromGUI) {
 	
 	//gather the relevant data:
 	auto dimensions = controller.getActiveFieldPtr()->getFieldDimensions();
-	const PFM::simConfig_t* simData_ptr = controller.getLastSimConfigPtr();
+	const PFM::simConfig_t* simConfig_ptr = controller.getLastSimConfigPtr();
 	const PFM::simParameters_t* simParams_ptr = controller.getLastSimParametersPtr();
 
-	std::string fileName = "";	
-	if(calledFromGUI) { fileName += "m"; }
+	std::string dirname = "Sim" + std::to_string((int)simConfig_ptr->simulFunc) 
+						+ "_w" + std::to_string(dimensions.width) 
+						+ "_h" + std::to_string(dimensions.height)
+						+ "_c" + std::to_string(simConfig_ptr->cells)
+						+ "_ini" + std::to_string((int)simConfig_ptr->initialContidion) 		    
+						+ "_b" + std::to_string(simConfig_ptr->bias)
+						+ "m" + std::to_string((int)simConfig_ptr->method)
+						+ "_t" + std::to_string(simConfig_ptr->reducedSecondsSinceEpochOnSimCall());	
+	
+	std::filesystem::create_directory(dirname);
 
-	return  "Sim" + std::to_string((int)simData_ptr->simulFunc) 
-		    + "m" + std::to_string((int)simData_ptr->method)
-		    + "_ini" + std::to_string((int)simData_ptr->initialContidion) 
-			+ "_b" + std::to_string(simData_ptr->bias)
-		    + "_s" + std::to_string(simData_ptr->stepsRan)
-		    + "_A" + std::to_string(simParams_ptr->A) + "_k" + std::to_string(simParams_ptr->k)
-		    + "_dt" + std::to_string(simParams_ptr->dt)
-		    + "_" + std::to_string(simData_ptr->cells) + "_" + std::to_string(dimensions.width) 
-		    + "_" + std::to_string(dimensions.height)
-		    + "_" + std::to_string(simData_ptr->initialSeed);
+	std::string baseFilename = "";
+
+	//TODO: do I actually want to mark manual saves?
+	//if(calledFromGUI) { fileName += "m"; }
+
+	baseFilename += "s" + std::to_string(simConfig_ptr->stepsRan)
+		         + "_A" + std::to_string(simParams_ptr->A) + "_k" + std::to_string(simParams_ptr->k)
+		         + "_dt" + std::to_string(simParams_ptr->dt);
+		    
+	return dirname + "\\" + baseFilename;
 }
 
 //TODO: an actual reasonable save system : p
@@ -233,7 +242,7 @@ bool PFM::SimulationControl::saveFieldData(bool savePGM, bool saveBIN, bool save
 
 	auto dimensions = m_activeBaseField_ptr->getFieldDimensions();
 
-	std::string baseFilename = getFileName(m_simConfigs.stepsRan, false);
+	std::string baseFilename = getDirAndFileName(m_simConfigs.stepsRan, false);
 	
 	int maxColor = 255;
 	FILE* fp_pgm = nullptr;
@@ -462,6 +471,10 @@ void PFM::SimulationControl::resetStepsAlreadyRan() {
 	m_simConfigs.stepsRan = 0;
 }
 
+void PFM::SimulationControl::updateEpochTimeSimCall() {
+	m_simConfigs.epochTimeSimCall = std::chrono::system_clock::now();
+}
+
 ///These API calls are really just wrappers to calls to methods of the controller:
 
 const PeriodicDoublesLattice2D* PFM::initializeSimulation(simConfig_t config) {
@@ -505,6 +518,7 @@ bool PFM::saveFieldData(bool savePGM, bool saveBIN, bool saveDAT) {
 	
 void PFM::runForSteps(int stepsToRun, simParameters_t parameters, simConfig_t config) {
 
+	controller.updateEpochTimeSimCall();
 	controller.runForSteps(stepsToRun, parameters.lambda, parameters.gamma, parameters.dt, 
 		                                                  config.simulFunc, config.method);
 }

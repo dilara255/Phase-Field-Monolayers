@@ -33,7 +33,8 @@ namespace PFM {
 
 	PFM_API bool saveFieldData(bool savePGM, bool saveBIN, bool saveDAT);
 	//Uses parameters and etc to build a default file-name. Compatible with GUI save button if sent as callback.
-    PFM_API std::string getFileName(int steps, bool calledFromGui);
+	//If the directory doesnt exist, it is created. Does not include extension.
+    PFM_API std::string getDirAndFileName(int steps, bool calledFromGui);
 
 	//Returns NULL in case no field is active or the simulation hasn't been initialized
 	PFM_API PeriodicDoublesLattice2D* getActiveFieldPtr();

@@ -27,6 +27,15 @@ namespace PFM {
 		bool perCellLayer = false;
 		bool startPaused = false;
 
+		std::chrono::system_clock::time_point epochTimeSimCall;
+ 
+		inline uint32_t reducedSecondsSinceEpochOnSimCall() const {
+			uint64_t seconds = 
+				std::chrono::duration_cast<std::chrono::seconds>(epochTimeSimCall.time_since_epoch()).count();
+
+			return (uint32_t)(seconds & UINT32_MAX);
+		}
+		
 		inline std::string getSimDataString() const {
 			std::string str = "";
 			str += "Width: " + std::to_string(width) + "\n";
@@ -41,7 +50,7 @@ namespace PFM {
 			str += "Steps: " + std::to_string(stepsRan) + "\n";
 			str += "Per cell layer? " + std::to_string(perCellLayer) + "\n";
 			str += "Start paused? " + std::to_string(startPaused);
-
+			
 			return str;
 		}
 	} simConfig_t;

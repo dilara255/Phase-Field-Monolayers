@@ -115,7 +115,6 @@ namespace PFM {
         //Returns an empty string in case the checkNumber is bad
         std::string getActiveFieldsParamStringBeforeAGivenCheck(size_t checkNumber) const;
         
-
         void printSimDataAndParams() const;
 
         bool isSimulationRunning() const;
@@ -129,6 +128,8 @@ namespace PFM {
 
         int stepsAlreadyRan() const;
         void resetStepsAlreadyRan();
+
+        void updateEpochTimeSimCall();
 
     private:
 
