@@ -25,12 +25,31 @@ void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 void controlFlowMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	if(g_simConfigNextStart_ptr == nullptr) { return; }
 	if(g_simParamsNextStart_ptr == nullptr) { return; }
+	if(g_simConfig_ptr == nullptr) { return; }
+	if(g_simParams_ptr == nullptr) { return; }
 
-	//TODO:
-	//Buttons to copy "current" params and config
-	//Button to pause/resume simulation
-	//Button to restart simulation with new config and params
-	//Get rid of the strings and instead expose the actual field for change
+	//TODO: make pause/resume and restart actually work (PFM/GUI API support needed)
+
+	static bool paused = false;
+	if (paused) {
+		if (ImGui::Button("Resume")) { paused = false; }
+	}
+	else {
+		if (ImGui::Button("Pause ")) { paused = true; }
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Restart w/ these values")) { puts("\nrestart!\n"); }
+
+	if (ImGui::Button("Copy Config")) {
+		*g_simConfigNextStart_ptr = *g_simConfig_ptr;
+		g_simConfigNextStart_ptr->stepsRan = 0;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Copy Params")) {
+		*g_simParamsNextStart_ptr = *g_simParams_ptr;
+	}
+
+	//TODO: Get rid of the strings and instead expose the actual field for change
 
 	ImGui::Text("Configuration for restart:\n%s", g_simConfigNextStart_ptr->getSimDataString().c_str());
 	ImGui::Text("Parameters for restart:\n%s", g_simParamsNextStart_ptr->getSimParamsString().c_str());
