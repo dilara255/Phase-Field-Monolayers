@@ -289,8 +289,8 @@ bool PFM::SimulationControl::saveFieldData() const {
 
 void PFM::SimulationControl::updateGammaLambda() {
 	if(m_simParameters.A == 0) { return; }
-	m_simParameters.gamma = std::sqrt(m_simParameters.A * m_simParameters.k) / 6.0;
-	m_simParameters.lambda = 2*std::sqrt(m_simParameters.k / m_simParameters.A);
+	m_simParameters.gamma = PFM::getGammaFromKandA(m_simParameters.k, m_simParameters.A);
+	m_simParameters.lambda = PFM::getLambdaFromKandA(m_simParameters.k, m_simParameters.A);
 }
 
 void PFM::SimulationControl::updateKandA() {
@@ -535,6 +535,14 @@ PFM::simParameters_t* PFM::getSimParamsPtr() {
 void PFM::updatePhysicalParameters() {
 	if (!controller.isInitialized()) { return; }
 	controller.updatePhysicalParametersFromInternals();
+}
+
+double PFM::getLambdaFromKandA(double k, double A) {
+	return 2*std::sqrt(k / A);
+}
+
+double PFM::getGammaFromKandA(double k, double A) {
+	return std::sqrt(A * k) / 6.0;
 }
 
 void PFM::setMaxStepsPerCheckAdded(size_t newMaxStepsPerCheck) {
