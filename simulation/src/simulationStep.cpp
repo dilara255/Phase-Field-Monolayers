@@ -54,6 +54,7 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	auto tempKsAndDphis_ptr = controller_ptr->getLastDphisAndTempKsFieldPtr();
 	
 	controller_ptr->printSimDataAndParams();
+	checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
 	updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
 		                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
 
@@ -95,6 +96,7 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 
 		updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
 			                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
+		checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
 
 		if (checks_ptr->totalAbsoluteChangeSinceLastSave >= controller_ptr->getAbsoluteChangePerCheckSaved()) {
 			controller_ptr->saveFieldData();
@@ -259,9 +261,9 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const int step, const int stepsPerCheckSaved, 
 	                      const double absoluteChangePerElementPerCheckSaved, const double dt) {
 	
-	const int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
-
 	checks_ptr->step = step;
+
+	const int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
 	checks_ptr->totalAbsoluteChangeSinceLastSave = 
 				checks_ptr->remainingChangeSinceSaveOnLastCheck  + checks_ptr->absoluteChange / elements;
 	

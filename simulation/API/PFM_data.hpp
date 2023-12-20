@@ -91,6 +91,7 @@ namespace PFM {
 	} neighborhood9_t;
 
 	typedef struct checkData_st {
+
 		int step = 0;
 		double lastDensity = 0;
 		double densityChange = 0;
@@ -105,12 +106,15 @@ namespace PFM {
 		double totalAbsoluteChangeSinceLastSave = 0;
 
 		double remainingChangeSinceSaveOnLastCheck = 0;
+
+		simParameters_t parametersOnLastCheck;
 		
 		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; }
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
 		                        lastDensityChange = 0; lastAbsoluteChange = 0; stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
 		                        remainingChangeSinceSaveOnLastCheck = 0; }
+		
 		inline const std::string getChecksStr() const {
 			
 			assert(stepsDuringLastCheckPeriod > 0 && "Bad number of steps on last Check");
@@ -137,6 +141,26 @@ namespace PFM {
 
 			return str;
 		}
+
+		inline const std::string getParametersLastUpdateStr() const {
+
+			const size_t precision = 10;
+			char fmtValsBuffer[2*precision + 1];
+
+			std::string str = "Parameters on the previous check:\nLambda: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.lambda);
+			str += fmtValsBuffer; 
+			str += " | Gamma: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.gamma);
+			str += fmtValsBuffer; 
+			str += " | Dt: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.dt);
+			str += fmtValsBuffer; 
+			str += "\n";
+
+			return str;
+		}
+
 	} checkData_t;
 
 	typedef struct fieldDimensions_st {

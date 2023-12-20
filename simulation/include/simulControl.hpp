@@ -100,6 +100,7 @@ namespace PFM {
 	    void setIntermediateDATsaves(bool shouldSave);
 	    void setIntermediatePGMsaves(bool shouldSave);
 	    void setIntermediateBINsaves(bool shouldSave);
+        void setSavingOnDATofTheParamsBeforeEachCheck(bool shouldSave);
 
         const simConfig_t* getLastSimConfigPtr() const;
         std::string getSimDataString() const;
@@ -110,6 +111,8 @@ namespace PFM {
         size_t getActiveFieldsCheckVectorElements() const;
         //Returns an empty string in case the checkNumber is bad
         std::string getActiveFieldsChecksString(size_t checkNumber) const;
+        //Returns an empty string in case the checkNumber is bad
+        std::string getActiveFieldsParamStringBeforeAGivenCheck(size_t checkNumber) const;
         
 
         void printSimDataAndParams() const;
@@ -147,6 +150,7 @@ namespace PFM {
         bool m_saveDATonIntermediateChecks = false;
         bool m_savePGMonIntermediateChecks = false;
         bool m_saveBINonIntermediateChecks = false;
+        bool m_saveOnDATtheParamsBeforeEachCheck = false;
 
         std::thread m_stepsThread;
 
