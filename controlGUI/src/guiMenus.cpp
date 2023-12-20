@@ -1,8 +1,13 @@
-#include "guiMenus.hpp"
+#include "imgui/imgui.h"
+
+#include "fAux/API/miscStdHeaders.h"
 #include "fViz2D/API/GUI_API.hpp"
+
 #include "PFM_data.hpp"
 #include "PFM_API.hpp"
-#include "imgui/imgui.h"
+
+#include "guiMenus.hpp"
+
 
 static PFM::checkData_t* g_checkData_ptr = nullptr;
 static const PFM::simConfig_t* g_simConfig_ptr = nullptr;
@@ -19,15 +24,25 @@ void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	ImGui::Text("Simulation configuration:\n%s", g_simConfig_ptr->getSimDataString().c_str());
 	ImGui::Text("Simulation parameters:\n%s", g_simParams_ptr->getSimParamsString().c_str());
 
-	double completelyArbitraryMaxKplusA = 1.1;
+	double completelyArbitraryMaxKplusATimesDt = 1.1;
+
+	//These will be used to find the maximum allowed value of each parameter
+	double minValuesForLimitCalc = 0.000001;
+	double dividendForLimitCalc = std::max(minValuesForLimitCalc, g_simParams_ptr->dt);
 
 	double mink = 0.0;
-	double maxk = completelyArbitraryMaxKplusA - g_simParams_ptr->A;
+
+	double maxk = completelyArbitraryMaxKplusATimesDt/dividendForLimitCalc - g_simParams_ptr->A;
 	ImGui::SliderScalar("k", ImGuiDataType_Double, &g_simParams_ptr->k, &mink, &maxk);
 
 	double minA = 0.0;
-	double maxA = completelyArbitraryMaxKplusA - g_simParams_ptr->k;
+	double maxA = completelyArbitraryMaxKplusATimesDt/dividendForLimitCalc - g_simParams_ptr->k;
 	ImGui::SliderScalar("A", ImGuiDataType_Double, &g_simParams_ptr->A, &minA,&maxA);
+
+	double minDt = 0.0;
+	dividendForLimitCalc = std::max(minValuesForLimitCalc, g_simParams_ptr->A + g_simParams_ptr->k);
+	double maxDt = completelyArbitraryMaxKplusATimesDt/dividendForLimitCalc;
+	ImGui::SliderScalar("dt", ImGuiDataType_Double, &g_simParams_ptr->dt, &minDt,&maxDt);
 
 	PFM::updatePhysicalParameters();
 }
