@@ -5,12 +5,6 @@
 #include "numericalIntegration.hpp"
 #include "derivatives.hpp"
 
-//TODO: Make into parameters in the sim func, which should come from the run method used
-#define TOTAL_CHANGE_PER_ELEMENT_PER_SAVE 0.01
-#define SAVE_INTERMEDIATE_DATS 0
-#define SAVE_INTERMEDIATE_PGMS 0
-#define SAVE_INTERMEDIATE_BINS 0
-
 //TODO: version which accepts the controller and deals with the data (eg, currentAndLast, multi-layers, etc)
 void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius, 
 	                                 double cellSeedValue, bool invertValueOn);
@@ -58,10 +52,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 	auto rotBaseField_ptr = controller_ptr->getRotatingBaseFieldPtr();
 	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
 	auto tempKsAndDphis_ptr = controller_ptr->getLastDphisAndTempKsFieldPtr();
-
+	
 	controller_ptr->printSimDataAndParams();
 	updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
-		                                               TOTAL_CHANGE_PER_ELEMENT_PER_SAVE, dt);
+		                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
 
 	auto params_ptr = controller_ptr->getLastSimParametersPtr();
 	//The actual steps:
@@ -100,10 +94,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, int* stepCount_
 		*stepCount_ptr += 1;
 
 		updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
-			                                               TOTAL_CHANGE_PER_ELEMENT_PER_SAVE, dt);
+			                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
 
-		if (checks_ptr->totalAbsoluteChangeSinceLastSave >= TOTAL_CHANGE_PER_ELEMENT_PER_SAVE) {
-			controller_ptr->saveFieldData(SAVE_INTERMEDIATE_PGMS, SAVE_INTERMEDIATE_BINS, SAVE_INTERMEDIATE_DATS);
+		if (checks_ptr->totalAbsoluteChangeSinceLastSave >= controller_ptr->getAbsoluteChangePerCheckSaved()) {
+			controller_ptr->saveFieldData();
 			checks_ptr->totalAbsoluteChangeSinceLastSave = 0;
 		}
 	}
