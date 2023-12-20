@@ -1,4 +1,4 @@
-#include <algorithm>
+#include "fAux/API/miscStdHeaders.h"
 
 #include "PFM_API.hpp"
 #include "PFM_tests.hpp"
@@ -248,7 +248,7 @@ bool PFM::SimulationControl::saveFieldData(bool savePGM, bool saveBIN, bool save
 	for (int j = 0; j < (int)dimensions.height; j++) {
 		for (int i = 0; i < (int)dimensions.width; i++) {
 		  value = m_activeBaseField_ptr->getDataPoint({i,j});
-		  if(saveBIN) { fprintf(fp_bin, "%f ", value); }
+		  if(saveBIN) { fwrite(&value, sizeof(value), 1, fp_bin); }
 		  if(savePGM) { fprintf(fp_pgm, "%c", (char)(std::clamp(value, 0.0, 1.0) * maxColor)); }
 		}
 	}
