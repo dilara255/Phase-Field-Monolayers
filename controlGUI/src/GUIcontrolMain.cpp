@@ -19,6 +19,12 @@
 #define OVERRIDE_DEFAULT_AND_TRY_TO_START_PAUSED 1 //unless specified by command line argument
 #define SKIP_PAUSE_WHEN_SAVING_GUI_IMAGE 0
 
+namespace PFM_GUI { 
+	bool g_restartSimulationAfterStopped = false;
+	bool g_dtLoweredForFirstSteps = false;
+    double g_originalDt = -1.0;
+}
+
 //TODO: A LOT OF THE PARSING COULD BE HANDLED VIA THE SIMULATION PROJECT
 
 bool isArgumentDefault(int argument, char **argv) {
@@ -161,27 +167,33 @@ int main(int argc, char **argv) {
 	bool result = false;
 	LOG_INFO("Input processed. Will call the selected simulation function...");
 	
-	switch ((int)simToRun) {
-		case RUN_GUI_TESTS:
-			result = PFM_GUI_TESTS::guiLinkingAndDependencyTests();
-		break;
+	do {
+		PFM_GUI::g_restartSimulationAfterStopped = false;
+		PFM_GUI::g_dtLoweredForFirstSteps = false;
+		PFM_GUI::g_originalDt = params.dt;
 
-		case (int)PFM::simFuncEnum::SINGLE_LAYER_CH_SIM:
-			result = PFM_GUI::runSimulationWithGUI(&params, &config, PFM::getFileName); 
-		break;
+		switch ((int)simToRun) {
+			case RUN_GUI_TESTS:
+				result = PFM_GUI_TESTS::guiLinkingAndDependencyTests();
+			break;
 
-		case (int)PFM::simFuncEnum::MULTI_LAYER_CH_SIM:
-			LOG_WARN("MULTI LAYER SIM TEMPORARILY DISABLED. Todo: re-enable");
-		break;
+			case (int)PFM::simFuncEnum::SINGLE_LAYER_CH_SIM:
+				result = PFM_GUI::runSimulationWithGUI(&params, &config, PFM::getFileName); 
+			break;
 
-		case (int)PFM::simFuncEnum::DATA_CONTROL_TEST:
-			LOG_WARN("DATA CONTROL TESTS TEMPORARILY DISABLED. Todo: re-enable");
-		break;
+			case (int)PFM::simFuncEnum::MULTI_LAYER_CH_SIM:
+				LOG_WARN("MULTI LAYER SIM TEMPORARILY DISABLED. Todo: re-enable");
+			break;
 
-		default:
-			LOG_ERROR("Chosen simulation not supported by the GUI program");
-		break;
-	}
+			case (int)PFM::simFuncEnum::DATA_CONTROL_TEST:
+				LOG_WARN("DATA CONTROL TESTS TEMPORARILY DISABLED. Todo: re-enable");
+			break;
+
+			default:
+				LOG_ERROR("Chosen simulation not supported by the GUI program");
+			break;
+		}
+	} while(PFM_GUI::g_restartSimulationAfterStopped);
 
 	if(result) { LOG_INFO("All ok"); }
 	else { LOG_ERROR("Errors found"); }
