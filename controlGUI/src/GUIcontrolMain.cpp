@@ -14,6 +14,7 @@
 #include "guiMenus.hpp"
 
 #define RUN_GUI_TESTS (-1)
+#define SAVE_PARAMETERS_BEFOR_EACH_CHECK 1
 
 //TODO: A LOT OF THE PARSING COULD BE HANDLED VIA THE SIMULATION PROJECT
 
@@ -55,6 +56,8 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 		LOG_ERROR("Simulation id requested through argument is not supported");
 		return false;
 	}	
+
+	PFM::setSavingOnDATofTheParamsBeforeEachCheck(SAVE_PARAMETERS_BEFOR_EACH_CHECK);
 
 	//Otherwise, lets first load the defaults for the chosen simulation
 	*params_ptr = PFM::defaultSimParams[*simToRun_ptr];

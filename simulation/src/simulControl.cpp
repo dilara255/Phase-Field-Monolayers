@@ -207,10 +207,11 @@ std::string PFM::getFileName(int steps, bool calledFromGUI) {
 		    + "m" + std::to_string((int)simData_ptr->method)
 		    + "_ini" + std::to_string((int)simData_ptr->initialContidion) 
 			+ "_b" + std::to_string(simData_ptr->bias)
+		    + "_s" + std::to_string(simData_ptr->stepsRan)
 		    + "_A" + std::to_string(simParams_ptr->A) + "_k" + std::to_string(simParams_ptr->k)
 		    + "_dt" + std::to_string(simParams_ptr->dt)
 		    + "_" + std::to_string(simData_ptr->cells) + "_" + std::to_string(dimensions.width) 
-		    + "_" + std::to_string(dimensions.height) + "_" + std::to_string(simData_ptr->stepsRan) 
+		    + "_" + std::to_string(dimensions.height)
 		    + "_" + std::to_string(simData_ptr->initialSeed);
 }
 
@@ -265,6 +266,9 @@ bool PFM::SimulationControl::saveFieldData(bool savePGM, bool saveBIN, bool save
 
 		size_t numberChecks = getActiveFieldsCheckVectorElements();
 		for (size_t i = 0; i < numberChecks; i++) {
+			if(m_saveOnDATtheParamsBeforeEachCheck) { 
+				fprintf(fp_dat, "%s", getActiveFieldsParamStringBeforeAGivenCheck(i).c_str());
+			}
 			fprintf(fp_dat, "%s\n\n", getActiveFieldsChecksString(i).c_str());
 		}
 		
@@ -343,6 +347,10 @@ void PFM::SimulationControl::setIntermediateBINsaves(bool shouldSave)  {
 	m_saveBINonIntermediateChecks = shouldSave;
 }
 
+void PFM::SimulationControl::setSavingOnDATofTheParamsBeforeEachCheck(bool shouldSave)  {
+	m_saveOnDATtheParamsBeforeEachCheck = shouldSave;
+}
+
 bool PFM::SimulationControl::checkIfShouldStop() {
 	if(m_shouldStop || (m_stepsToRun > 0 && m_lastSimData.stepsRan >= m_stepsToRun)) {
 		m_shouldStop = true;
@@ -418,6 +426,14 @@ std::string PFM::SimulationControl::getActiveFieldsChecksString(size_t checkNumb
 	if(checkNumber >= elements) { return std::string(""); }
 	
 	return checksVec_ptr->at(checkNumber).getChecksStr();
+}
+
+std::string PFM::SimulationControl::getActiveFieldsParamStringBeforeAGivenCheck(size_t checkNumber) const {
+	auto checksVec_ptr = getActiveFieldConstPtr()->getCheckVectorConstPtr();
+	size_t elements = checksVec_ptr->size();
+	if(checkNumber >= elements) { return std::string(""); }
+	
+	return checksVec_ptr->at(checkNumber).getParametersLastUpdateStr();
 }
 
 void PFM::SimulationControl::printSimDataAndParams() const {
@@ -504,21 +520,25 @@ void PFM::updatePhysicalParameters() {
 }
 
 void PFM::setMaxStepsPerCheckAdded(size_t newMaxStepsPerCheck) {
-
+	controller.setMaxStepsPerCheckAdded(newMaxStepsPerCheck);
 }
 
 void PFM::setMaxTotalChangePerElementPerCheckAdded(double newMaxTotalChangePerCheck) {
-
+	controller.setMaxTotalChangePerElementPerCheckAdded(newMaxTotalChangePerCheck);
 }
 
 void PFM::setIntermediateDATsaves(bool shouldSave) {
-
+	controller.setIntermediateDATsaves(shouldSave);
 }
 
 void PFM::setIntermediatePGMsaves(bool shouldSave) {
-
+	controller.setIntermediatePGMsaves(shouldSave);
 }
 
 void PFM::setIntermediateBINsaves(bool shouldSave) {
+	controller.setIntermediateBINsaves(shouldSave);
+}
 
+void PFM::setSavingOnDATofTheParamsBeforeEachCheck(bool shouldSave) {
+	controller.setSavingOnDATofTheParamsBeforeEachCheck(shouldSave);
 }

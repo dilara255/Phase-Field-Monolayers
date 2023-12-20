@@ -53,4 +53,6 @@ namespace PFM {
 	PFM_API void setIntermediateDATsaves(bool shouldSave); //The DATs have config, param and CUMMULATIVE check data
 	PFM_API void setIntermediatePGMsaves(bool shouldSave); //The PGMs are simple 0-255 images of the network
 	PFM_API void setIntermediateBINsaves(bool shouldSave); //The BINs are the binary data of the network
+	//Default false. If true, each checkData entry will be preceeded by the parameters at the last check
+	PFM_API void setSavingOnDATofTheParamsBeforeEachCheck(bool shouldSave);
 }
