@@ -14,7 +14,7 @@
 namespace PFM {
 
 	typedef struct simConfig_st {
-		int stepsRan = 0;
+		uint64_t stepsRan = 0;
 		int cells = 0;
 		int width = 0;
 		int height = 0;

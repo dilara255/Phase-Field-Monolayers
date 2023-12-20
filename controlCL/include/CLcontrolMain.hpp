@@ -8,8 +8,9 @@ namespace PFM_CLI {
 	                         TOTAL_ARGS};
 	const char* argumentNames[TOTAL_ARGS] = { "ProgramCall", "SimFuncToRun(uint)", "Lamba(double)", "Gamma(double)",
 		                                      "dt(double)", "Cells(uint)", "Width(uint)", "Height(uint)", 
-											  "InitialCondition(uint)", "Bias(double)", "Seed(uint64)", "Method(uint)",
-	                                          "ChangePerElementPerStepToStop(double)", "MaximumSteps(uint64)"};
+											  "InitialCondition(uint)", "Bias(double)", "Seed(uint64)", 
+											  "Method(uint)", "StartPaused(bool)", 
+											  "ChangePerElementPerStepToStop(double)", "MaximumSteps(uint64)"};
 
 	const char* deafultArgument = "default";
 

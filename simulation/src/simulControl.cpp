@@ -392,7 +392,7 @@ double PFM::SimulationControl::getAbsoluteChangePerCheckSaved() const {
 	return m_absoluteChangePerCheckSaved;
 }
 
-void PFM::SimulationControl::runForSteps(int steps, double lambda, double gamma, double dt,
+void PFM::SimulationControl::runForSteps(uint64_t steps, double lambda, double gamma, double dt,
 	                                     PFM::simFuncEnum simulationToRun, PFM::integrationMethods method) {
 
 	if(controller.isSimulationRunning()) { return; }
@@ -463,7 +463,7 @@ const bool* PFM::SimulationControl::getIsPaused_ptr() const {
 	return &m_shouldBePaused;
 }
 
-int PFM::SimulationControl::stepsAlreadyRan() const {
+uint64_t PFM::SimulationControl::stepsAlreadyRan() const {
 	return m_simConfigs.stepsRan;
 }
 
@@ -504,7 +504,7 @@ void PFM::resumeSimulation() {
 	controller.resume();
 }
 
-int PFM::getStepsRan() {
+uint64_t PFM::getStepsRan() {
 	return controller.stepsAlreadyRan();
 }
 
@@ -521,7 +521,7 @@ bool PFM::saveFieldDataAccordingToController() {
 }
 
 	
-void PFM::runForSteps(int stepsToRun, simParameters_t parameters, simConfig_t config) {
+void PFM::runForSteps(uint64_t stepsToRun, simParameters_t parameters, simConfig_t config) {
 
 	controller.updateEpochTimeSimCall();
 	controller.runForSteps(stepsToRun, parameters.lambda, parameters.gamma, parameters.dt, 

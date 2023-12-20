@@ -21,7 +21,7 @@ namespace PFM {
     //*******************SimulationFunctions*************************
     //These are the definitions of the possible simulation functions:
     class SimulationControl;
-    typedef void SimulationSteps_fn(SimulationControl* controller_ptr, int* stepCount_ptr, 
+    typedef void SimulationSteps_fn(SimulationControl* controller_ptr, uint64_t* stepCount_ptr, 
                                     const bool* shouldPause_ptr, bool* isRunning_ptr, integrationMethods method);
     
     //WARNING: these should always be kept in synch with PFM::simFuncEnum (@PFM_API.hpp)
@@ -65,7 +65,7 @@ namespace PFM {
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
         //Does nothing in case the simulation is already running or a bad simFuncEnum is passed.
-        void runForSteps(int steps,  double lambda, double gamma, double dt, simFuncEnum simulationToRun, 
+        void runForSteps(uint64_t steps,  double lambda, double gamma, double dt, simFuncEnum simulationToRun, 
                          integrationMethods methodToUse = integrationMethods::FTCS);
         //Asks the controller to stop and waits for confirmation (in MS_TO_WAIT ms sleep cycles)
         //When the simulation actually stops, its thread is joined. Does nothing if the simulation isn't running.
@@ -126,7 +126,7 @@ namespace PFM {
         int getStepsPerCheckSaved() const;
         double getAbsoluteChangePerCheckSaved() const;
 
-        int stepsAlreadyRan() const;
+        uint64_t stepsAlreadyRan() const;
         void resetStepsAlreadyRan();
 
         void updateEpochTimeSimCall();
