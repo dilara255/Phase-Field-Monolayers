@@ -26,20 +26,6 @@ namespace PFM {
         integrationMethods method = integrationMethods::TOTAL_METHODS;
 		bool perCellLayer = false;
 
-		inline void loadDefaults() {
-			stepsRan = 0;
-			cells = 50;
-			width = 128;
-			height = 128;
-			cellSeedValue = 1;
-			initialSeed = DEFAULT_PRNG_SEED0;
-			simulFunc = simFuncEnum::SINGLE_LAYER_CH_SIM;        
-			initialContidion = initialConditions::LINEAR_RANDOM;
-			bias = -0.3;
-			method = integrationMethods::FTCS;
-			perCellLayer = false;
-		}
-
 		inline std::string getSimDataString() const {
 			std::string str = "";
 			str += "Width: " + std::to_string(width) + "\n";
@@ -60,16 +46,10 @@ namespace PFM {
 
 	typedef struct simParameters_st {     
         double dt = -1;
-		double gamma = -1;
 		double lambda = -1;
-		double k = -1;
+		double gamma = -1;
         double A = -1;
-
-		inline void loadDefaults() {
-			dt = 1;
-			lambda = 3; //3 //7.824813
-			gamma = 0.06; //0.06 //0.043986
-		}
+		double k = -1;
 
 		inline std::string getSimParamsString() const {
 			std::string str = "";

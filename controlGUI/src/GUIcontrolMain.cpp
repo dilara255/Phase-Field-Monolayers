@@ -6,6 +6,7 @@
 #include "fViz2D/API/GUI_API.hpp"
 
 #include "PFM_API.hpp"
+#include "PFM_defaults.hpp"
 #include "PFM_tests.hpp"
 
 #include "guiTests.hpp"
@@ -13,7 +14,6 @@
 #include "guiMenus.hpp"
 
 #define RUN_GUI_TESTS (-1)
-#define TOTAL_SIM_FUNCS ((int)PFM::simFuncEnum::TOTAL_SIM_FUNCS)
 
 //TODO: A LOT OF THE PARSING COULD BE HANDLED VIA THE SIMULATION PROJECT
 
@@ -40,11 +40,27 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 		return false;
 	}
 
-	//TODO: first figure out the simulation func, then load *its* defaults, then proceed
-	params_ptr->loadDefaults();
-	config_ptr->loadDefaults();
-	*simToRun_ptr = (int)config_ptr->simulFunc;
+	*simToRun_ptr = (int)PFM::defaultSimToRun;
+	//If arguments where provided, first figure out what simulation will be run:
+	if(argc > 1) { 
+		int index = (int)PFM_GUI::mainsArgumentList::SIM_TO_RUN;
+		if (strcmp(PFM_GUI::deafultArgument, argv[index]) != 0) {
+			//the defaultArgument wasn't passed for the simulation to run, so:
+			*simToRun_ptr = atoi(argv[index]); 
+		}
+	}
+		
+	if(*simToRun_ptr == RUN_GUI_TESTS) { return true; } //nothing else is needed
+	if ( *simToRun_ptr < 0 || *simToRun_ptr >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS ) { //bad sim id, quit
+		LOG_ERROR("Simulation id requested through argument is not supported");
+		return false;
+	}	
 
+	//Otherwise, lets first load the defaults for the chosen simulation
+	*params_ptr = PFM::defaultSimParams[*simToRun_ptr];
+	*config_ptr = PFM::defaultConfigs[*simToRun_ptr];
+
+	//And then proceed to change any non-default values passed:
 	for (int i = 1; i < argc; i++) {
 		switch (i) {
 		
@@ -52,12 +68,6 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 				LOG_ERROR("Absurd error parsing command line input");
 				return false;
 		
-			//Otherwise, the argument is treated here:
-			case PFM_GUI::mainsArgumentList::SIM_TO_RUN: {
-				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
-				*simToRun_ptr = atoi(argv[i]);		
-			} break;
-
 			case PFM_GUI::mainsArgumentList::LAMBDA: {
 				if (strcmp(PFM_GUI::deafultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(params_ptr->lambda));
@@ -192,7 +202,7 @@ void populateMenuList(GUI::menuDefinitionList_t* menuList_ptr) {
 //See config and params, receive those plus whatever
 bool PFM_GUI::runSimulationWithGUI(PFM::simParameters_t parameters, PFM::simConfig_t config,
 	                               GUI::filenameCallback_func* filenameFunc, int stepsToRun, bool saveOnExit) {
-	if ((int)config.simulFunc >= TOTAL_SIM_FUNCS) {
+	if ((int)config.simulFunc >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) {
 		LOG_ERROR("Invalid simulation function selected");
 		return false;
 	}
