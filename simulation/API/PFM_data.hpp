@@ -103,7 +103,7 @@ namespace PFM {
 
 	typedef struct checkData_st {
 
-		int step = 0;
+		uint64_t step = 0;
 		double lastDensity = 0;
 		double densityChange = 0;
 		double absoluteChange = 0;
@@ -111,7 +111,7 @@ namespace PFM {
 		double lastDensityChange = 0;
 		double lastAbsoluteChange = 0;
 
-		int stepsAtLastCheck = 0;
+		uint64_t stepsAtLastCheck = 0;
 		int stepsDuringLastCheckPeriod = 0;
 		double totalTime = 0;
 		double totalAbsoluteChangeSinceLastSave = 0;

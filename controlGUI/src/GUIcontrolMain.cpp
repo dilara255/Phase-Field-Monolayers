@@ -15,7 +15,7 @@
 #include "guiMenus.hpp"
 
 #define RUN_GUI_TESTS (-1)
-#define SAVE_PARAMETERS_BEFOR_EACH_CHECK 1
+#define SAVE_PARAMETERS_BEFORE_EACH_CHECK 1
 #define OVERRIDE_DEFAULT_AND_TRY_TO_START_PAUSED 1 //unless specified by command line argument
 #define SKIP_PAUSE_WHEN_SAVING_GUI_IMAGE 0
 
@@ -66,7 +66,7 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 		return false;
 	}	
 
-	PFM::setSavingOnDATofTheParamsBeforeEachCheck(SAVE_PARAMETERS_BEFOR_EACH_CHECK);
+	PFM::setSavingOnDATofTheParamsBeforeEachCheck(SAVE_PARAMETERS_BEFORE_EACH_CHECK);
 
 	//Otherwise, lets first load the defaults for the chosen simulation
 	*params_ptr = PFM::defaultSimParams[*simToRun_ptr];
@@ -221,12 +221,10 @@ void populateMenuList(GUI::menuDefinitionList_t* menuList_ptr, PFM::simConfig_t*
 	return;
 }
 
-//TODO: receive config and param structs
 //Should also receive the number of steps to run and/or minimumAbsoluteChange
 //Should receive stepsPerSave and/or totalAbsoluteChangePerSave as well
-//Make sure if a posite number of steps was passed, manually closing the renderer still stops the simulation
+//Make sure if a positive number of steps was passed, manually closing the renderer still stop the simulation
 //Add option for data saves to also save the image from the GUI
-//See config and params, receive those plus whatever
 bool PFM_GUI::runSimulationWithGUI(PFM::simParameters_t* parameters_ptr, PFM::simConfig_t* config_ptr,
 	                               GUI::filenameCallback_func* filenameFunc, int stepsToRun, bool saveOnExit) {
 	

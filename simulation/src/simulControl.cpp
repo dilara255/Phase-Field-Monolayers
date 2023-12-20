@@ -515,6 +515,11 @@ void PFM::resetStepsRan() {
 bool PFM::saveFieldData(bool savePGM, bool saveBIN, bool saveDAT) {
 	return controller.saveFieldData(savePGM, saveBIN, saveDAT);
 }
+
+bool PFM::saveFieldDataAccordingToController() {
+	return controller.saveFieldData();
+}
+
 	
 void PFM::runForSteps(int stepsToRun, simParameters_t parameters, simConfig_t config) {
 
