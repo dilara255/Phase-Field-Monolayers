@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 import subprocess
+import hashlib
+import time
+import os
+import shutil
+
+makeGifFilename = "makeGif.py"
 
 #all fields can be set to 'default'
 
@@ -16,9 +22,19 @@ seed = 'default' #some known-good seeds are available on depend/fAux/include/fAu
 method = '1' #Numerical method. 0-3, each slower then the previous : )
 startPaused = 'default' #starting paused here will just hang forever
 changePerElmPerStepToStop = 'default' #default waits for fairly minimal changes
-maxSteps = '315000' #default gives enough time for most tested networks to converge
+maxSteps = '10000' #default gives enough time for most tested networks to converge
 stepsPerCheck = 'default' #default is 5k on debug and 25k on release (~100s)
 changePerCheck = 'default' #default is 5k on debug and 25k on release (~100s)
+
+time = str(time.time())
+
+keyInt = 0
+
+while keyInt == 0:
+    key = hashlib.blake2b(time.encode(), digest_size=4, 
+                      key=lambda_.encode(), salt=gamma.encode(), person=width.encode())
+
+    keyInt = int(key.hexdigest(), 16)
 
 argumentsString = (r'..\bin\Release-windows-x86_64\controlCL\controlCL.exe '
 + simToRun + ' '
@@ -36,8 +52,22 @@ argumentsString = (r'..\bin\Release-windows-x86_64\controlCL\controlCL.exe '
 + changePerElmPerStepToStop + ' '
 + maxSteps + ' '
 + stepsPerCheck + ' '
-+ changePerCheck)
++ changePerCheck + ' '
++ str(keyInt)
+)
 
-print(argumentsString)
+print('\n' + argumentsString + '\n')
 
 subprocess.run(argumentsString)
+
+print('\nWill try to acquire the path to the saved data for processing...\n')
+
+keyFileName = str(keyInt) + ".txt"
+
+keyFile = open(keyFileName)
+dirPath = keyFile.readline()
+
+keyFile.close()
+os.remove(keyFileName)
+
+os.system('python ' + makeGifFilename + ' ' + dirPath)

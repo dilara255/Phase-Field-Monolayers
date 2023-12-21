@@ -12,7 +12,8 @@
 
 using namespace PFM;
 
-static SimulationControl controller;
+static SimulationControl g_controller;
+static uint32_t g_callerKey = PFM::defaultCallerKey;
 
 ///Definitions of the methods of the claas SimulationControl:
 
@@ -203,9 +204,9 @@ void PFM::SimulationControl::mirrorBaseOnRotating() {
 std::string PFM::getDirAndFileName(int steps, bool calledFromGUI) {
 	
 	//gather the relevant data:
-	auto dimensions = controller.getActiveFieldPtr()->getFieldDimensions();
-	const PFM::simConfig_t* simConfig_ptr = controller.getLastSimConfigPtr();
-	const PFM::simParameters_t* simParams_ptr = controller.getLastSimParametersPtr();
+	auto dimensions = g_controller.getActiveFieldPtr()->getFieldDimensions();
+	const PFM::simConfig_t* simConfig_ptr = g_controller.getLastSimConfigPtr();
+	const PFM::simParameters_t* simParams_ptr = g_controller.getLastSimParametersPtr();
 
 	std::string dirname = "Sim" + std::to_string((int)simConfig_ptr->simulFunc) 
 						+ "_w" + std::to_string(dimensions.width) 
@@ -216,7 +217,21 @@ std::string PFM::getDirAndFileName(int steps, bool calledFromGUI) {
 						+ "m" + std::to_string((int)simConfig_ptr->method)
 						+ "_t" + std::to_string(simConfig_ptr->reducedSecondsSinceEpochOnSimCall());	
 	
-	std::filesystem::create_directory(dirname);
+	bool createdDirectory = std::filesystem::create_directory(dirname);
+	uint32_t callerKey = PFM::getCallerKey();
+
+	if (createdDirectory && (callerKey != PFM::defaultCallerKey)) {
+		//We should let the caller know the path to the new folder:
+		FILE* caller_fp = fopen( (std::to_string(callerKey) + ".txt").c_str(), "w");
+		if (caller_fp == NULL) {
+			//Poor caller
+			assert(false && "Couldn't generate the file to let the caller know the path to the new data folder");
+		}
+		else {
+			fprintf(caller_fp, "%s", dirname.c_str());
+			fclose(caller_fp);
+		}
+	}
 
 	std::string baseFilename = "";
 
@@ -397,7 +412,7 @@ double PFM::SimulationControl::getAbsoluteChangePerCheckSaved() const {
 void PFM::SimulationControl::runForSteps(uint64_t steps, double lambda, double gamma, double dt,
 	                                     PFM::simFuncEnum simulationToRun, PFM::integrationMethods method) {
 
-	if(controller.isSimulationRunning()) { return; }
+	if(g_controller.isSimulationRunning()) { return; }
 	if((int)simulationToRun >= (int)PFM::simFuncEnum::TOTAL_SIM_FUNCS) { return; }
 	if((int)method >=  (int)PFM::integrationMethods::TOTAL_METHODS) { return; }
 
@@ -413,7 +428,7 @@ void PFM::SimulationControl::runForSteps(uint64_t steps, double lambda, double g
 	m_shouldBePaused = m_simConfigs.startPaused;
 
 	m_stepsThread = std::thread(*(simFunctionsPtrs_arr[(int)simulationToRun]), this, &m_simConfigs.stepsRan, 
-	                                                      controller.getIsPaused_ptr(), &m_isRunning, method);
+	                                                      g_controller.getIsPaused_ptr(), &m_isRunning, method);
 	m_stepsThread.detach();
 }
 
@@ -480,82 +495,82 @@ void PFM::SimulationControl::updateEpochTimeSimCall() {
 ///These API calls are really just wrappers to calls to methods of the controller:
 
 const PeriodicDoublesLattice2D* PFM::initializeSimulation(simConfig_t config) {
-	if(isSimulationRunning()) { return controller.getActiveFieldPtr(); }
+	if(isSimulationRunning()) { return g_controller.getActiveFieldPtr(); }
 
-	controller.reinitializeController(config);
-	return controller.getActiveFieldPtr();
+	g_controller.reinitializeController(config);
+	return g_controller.getActiveFieldPtr();
 }
 
 bool PFM::isSimulationRunning() {
-	return controller.isSimulationRunning();
+	return g_controller.isSimulationRunning();
 }
 
 bool PFM::isSimulationPaused() {
-	return PFM::isSimulationRunning() && controller.shouldBePaused();
+	return PFM::isSimulationRunning() && g_controller.shouldBePaused();
 }
 
 int PFM::stopSimulation() {
-	return controller.stop();
+	return g_controller.stop();
 }
 
 void PFM::pauseSimulation() {
-	controller.pause();
+	g_controller.pause();
 }
 
 void PFM::resumeSimulation() {
-	controller.resume();
+	g_controller.resume();
 }
 
 uint64_t PFM::getStepsRan() {
-	return controller.stepsAlreadyRan();
+	return g_controller.stepsAlreadyRan();
 }
 
 void PFM::resetStepsRan() {
-	controller.resetStepsAlreadyRan();
+	g_controller.resetStepsAlreadyRan();
 }
 
 bool PFM::saveFieldData(bool savePGM, bool saveBIN, bool saveDAT) {
-	return controller.saveFieldData(savePGM, saveBIN, saveDAT);
+	return g_controller.saveFieldData(savePGM, saveBIN, saveDAT);
 }
 
 bool PFM::saveFieldDataAccordingToController() {
-	return controller.saveFieldData();
+	return g_controller.saveFieldData();
 }
 
 	
 void PFM::runForSteps(uint64_t stepsToRun, simParameters_t parameters, simConfig_t config) {
 
-	controller.updateEpochTimeSimCall();
-	controller.runForSteps(stepsToRun, parameters.lambda, parameters.gamma, parameters.dt, 
+	g_controller.updateEpochTimeSimCall();
+	g_controller.runForSteps(stepsToRun, parameters.lambda, parameters.gamma, parameters.dt, 
 		                                                  config.simulFunc, config.method);
 }
 
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {
-	return controller.getActiveFieldPtr();
+	return g_controller.getActiveFieldPtr();
 }
 
 const PeriodicDoublesLattice2D* PFM::getActiveFieldConstPtr() {
-	return (const PeriodicDoublesLattice2D*)controller.getActiveFieldPtr();
+	return (const PeriodicDoublesLattice2D*)g_controller.getActiveFieldPtr();
 }
 
 PFM::checkData_t* PFM::getCheckDataPtr() {
-	if (!controller.isInitialized() && controller.getActiveFieldPtr()->isInitialized()) { return nullptr; }
-	return &controller.getActiveFieldPtr()->checks;
+	if (!g_controller.isInitialized() && g_controller.getActiveFieldPtr()->isInitialized()) { return nullptr; }
+	return &g_controller.getActiveFieldPtr()->checks;
 }
 
 const PFM::simConfig_t* PFM::getSimConfigPtr() {
-	if (!controller.isInitialized()) { return nullptr; }
-	return controller.getLastSimConfigPtr();
+	if (!g_controller.isInitialized()) { return nullptr; }
+	return g_controller.getLastSimConfigPtr();
 }
 
 PFM::simParameters_t* PFM::getSimParamsPtr() {
-	if (!controller.isInitialized()) { return nullptr; }
-	return controller.getLastSimParametersPtr();
+	if (!g_controller.isInitialized()) { return nullptr; }
+	return g_controller.getLastSimParametersPtr();
 }
 
 void PFM::updatePhysicalParameters() {
-	if (!controller.isInitialized()) { return; }
-	controller.updatePhysicalParametersFromInternals();
+	if (!g_controller.isInitialized()) { return; }
+	g_controller.updatePhysicalParametersFromInternals();
 }
 
 double PFM::getLambdaFromKandA(double k, double A) {
@@ -595,33 +610,41 @@ PFM::parameterBounds_t PFM::calculateParameterBounds(double k, double A, double 
 }
 
 void PFM::setMaxStepsPerCheckAdded(size_t newMaxStepsPerCheck) {
-	controller.setMaxStepsPerCheckAdded(newMaxStepsPerCheck);
+	g_controller.setMaxStepsPerCheckAdded(newMaxStepsPerCheck);
 }
 
 void PFM::setMaxTotalChangePerElementPerCheckAdded(double newMaxTotalChangePerCheck) {
-	controller.setMaxTotalChangePerElementPerCheckAdded(newMaxTotalChangePerCheck);
+	g_controller.setMaxTotalChangePerElementPerCheckAdded(newMaxTotalChangePerCheck);
 }
 
 size_t PFM::getMaxStepsPerCheckAdded() {
-	return controller.getStepsPerCheckSaved();
+	return g_controller.getStepsPerCheckSaved();
 }
 
 double PFM::getMaxTotalChangePerElementPerCheckAdded() {
-	return controller.getAbsoluteChangePerCheckSaved();
+	return g_controller.getAbsoluteChangePerCheckSaved();
 }
 
 void PFM::setIntermediateDATsaves(bool shouldSave) {
-	controller.setIntermediateDATsaves(shouldSave);
+	g_controller.setIntermediateDATsaves(shouldSave);
 }
 
 void PFM::setIntermediatePGMsaves(bool shouldSave) {
-	controller.setIntermediatePGMsaves(shouldSave);
+	g_controller.setIntermediatePGMsaves(shouldSave);
 }
 
 void PFM::setIntermediateBINsaves(bool shouldSave) {
-	controller.setIntermediateBINsaves(shouldSave);
+	g_controller.setIntermediateBINsaves(shouldSave);
 }
 
 void PFM::setSavingOnDATofTheParamsBeforeEachCheck(bool shouldSave) {
-	controller.setSavingOnDATofTheParamsBeforeEachCheck(shouldSave);
+	g_controller.setSavingOnDATofTheParamsBeforeEachCheck(shouldSave);
+}
+
+void PFM::setCallerKey(uint32_t key) {
+	g_callerKey = key;
+}
+
+uint32_t PFM::getCallerKey() {
+	return g_callerKey;
 }

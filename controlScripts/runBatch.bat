@@ -1,5 +1,5 @@
 @echo off
 
-python runner1.py
+python runner.py
 
 timeout /t -1
