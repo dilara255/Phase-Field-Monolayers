@@ -1,24 +1,25 @@
-# Phase-Field-Monolayers (wip)
+# CH Phase-Field-Monolayers (wip)
 
-A simulation of cell monolayers using the **phase-field model**.
+A simulation of cell monolayers using the **phase-field model** and **Cahn-Hilliard potential**.
 
 Main contents:
 - **simulation** holds the actual simulation. It's compiled as a static library.
-- **controlCL** is thin, command-line only control application.
+- **controlCL** is a thin, command-line only control application. Ideal to be called from scripts.
 - **controlGUI** is a control application with a GUI that allows some real-time control and tinkering with the simulation. Mainly meant for exploration and testing.
 - **controlScripts** are scripts which call controlCL, to automate batches of simulations and possibly some post-processing.
 
 ## Current state:
 
 Simulation of a single Cahn-Hilliard field, with support for FTCS, Heun, RK2 and RK4.
-- Next minor: checks and parameters data structure, saving and control via CLI and GUI and basic runtime on the "simulation" project.
-- After that: support for multiple fields and intractions between them.
+Periodic density and absolute change checks and saving of these and of the field data (in .pgm, .jpg and/or .bin).
+Parameters and configurations can be defined via command line or GUI (supports restart with new configurations and realtime change of parameters).
+- Next goal: support for multiple fields (using subdomains) and intractions between them.
 
 ## Dependencies and requirements:
 
-- Uses fAux as a utility library (included). The "simulation" project doesn't need to link to it (but uses some headers).
+- Uses fAux as a utility library (included). The **simulation** project doesn't need to link to it (but uses some headers).
 - The **GUI application** is built on top of fViz2D (also included), and **requires openGL 3.3** or better.
-- The build system is controlled by **premake5**.
+- The build system is controlled by **premake5** (and tested for gmake and Visual Studio).
 - **Expects 64 bit Windows or Linux**.
 - The scripts use **Python 3**.
 

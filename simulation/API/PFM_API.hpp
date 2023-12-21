@@ -75,4 +75,8 @@ namespace PFM {
 	PFM_API void setIntermediateBINsaves(bool shouldSave); //The BINs are the binary data of the network
 	//Default false. If true, each checkData entry will be preceeded by the parameters at the last check
 	PFM_API void setSavingOnDATofTheParamsBeforeEachCheck(bool shouldSave);
+
+	//The caller key can be used to aid communication with a calling script. Changing it may breal communications
+	PFM_API void setCallerKey(uint32_t key);
+	PFM_API uint32_t getCallerKey();
 }

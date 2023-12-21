@@ -1,11 +1,17 @@
-#run this from inside the folder of a simulation run containing PGMs (not JPGs)
+#Run this either from the folder:
+#-- of a simulation run's data, passing NO EXTRA ARGUMENTS
+#-- from which the simulation was called, passing the data directory's name as the only argument
+#runner automatically calls this appropriately
+
 #Uses "Pillow": you may need to "python3 -m pip install --upgrade Pillow"
 #More info on https://pillow.readthedocs.io/en/stable/installation.html
 #Note the WARNING: "Pillow and PIL cannot co-exist in the same environment"
 
 import glob
 from PIL import Image
+import sys
 
+gifName = 'out.gif'
 gifFrameDuration = 40
 
 def pgmToColoredJpg(source_path, dest_path):
@@ -69,14 +75,24 @@ def pgmToColoredJpg(source_path, dest_path):
 
     imNew.save(dest_path, "JPEG", optimize=True, quality=100)
 
-pgmPaths = glob.glob("*.pgm")
+if len(sys.argv) > 2:
+    print('received bad arguments')
+    exit
+    
+dataPath = ''
+if len(sys.argv) == 2:
+    dataPath = sys.argv[1] + '\\'
+
+pgmPaths = glob.glob(dataPath + "*.pgm")
 for path in pgmPaths:
     pgmToColoredJpg(path, path[:-4] + ".jpg")
     
-jpgPaths = sorted(glob.glob("*.jpg"), key = len)
+jpgPaths = sorted(glob.glob(dataPath + "*.jpg"), key = len)
 images = []
 for path in jpgPaths:
     im = Image.open(path)
     images.append(im)
-images[0].save('out.gif', save_all=True, append_images=images[1:], 
+images[0].save(dataPath + gifName, save_all=True, append_images=images[1:], 
                optimize=True, duration=gifFrameDuration, loop=0, comment=jpgPaths[0])
+
+print('=> jpgs and gif available on the data folder (' + dataPath + ')\n')

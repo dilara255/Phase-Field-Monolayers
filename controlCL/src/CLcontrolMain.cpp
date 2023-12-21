@@ -17,12 +17,12 @@ bool g_dtLoweredForFirstSteps = false;
 double g_originalDt = BAD_ORIGINAL_DT;
 
 bool isArgumentDefault(int argument, char **argv) {
-	return (strcmp(PFM_CLI::deafultArgument, argv[argument]) == 0);
+	return (strcmp(PFM::deafultArgument, argv[argument]) == 0);
 }
 
 void printArgumentsList() {
-	for (int i = 0; i < PFM_CLI::mainsArgumentList::TOTAL_ARGS; i++) {
-		printf("%s ", PFM_CLI::argumentNames[i]);
+	for (int i = 0; i < PFM::mainsArgumentList::TOTAL_ARGS; i++) {
+		printf("%s ", PFM::argumentNames[i]);
 	}
 	puts("\n");
 }
@@ -33,9 +33,9 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 
 	LOG_TRACE("Will preccess command line inputs...");
 
-	if (argc > 1 && argc != PFM_CLI::mainsArgumentList::TOTAL_ARGS) {
+	if (argc > 1 && argc != PFM::mainsArgumentList::TOTAL_ARGS) {
 		LOG_ERROR("BAD NUBER OF CL ARGUMENTS: either just run the program or specify all arguments");
-		printf("Expected %d, got %d. Arguments expected are:\n", PFM_CLI::mainsArgumentList::TOTAL_ARGS, argc);
+		printf("Expected %d, got %d. Arguments expected are:\n", PFM::mainsArgumentList::TOTAL_ARGS, argc);
 		printArgumentsList();
 		return false;
 	}
@@ -43,8 +43,8 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 	*simToRun_ptr = (int)PFM::defaultSimToRun;
 	//If arguments where provided, first figure out what simulation will be run:
 	if(argc > 1) { 
-		int index = (int)PFM_CLI::mainsArgumentList::SIM_TO_RUN;
-		if (strcmp(PFM_CLI::deafultArgument, argv[index]) != 0) {
+		int index = (int)PFM::mainsArgumentList::SIM_TO_RUN;
+		if (strcmp(PFM::deafultArgument, argv[index]) != 0) {
 			//the defaultArgument wasn't passed for the simulation to run, so:
 			*simToRun_ptr = atoi(argv[index]); 
 		}
@@ -69,44 +69,44 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 				printf("arg: %d\n", i);
 				return false;
 		
-			case PFM_CLI::mainsArgumentList::PROG_CALL: {
+			case PFM::mainsArgumentList::PROG_CALL: {
 			} break;
 
-			case PFM_CLI::mainsArgumentList::SIM_TO_RUN: {
+			case PFM::mainsArgumentList::SIM_TO_RUN: {
 			} break;
 
-			case PFM_CLI::mainsArgumentList::LAMBDA: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::LAMBDA: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(params_ptr->lambda));
 			} break;
 
-			case PFM_CLI::mainsArgumentList::GAMMA: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::GAMMA: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(params_ptr->gamma));
 			} break;
 
-			case PFM_CLI::mainsArgumentList::DT: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::DT: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(params_ptr->dt));
 			} break;
 
-			case PFM_CLI::mainsArgumentList::CELLS: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::CELLS: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				config_ptr->cells = atoi(argv[i]);
 			} break;
 
-			case PFM_CLI::mainsArgumentList::WIDTH: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::WIDTH: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				config_ptr->width = atoi(argv[i]);
 			} break;
 
-			case PFM_CLI::mainsArgumentList::HEIGHT: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::HEIGHT: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				config_ptr->height = atoi(argv[i]);
 			} break;
 
-			case PFM_CLI::mainsArgumentList::INITIAL_COND: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::INITIAL_COND: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				int cond = atoi(argv[i]);
 				if (cond < 0 || cond >= (int)PFM::initialConditions::TOTAL_INITIAL_CONDS) {
 					LOG_ERROR("Bad initial Condition");
@@ -115,18 +115,18 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 				config_ptr->initialContidion = (PFM::initialConditions)cond;
 			} break;
 
-			case PFM_CLI::mainsArgumentList::BIAS: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::BIAS: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(config_ptr->bias));
 			} break;
 
-			case PFM_CLI::mainsArgumentList::SEED: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::SEED: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				config_ptr->initialSeed = strtoll(argv[i], NULL, 10);
 			} break;
 
-			case PFM_CLI::mainsArgumentList::METHOD: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::METHOD: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				int method = atoi(argv[i]);
 				if (method < 0 || method >= (int)PFM::integrationMethods::TOTAL_METHODS) {
 					LOG_ERROR("Bad Integration Method");
@@ -135,23 +135,23 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 				config_ptr->method = (PFM::integrationMethods)method;
 			} break;
 
-			case PFM_CLI::mainsArgumentList::START_PAUSED: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::START_PAUSED: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				config_ptr->startPaused = atoi(argv[i]);
 			} break;
 
-			case PFM_CLI::mainsArgumentList::CHANGE_PER_ELEMENT_PER_STEP_TO_STOP: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::CHANGE_PER_ELEMENT_PER_STEP_TO_STOP: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &g_changePerElementPerStepToStop);
 			} break;
 
-			case PFM_CLI::mainsArgumentList::MAXIMUM_STEPS: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::MAXIMUM_STEPS: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				g_maximumSteps = strtoll(argv[i], NULL, 10);
 			} break;
 
-			case PFM_CLI::mainsArgumentList::STEPS_PER_CHECK: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::STEPS_PER_CHECK: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				int64_t steps = strtol(argv[i], NULL, 10);
 				bool valid = (steps > 0) && (steps <= UINT32_MAX);
 				if(!valid) { LOG_ERROR("Bad number of steps per check"); return false;}
@@ -159,13 +159,18 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 				PFM::setMaxStepsPerCheckAdded((uint32_t)steps);
 			} break;
 
-			case PFM_CLI::mainsArgumentList::ABSOLUTE_CHANGE_PER_CHECK: {
-				if (strcmp(PFM_CLI::deafultArgument, argv[i]) == 0) { break; }
+			case PFM::mainsArgumentList::ABSOLUTE_CHANGE_PER_CHECK: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
 				double change = sscanf(argv[i], "%lf", &g_changePerElementPerStepToStop);
 				if(change <= 0) { LOG_ERROR("Bad change per check"); return false; }
 
 				PFM::setMaxTotalChangePerElementPerCheckAdded(change);
 			} break;
+
+			case PFM::mainsArgumentList::CALLER_KEY: {
+				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				PFM::setCallerKey((uint32_t)strtoll(argv[i], NULL, 10));
+			} break;	
 		}
 	}
 
