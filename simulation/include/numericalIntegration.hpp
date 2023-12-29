@@ -10,7 +10,7 @@
 namespace N_INT { 
 	
 	enum class rungeKuttaOrder { TWO, FOUR };
-	inline int rkStepsFromOrder(rungeKuttaOrder order) { 
+	constexpr int rkStepsFromOrder(rungeKuttaOrder order) { 
 		if(order == rungeKuttaOrder::TWO) { return 2; }
 		else if (order == rungeKuttaOrder::FOUR) { return 4; }
 		else { assert("BAD RK ORDER"); return 0; }

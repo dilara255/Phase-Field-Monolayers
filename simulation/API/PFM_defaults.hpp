@@ -39,8 +39,12 @@ namespace PFM {
 	};
 
 	static const uint64_t completelyArbitraryStepToUnlockFullDt = 50;
-	//This is used to help avoid having way too many save in the first few frames
+	//This is used to help avoid having way too many saves in the first few frames
+	//TODO: review need after implementing adaptative dt
 	static const double absoluteChangeRemainingFactor = 0.2;
+
+	//TODO: review need after implementing adaptative dt
+	static const float completelyArbitraryFactorForAdaptativeDt = 2.0f;
 
 	static const uint32_t defaulStepsPerCheck = 5000;
 	static const double defaultAbsChangePerCheck = 0.0025;

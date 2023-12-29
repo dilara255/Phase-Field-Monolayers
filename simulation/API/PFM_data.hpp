@@ -2,6 +2,15 @@
 
 //TODO: *in case* this is turned into a shared library, what should or shouldn't get a PFM_API appended?
 
+//This exposes the data types for simulation parameters, configuration, checks and periodic 2D lattices.
+//- simConfig_t deals with stuff like the size of the network, initial conditions, integration methods, etc;
+//- simParameters_t holds the actual parameters, like dt, lambda, gamma, etc;
+//- checkData_t holds runtime checks, like the avg density of the field or it's absolute change, etc;
+//-- All of these have helper functions, specially to print out their data.
+//- PeriodicDoublesLattice2D is a class which helps deal with and acess 2D periodic data (doubles).
+//-- It also holds a public checkData_t and a private vector of them, for checks done on this lattice.
+//--- Note that "checks done on this lattice" may or may not make sense depending on usage.
+
 #include "PFM_API_enums.hpp"
 
 #include "fAux/API/miscStdHeaders.h"
@@ -35,6 +44,7 @@ namespace PFM {
         integrationMethods method = integrationMethods::TOTAL_METHODS;
 		bool perCellLayer = false;
 		bool startPaused = false;
+		bool adaptativeDt = false;
 
 		std::chrono::system_clock::time_point epochTimeSimCall;
  
@@ -58,7 +68,8 @@ namespace PFM {
 			str += "Simulation: " + std::to_string((int)simulFunc) + "\n";
 			str += "Steps: " + std::to_string(stepsRan) + "\n";
 			str += "Per cell layer? " + std::to_string(perCellLayer) + "\n";
-			str += "Start paused? " + std::to_string(startPaused);
+			str += "Start paused? " + std::to_string(startPaused) + "\n";
+			str += "Adaptative dt? " + std::to_string(adaptativeDt);
 			
 			return str;
 		}
@@ -253,7 +264,8 @@ namespace PFM {
 		size_t indexFromPeriodicCoordinate(coordinate_t coordinate) const;
 	};
 
-	//This holds 2 lattices to be used in conjunction, one for the current and another for the last value
+	//This holds 2 lattices to be used together, one for the current and another for the last value
+	//If the checks vector is used, care should be taken to not confuse both (TODO: review this)
 	class CurrentAndLastPerioricDoublesLattice2D {
 	public:
 		CurrentAndLastPerioricDoublesLattice2D(fieldDimensions_t newDimensions, int cellID = ALL_CELLS_ID, 

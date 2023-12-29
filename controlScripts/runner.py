@@ -22,7 +22,7 @@ seed = 'default' #some known-good seeds are available on depend/fAux/include/fAu
 method = '1' #Numerical method. 0-3, each slower then the previous : )
 startPaused = 'default' #starting paused here will just hang forever
 changePerElmPerStepToStop = 'default' #default waits for fairly minimal changes
-maxSteps = '10000' #default gives enough time for most tested networks to converge
+maxSteps = '100000' #default gives enough time for most tested networks to converge
 stepsPerCheck = 'default' #default is 5k on debug and 25k on release (~100s)
 changePerCheck = 'default' #default is 5k on debug and 25k on release (~100s)
 
