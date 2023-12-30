@@ -24,6 +24,10 @@ namespace PFM {
 	PFM_API void pauseSimulation();
 	PFM_API void resumeSimulation();
 
+	//The intended dt is automatically set when the simulation is first ran. This lets the client change it later.
+	PFM_API void setIntendedDt(double newDt);
+	PFM_API double getIntendedDt();
+
 	//Returns true even if the simulation is actually paused
 	PFM_API bool isSimulationRunning();
 	//Only returns true if the simulation isSimulationRunning() is also true

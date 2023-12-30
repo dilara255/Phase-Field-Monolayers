@@ -11,7 +11,7 @@
 #include "PFM_tests.hpp"
 
 #include "guiTests.hpp"
-#include "guiControlMain.hpp"
+#include "GUIcontrolMain.hpp"
 #include "guiMenus.hpp"
 
 #define RUN_GUI_TESTS (-1)

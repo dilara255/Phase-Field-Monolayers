@@ -14,6 +14,7 @@
 
 #define CELL_SEED_VAL (1.0) //used to mark a point as a cell to be expanded. TODO: deprecate?
 #define MS_TO_WAIT 10
+#define BAD_ORIGINAL_DT (-999.999)
 
 namespace PFM {
 
@@ -75,6 +76,11 @@ namespace PFM {
         void resume();
         bool shouldBePaused() const;
 
+        //In case adaptative dt is enabled, uses it if "initial" period is over (set in PFM_defaults.hpp)
+        //Otherwise, sets dt to the intended value or to a "safe" maximum based on the other parameters.
+        //NOTE: Simulation functions can call this or just use the initial dt or handle it internally.
+        void updateDt();
+
         //Copies the data from the currentStep of the rotating fields into the baseField
         void mirrorRotatingOnBase();
         //Copies the data from the baseField into the currentStep of the rotating fields
@@ -91,7 +97,8 @@ namespace PFM {
         void setGammaUsed(double newGamma);
         //Just returns in case the new lambda = 0
         void updatePhysicalParametersFromInternals();
-        void setDTused(double newDt);
+        void setIntendedDt(double newDt);
+        double getIntendedDt();
 
         void setMaxStepsPerCheckAdded(size_t newStepsPerCheckSaved);
         //Set to zero in case newMaxTotalChangePerCheck < 0 (will save every step)
@@ -149,6 +156,8 @@ namespace PFM {
         bool m_seedsNeedExpanding = false;
         uint32_t m_stepsPerCheckSaved = PFM::defaulStepsPerCheck;
         double m_absoluteChangePerCheckSaved = PFM::defaultAbsChangePerCheck;
+
+        double m_intendedDt = BAD_ORIGINAL_DT;
 
         bool m_saveDATonIntermediateChecks = false;
         bool m_savePGMonIntermediateChecks = false;

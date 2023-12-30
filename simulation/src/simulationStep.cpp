@@ -64,22 +64,24 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 	updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
 		                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
 
+	//We call a first dt update to sanitize possibly too high initial dt
+	//This is done before the checks and their printing so they reflect the original intent
+	controller_ptr->updateDt();
+
 	//Start paused?
 	while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
 
 	//The actual steps:
 	auto params_ptr = controller_ptr->getLastSimParametersPtr();
-	auto config_ptr = controller_ptr->getLastSimConfigPtr();
 	while(!controller_ptr->checkIfShouldStop()) {
 	
+		//Update dt each step so we can deal with the initial few steps, adaptative dt, and client changes
+		controller_ptr->updateDt();
+
 		//TODO: maybe pull into an "updateLocalParameters" function?
 		dt = params_ptr->dt;
 		A = params_ptr->A;
 		k = params_ptr->k;
-
-		if (params_ptr->adaptativeDt) {
-			dt = calculateMaxAdaptativeDt(params_ptr, config_ptr, checks_ptr);
-		}
 
 		switch (method)
 		{
@@ -130,7 +132,7 @@ void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, uint64_t* 
 	const double maxValue = 1;
 	controller_ptr->setKused(diffusionFactor);
 	controller_ptr->setAused(maxValue);	
-	controller_ptr->setDTused(1);	
+	controller_ptr->setIntendedDt(1);	
 
 	auto field_ptr = controller_ptr->getRotatingBaseFieldPtr()->getPointerToCurrent();
 
@@ -238,7 +240,7 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 	
 	controller_ptr->setKused(k);
 	controller_ptr->setAused(A);
-	controller_ptr->setDTused(dt);
+	controller_ptr->setIntendedDt(dt);
 
 	auto rotBaseField_ptr = controller_ptr->getRotatingBaseFieldPtr();
 	auto baseField_ptr = controller_ptr->getBaseFieldPtr();

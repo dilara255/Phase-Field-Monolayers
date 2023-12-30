@@ -79,7 +79,7 @@ namespace PFM {
 		double gamma = -1;
         double A = -1;
 		double k = -1;
-		bool adaptativeDt = false;
+		bool useAdaptativeDt = false;
 
 		inline std::string getSimParamsString() const {
 			std::string str = "";
@@ -88,7 +88,7 @@ namespace PFM {
 			str += "Lambda (interface width): " + std::to_string(lambda) + "\n";
 			str += "k: " + std::to_string(k) + "\n";
 			str += "A: " + std::to_string(A) + "\n";
-			str += "Adaptative dt? " + std::to_string(adaptativeDt);
+			str += "Adaptative dt? " + std::to_string(useAdaptativeDt);
 
 			return str;
 		}

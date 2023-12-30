@@ -353,8 +353,27 @@ void PFM::SimulationControl::updatePhysicalParametersFromInternals() {
 	updateGammaLambda();
 }
 
-void PFM::SimulationControl::setDTused(double newDt) {
-	m_simParameters.dt = newDt;
+void PFM::SimulationControl::setIntendedDt(double newDt) {
+	m_intendedDt = newDt;
+}
+
+double PFM::SimulationControl::getIntendedDt() {
+	return m_intendedDt;
+}
+
+void PFM::SimulationControl::updateDt() {
+
+	if (m_simParameters.useAdaptativeDt && stepsAlreadyRan() > completelyArbitraryStepToUnlockFullDt) {
+		//use adaptative step size
+		m_simParameters.dt = PFM::calculateMaxAdaptativeDt(&m_simParameters, &m_simConfigs, getActiveFieldsCheckDataPtr());
+	}
+	else {
+		//bind step size to safe values, but otherwise use the intended value
+		m_simParameters.dt = m_intendedDt;
+
+		parameterBounds_t bounds = PFM::calculateParameterBounds(m_simParameters.k, m_simParameters.A, m_simParameters.dt, stepsAlreadyRan());
+		if (m_simParameters.dt > bounds.maxDt) { m_simParameters.dt = bounds.maxDt; }
+	}
 }
 
 void PFM::SimulationControl::setMaxStepsPerCheckAdded(size_t newStepsPerCheckSaved) {
@@ -423,7 +442,8 @@ void PFM::SimulationControl::runForSteps(uint64_t steps, simParameters_t paramet
 	m_simParameters.gamma = parameters.gamma;
 	updateKandA();
 	m_simParameters.dt = parameters.dt;
-	m_simParameters.adaptativeDt = parameters.adaptativeDt;
+	m_simParameters.useAdaptativeDt = parameters.useAdaptativeDt;
+	m_intendedDt = m_simParameters.dt;
 	m_isRunning = true;
 
 	m_shouldBePaused = m_simConfigs.startPaused;
@@ -521,6 +541,15 @@ void PFM::pauseSimulation() {
 void PFM::resumeSimulation() {
 	g_controller.resume();
 }
+
+void PFM::setIntendedDt(double newDt) {
+	g_controller.setIntendedDt(newDt);
+}
+
+double PFM::getIntendedDt() {
+	return g_controller.getIntendedDt();
+}
+
 
 uint64_t PFM::getStepsRan() {
 	return g_controller.stepsAlreadyRan();

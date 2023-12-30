@@ -8,13 +8,10 @@
 #include "CLcontrolMain.hpp"
 
 #define RUN_CLI_TESTS -1                            
-#define BAD_ORIGINAL_DT (-999.999)
 
 double g_changePerElementPerStepToStop = PFM::defaultAbsChangePerStepToStop;
 uint64_t g_maximumSteps = PFM::defaulMaxSteps;
 int g_checksAtChangeTreshold = 0;
-bool g_dtLoweredForFirstSteps = false;
-double g_originalDt = BAD_ORIGINAL_DT;
 
 bool isArgumentDefault(int argument, char **argv) {
 	return (strcmp(PFM::deafultArgument, argv[argument]) == 0);
@@ -230,20 +227,6 @@ bool shouldStop(PFM::checkData_t* check_ptr) {
 		   (g_checksAtChangeTreshold >= PFM::stepsAtChangeThresholdToStop);
 }
 
-void sanitizeParams(PFM::simParameters_t* params_ptr, uint64_t stepsRan) {
-	
-	assert(g_originalDt != BAD_ORIGINAL_DT);
-
-	PFM::parameterBounds_t bounds = PFM::calculateParameterBounds(params_ptr->k, params_ptr->A,
-		                                                                g_originalDt, stepsRan);
-
-	params_ptr->dt = g_originalDt;
-	if(params_ptr->dt > bounds.maxDt) { 
-		params_ptr->dt = bounds.maxDt; 
-		g_dtLoweredForFirstSteps = true; 
-	}
-}
-
 //TODO: Pass stuff in just like to the GUI counterpart
 bool PFM_CLI::runSimulationFromCL(PFM::simParameters_t* parameters_ptr, PFM::simConfig_t* config_ptr,
 		                                                             int stepsToRun, bool saveOnExit) {
@@ -263,8 +246,6 @@ bool PFM_CLI::runSimulationFromCL(PFM::simParameters_t* parameters_ptr, PFM::sim
 	PFM::setIntermediateBINsaves(true);
 	PFM::setIntermediatePGMsaves(true);
 	PFM::initializeSimulation(*config_ptr);
-	g_originalDt = parameters_ptr->dt;
-	sanitizeParams(parameters_ptr, PFM::getStepsRan());
 	LOG_INFO("Simulation initialized. Will run the simulation");
 	PFM::runForSteps(stepsToRun, *parameters_ptr, *config_ptr);
 	
@@ -274,9 +255,7 @@ bool PFM_CLI::runSimulationFromCL(PFM::simParameters_t* parameters_ptr, PFM::sim
 
 	auto simulParams_ptr = PFM::getSimParamsPtr();
 	while (PFM::isSimulationRunning()) {
-		//We make sure to keep dt as close as possible to the desired value witouth exploding stuff:
-		sanitizeParams(simulParams_ptr, stepsRan);
-		//Then we wait for a new step in the simulation:
+		//We wait for a new step in the simulation:
 		while(stepsRan == PFM::getStepsRan()) { 
 			AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI/2));
 		}
