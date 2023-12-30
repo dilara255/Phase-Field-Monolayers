@@ -78,7 +78,8 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 			phiField->incrementDataPoint(centerPoint, dt * dPhi);
 			
 			checks_ptr->densityChange += dPhi * dt;
-			checks_ptr->absoluteChange += std::abs(dPhi);
+			checks_ptr->absoluteChange += std::abs(dPhi) * dt;
+			checks_ptr->sumOfsquaresOfChanges += (dPhi * dt) * (dPhi * dt);
 		}
 	}
 }
@@ -145,7 +146,8 @@ void N_INT::TD::CH::heunStep(PFM::CurrentAndLastPerioricDoublesLattice2D* rotati
 
 			//And also the checks:
 			checks_ptr->densityChange += b1 * dt * dPhiIntermediates;
-			checks_ptr->absoluteChange += std::abs(b1 * dPhiIntermediates); //TODO: is this right? are Kn always monotone?
+			checks_ptr->absoluteChange += std::abs(b1 * dPhiIntermediates) * dt; //TODO: is this right? are Kn always monotone?
+			checks_ptr->sumOfsquaresOfChanges += (b1 * dPhiIntermediates * dt) * (b1 * dPhiIntermediates * dt); //See here as well
 		}
 	}
 
@@ -183,7 +185,8 @@ void N_INT::TD::CH::heunStep(PFM::CurrentAndLastPerioricDoublesLattice2D* rotati
 
 			//The checks can now be finalized:
 			checks_ptr->densityChange += b2 * dt * dPhiIntermediates;
-			checks_ptr->absoluteChange += std::abs(b2 * dPhiIntermediates);
+			checks_ptr->absoluteChange += std::abs(b2 * dPhiIntermediates) * dt;
+			checks_ptr->sumOfsquaresOfChanges += (b2 * dPhiIntermediates * dt) * (b2 * dPhiIntermediates * dt);
 		}
 	}
 	
@@ -243,7 +246,8 @@ void rungeKutaCahnHiliardFirstStep(double coefKnFinal, double coefKnInterm, int 
 
 			//And also the checks:
 			checks_ptr->densityChange += coefKnFinal * dPhiIntermediate;
-			checks_ptr->absoluteChange += std::abs(coefKnFinal * k1); //TODO: is this right? are Kn always monotone?
+			checks_ptr->absoluteChange += std::abs(coefKnFinal * k1) * dt; //TODO: is this right? are Kn always monotone?
+			checks_ptr->sumOfsquaresOfChanges += (coefKnFinal * k1 * dt) * (coefKnFinal * k1 * dt);
 		}
 	}
 }
@@ -300,7 +304,8 @@ void rungeKutaCahnHiliardIntermediateStep(double coefKnFinal, double coefKnInter
 
 				//And also the checks:
 				checks_ptr->densityChange += coefKnFinal * dPhiIntermediate;
-				checks_ptr->absoluteChange += std::abs(coefKnFinal * kn); //TODO: is this right? are Kn always monotone?
+				checks_ptr->absoluteChange += std::abs(coefKnFinal * kn) * dt; //TODO: is this right? are Kn always monotone?
+				checks_ptr->sumOfsquaresOfChanges += (coefKnFinal * kn * dt) * (coefKnFinal * kn * dt);
 			}
 	}
 }
@@ -351,7 +356,8 @@ void rungeKutaCahnHiliardFinalStep(double coefKnFinal, int height, int width,
 
 			//And also the checks:
 			checks_ptr->densityChange += coefKnFinal * dPhiIntermediate;
-			checks_ptr->absoluteChange += std::abs(coefKnFinal * kn); //TODO: is this right? are Kn always monotone?
+			checks_ptr->absoluteChange += std::abs(coefKnFinal * kn) * dt; //TODO: is this right? are Kn always monotone?
+			checks_ptr->sumOfsquaresOfChanges += (coefKnFinal * kn * dt) * (coefKnFinal * kn * dt);
 		}
 	}
 }
@@ -453,7 +459,9 @@ void INT::TD::verletCahnHiliard(PFM::CurrentAndLastPerioricDoublesLattice2D* rot
 			field_ptr->writeDataPoint(centerPoint, phi);
 
 			checks_ptr->density += phi;
-			checks_ptr->absoluteChange += std::abs( (phi-phi0)/dt );
+			checks_ptr->densityChange += phi-phi0;
+			checks_ptr->absoluteChange += std::abs( phi-phi0 );
+			checks_ptr->sumOfsquaresOfChanges += (phi-phi0) * (phi-phi0);
 		}
 	}
 

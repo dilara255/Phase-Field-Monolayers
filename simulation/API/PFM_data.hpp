@@ -127,12 +127,17 @@ namespace PFM {
 		double lastDensity = 0;
 		double densityChange = 0;
 		double absoluteChange = 0;
+		double sumOfsquaresOfChanges = 0;
 		
 		double lastDensityChange = 0;
-		double lastAbsoluteChange = 0;
+		double lastAbsoluteChangePerElement = 0;
+		double lastRmsAbsChange = 0;
+		double lastAbsChangeStdDev = 0;
 
 		uint64_t stepsAtLastCheck = 0;
 		int stepsDuringLastCheckPeriod = 0;
+		double timeAtLastcheck = 0;
+		double timeDuringLastCheckPeriod = 0;
 		double totalTime = 0;
 		double totalAbsoluteChangeSinceLastSave = 0;
 
@@ -140,9 +145,11 @@ namespace PFM {
 
 		simParameters_t parametersOnLastCheck;
 		
-		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; }
+		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0;	}
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
-		                        lastDensityChange = 0; lastAbsoluteChange = 0; stepsAtLastCheck = 0;
+		                        sumOfsquaresOfChanges = 0; timeAtLastcheck = 0; timeDuringLastCheckPeriod = 0;
+		                        lastDensityChange = 0; lastAbsoluteChangePerElement = 0; lastRmsAbsChange = 0;
+								lastAbsChangeStdDev = 0;  stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
 		                        remainingChangeSinceSaveOnLastCheck = 0; }
 		
@@ -154,7 +161,7 @@ namespace PFM {
 			char fmtValsBuffer[2*precision + 1];
 
 			std::string str = "Checks @ step ";
-			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + ")\n";
+			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod) + ")\n";
 			str += "Density: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensity);
 			str += fmtValsBuffer;
@@ -162,11 +169,18 @@ namespace PFM {
 			str += "Change: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensityChange);
 			str += fmtValsBuffer;
-			str += ", absolute change / step: ";
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, (lastAbsoluteChange / stepsDuringLastCheckPeriod));
+			str += ", absolute change / element per unit time: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, (lastAbsoluteChangePerElement / timeDuringLastCheckPeriod));
 			str += fmtValsBuffer;
 			str += " (since last save: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
+			str += fmtValsBuffer;
+			str += ")\n";
+			str += "Std Dev: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastAbsChangeStdDev / timeDuringLastCheckPeriod);
+			str += fmtValsBuffer;
+			str += " (RMS: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastRmsAbsChange / timeDuringLastCheckPeriod);
 			str += fmtValsBuffer;
 			str += ")\n";
 
