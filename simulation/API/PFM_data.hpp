@@ -161,7 +161,8 @@ namespace PFM {
 			char fmtValsBuffer[2*precision + 1];
 
 			std::string str = "Checks @ step ";
-			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod) + ")\n";
+			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod) 
+				   + "@ avg dt: " + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) + ")\n";
 			str += "Density: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensity);
 			str += fmtValsBuffer;
@@ -198,7 +199,7 @@ namespace PFM {
 			str += " | Gamma: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.gamma);
 			str += fmtValsBuffer; 
-			str += " | Dt: ";
+			str += " | dt: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.dt);
 			str += fmtValsBuffer; 
 			str += "\n";

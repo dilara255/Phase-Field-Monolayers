@@ -23,7 +23,7 @@ void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 
 void createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr, double* GUIissuedDt_ptr) {
 	
-	ImGui::Checkbox("Adaptative DT", &param_ptr->useAdaptativeDt);
+	ImGui::Checkbox("Adaptative dt", &param_ptr->useAdaptativeDt);
 
 	PFM::parameterBounds_t bounds = 
 		PFM::calculateParameterBounds(param_ptr->k, param_ptr->A, param_ptr->dt, stepsRan);
@@ -108,7 +108,8 @@ void controlFlowMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	
 	ImGui::Text("Parameters for restart:\n");
 	
-	createParameterSliders(1000, g_simParamsNextStart_ptr, &(g_simParamsNextStart_ptr->dt));
+	createParameterSliders(2 * PFM::completelyArbitraryStepToUnlockFullDt, 
+		                   g_simParamsNextStart_ptr, &(g_simParamsNextStart_ptr->dt));
 	g_simConfigNextStart_ptr->stepsRan = 0; //change place
 
 	g_simParamsNextStart_ptr->lambda = 

@@ -4,6 +4,7 @@
 //Also, thread safety is a crutch : )
 
 #include "PFM_API_enums.hpp"
+#include "PFM_defaults.hpp"
 #include "PFM_data.hpp"
 #include "fAux/API/miscStdHeaders.h"
 #include "fAux/API/prng.hpp"
@@ -59,7 +60,11 @@ namespace PFM {
 	PFM_API double getLambdaFromKandA(double k, double A);
 	PFM_API double getGammaFromKandA(double k, double A);
 	PFM_API parameterBounds_t calculateParameterBounds(double k, double A, double dt, uint64_t steps);
-	PFM_API double calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, const simConfig_t* config_ptr, const checkData_t* lastCheck_ptr);
+
+	//Note: this uses data from the last available check provided 
+	//Making sure it's properly updated is a responsability of the client
+	PFM_API double calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, const simConfig_t* config_ptr, 
+		                                                                        const checkData_t* lastCheck_ptr);
 
 	//The values set by the following two functions are used to decide when to add a new checkData entry
 	//The entry is triggered when either condition is met

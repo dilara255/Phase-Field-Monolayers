@@ -638,9 +638,38 @@ PFM::parameterBounds_t PFM::calculateParameterBounds(double k, double A, double 
 	return bounds;
 }
 
-double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, const simConfig_t* config_ptr, const checkData_t* lastCheck_ptr) {
+double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, const simConfig_t* config_ptr, 
+																		 const checkData_t* lastCheck_ptr) {
 	
-	return PFM::calculateParameterBounds(parameters_ptr->k, parameters_ptr->A, parameters_ptr->dt, lastCheck_ptr->step).maxDt;
+	double highAvgChangeEstimative = 
+			lastCheck_ptr->lastAbsoluteChangePerElement + (3 * lastCheck_ptr->lastAbsChangeStdDev);
+
+	//Most change happens in the interface area: 
+	//Average may be a lot smaller than the change we actually care about. Let's roughly account for that:
+
+	double inverseInterfaceProportion = 
+			(config_ptr->width * config_ptr->height) / (parameters_ptr->lambda * parameters_ptr->lambda);
+	inverseInterfaceProportion = std::sqrt(inverseInterfaceProportion);
+
+	//Note that while this may be artificially high in the initial steps (where interface may be larger,
+	//the initial need more care and should be using "parameter bounds" instead anyway (see PFM_API.hpp)
+
+	double effectiveChangePerStep = 
+			highAvgChangeEstimative * inverseInterfaceProportion / lastCheck_ptr->stepsDuringLastCheckPeriod;
+
+	//Despite the name, this may actually be a slowing factor
+	double speedUpFactor = maxChangePerStep / effectiveChangePerStep;
+
+	double avgDtRelevantPeriod = lastCheck_ptr->timeDuringLastCheckPeriod / lastCheck_ptr->stepsDuringLastCheckPeriod;
+
+	//We don't want to ramp up the speed to fast, so:
+	double adaptativeDt = std::min(PFM::maxAdaptativeDtSpeedUpFactor, speedUpFactor) * avgDtRelevantPeriod;
+
+	//But we don't want the adaptative dt to be unecessarily conservative either, so our final answer is:
+	double minDt = PFM::calculateParameterBounds(parameters_ptr->k, parameters_ptr->A, adaptativeDt,
+		                                                  2 * completelyArbitraryStepToUnlockFullDt).maxDt;
+
+	return std::max(minDt, adaptativeDt);
 }
 
 void PFM::setMaxStepsPerCheckAdded(size_t newMaxStepsPerCheck) {
