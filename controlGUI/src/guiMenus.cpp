@@ -23,6 +23,10 @@ void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 
 PFM::parameterBounds_t createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr) {
 	
+	ImGui::Checkbox("Adaptative DT", &param_ptr->adaptativeDt);
+
+	//TODO: handle adaptative dt
+
 	PFM::parameterBounds_t bounds = 
 		PFM::calculateParameterBounds(param_ptr->k, param_ptr->A, param_ptr->dt, stepsRan);
 
@@ -130,10 +134,10 @@ void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 		PFM_GUI::g_originalDt = g_simParams_ptr->dt;
 	}
 
-	//Now to make sure dt is not too large for the first few steps:
+	//Now to make sure dt is not too large:
 	if(g_simParams_ptr->dt > bounds.maxDt) { 
 		g_simParams_ptr->dt = bounds.maxDt; 
-		PFM_GUI::g_dtLoweredForFirstSteps = true; 
+		PFM_GUI::g_dtLoweredForFirstSteps = true;
 	}
 
 	PFM::updatePhysicalParameters();

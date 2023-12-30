@@ -69,12 +69,17 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 
 	//The actual steps:
 	auto params_ptr = controller_ptr->getLastSimParametersPtr();
+	auto config_ptr = controller_ptr->getLastSimConfigPtr();
 	while(!controller_ptr->checkIfShouldStop()) {
 	
 		//TODO: maybe pull into an "updateLocalParameters" function?
 		dt = params_ptr->dt;
 		A = params_ptr->A;
 		k = params_ptr->k;
+
+		if (params_ptr->adaptativeDt) {
+			dt = calculateMaxAdaptativeDt(params_ptr, config_ptr, checks_ptr);
+		}
 
 		switch (method)
 		{

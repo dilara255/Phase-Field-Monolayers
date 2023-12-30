@@ -353,8 +353,8 @@ void PFM::SimulationControl::updatePhysicalParametersFromInternals() {
 	updateGammaLambda();
 }
 
-void PFM::SimulationControl::setDTused(double newDT) {
-	m_simParameters.dt = newDT;
+void PFM::SimulationControl::setDTused(double newDt) {
+	m_simParameters.dt = newDt;
 }
 
 void PFM::SimulationControl::setMaxStepsPerCheckAdded(size_t newStepsPerCheckSaved) {
@@ -409,7 +409,7 @@ double PFM::SimulationControl::getAbsoluteChangePerCheckSaved() const {
 	return m_absoluteChangePerCheckSaved;
 }
 
-void PFM::SimulationControl::runForSteps(uint64_t steps, double lambda, double gamma, double dt,
+void PFM::SimulationControl::runForSteps(uint64_t steps, simParameters_t parameters,
 	                                     PFM::simFuncEnum simulationToRun, PFM::integrationMethods method) {
 
 	if(g_controller.isSimulationRunning()) { return; }
@@ -419,10 +419,11 @@ void PFM::SimulationControl::runForSteps(uint64_t steps, double lambda, double g
 	m_stepsToRun = steps;
 	m_simConfigs.simulFunc = simulationToRun;
 	m_simConfigs.method = method;
-	m_simParameters.lambda = lambda;
-	m_simParameters.gamma = gamma;
+	m_simParameters.lambda = parameters.lambda;
+	m_simParameters.gamma = parameters.gamma;
 	updateKandA();
-	m_simParameters.dt = dt;
+	m_simParameters.dt = parameters.dt;
+	m_simParameters.adaptativeDt = parameters.adaptativeDt;
 	m_isRunning = true;
 
 	m_shouldBePaused = m_simConfigs.startPaused;
@@ -541,8 +542,7 @@ bool PFM::saveFieldDataAccordingToController() {
 void PFM::runForSteps(uint64_t stepsToRun, simParameters_t parameters, simConfig_t config) {
 
 	g_controller.updateEpochTimeSimCall();
-	g_controller.runForSteps(stepsToRun, parameters.lambda, parameters.gamma, parameters.dt, 
-		                                                  config.simulFunc, config.method);
+	g_controller.runForSteps(stepsToRun, parameters, config.simulFunc, config.method);
 }
 
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {
@@ -607,6 +607,11 @@ PFM::parameterBounds_t PFM::calculateParameterBounds(double k, double A, double 
 	assert(bounds.maxDt > 0 && "Max dt should always be larger than zero");
 	
 	return bounds;
+}
+
+double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, const simConfig_t* config_ptr, const checkData_t* lastCheck_ptr) {
+	
+	return PFM::calculateParameterBounds(parameters_ptr->k, parameters_ptr->A, parameters_ptr->dt, lastCheck_ptr->step).maxDt;
 }
 
 void PFM::setMaxStepsPerCheckAdded(size_t newMaxStepsPerCheck) {

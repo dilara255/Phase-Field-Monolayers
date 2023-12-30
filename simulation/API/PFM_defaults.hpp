@@ -43,8 +43,9 @@ namespace PFM {
 	//TODO: review need after implementing adaptative dt
 	static const double absoluteChangeRemainingFactor = 0.2;
 
-	//TODO: review need after implementing adaptative dt
-	static const float completelyArbitraryFactorForAdaptativeDt = 2.0f;
+	//For adaptative dt:
+	static const double distanceStableEquilibria = 1.0;
+	static const double maxChangePerStep = PFM::distanceStableEquilibria / 4.0;
 
 	static const uint32_t defaulStepsPerCheck = 5000;
 	static const double defaultAbsChangePerCheck = 0.0025;

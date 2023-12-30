@@ -64,7 +64,7 @@ namespace PFM {
         //Spawns a new thread which will run the simulation.
         //Thread is joined either when the steps are over or from a call to stop() / nonBlockingStop().
         //Does nothing in case the simulation is already running or a bad simFuncEnum is passed.
-        void runForSteps(uint64_t steps,  double lambda, double gamma, double dt, simFuncEnum simulationToRun, 
+        void runForSteps(uint64_t steps, simParameters_t parameters, simFuncEnum simulationToRun,
                          integrationMethods methodToUse = integrationMethods::FTCS);
         //Asks the controller to stop and waits for confirmation (in MS_TO_WAIT ms sleep cycles)
         //When the simulation actually stops, its thread is joined. Does nothing if the simulation isn't running.
@@ -91,7 +91,7 @@ namespace PFM {
         void setGammaUsed(double newGamma);
         //Just returns in case the new lambda = 0
         void updatePhysicalParametersFromInternals();
-        void setDTused(double newK);
+        void setDTused(double newDt);
 
         void setMaxStepsPerCheckAdded(size_t newStepsPerCheckSaved);
         //Set to zero in case newMaxTotalChangePerCheck < 0 (will save every step)

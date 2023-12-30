@@ -44,7 +44,6 @@ namespace PFM {
         integrationMethods method = integrationMethods::TOTAL_METHODS;
 		bool perCellLayer = false;
 		bool startPaused = false;
-		bool adaptativeDt = false;
 
 		std::chrono::system_clock::time_point epochTimeSimCall;
  
@@ -68,9 +67,8 @@ namespace PFM {
 			str += "Simulation: " + std::to_string((int)simulFunc) + "\n";
 			str += "Steps: " + std::to_string(stepsRan) + "\n";
 			str += "Per cell layer? " + std::to_string(perCellLayer) + "\n";
-			str += "Start paused? " + std::to_string(startPaused) + "\n";
-			str += "Adaptative dt? " + std::to_string(adaptativeDt);
-			
+			str += "Start paused? " + std::to_string(startPaused);
+
 			return str;
 		}
 	} simConfig_t;
@@ -81,6 +79,7 @@ namespace PFM {
 		double gamma = -1;
         double A = -1;
 		double k = -1;
+		bool adaptativeDt = false;
 
 		inline std::string getSimParamsString() const {
 			std::string str = "";
@@ -89,6 +88,7 @@ namespace PFM {
 			str += "Lambda (interface width): " + std::to_string(lambda) + "\n";
 			str += "k: " + std::to_string(k) + "\n";
 			str += "A: " + std::to_string(A) + "\n";
+			str += "Adaptative dt? " + std::to_string(adaptativeDt);
 
 			return str;
 		}
