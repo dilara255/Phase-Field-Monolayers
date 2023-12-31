@@ -134,6 +134,8 @@ namespace PFM {
 		double lastRmsAbsChange = 0;
 		double lastAbsChangeStdDev = 0;
 
+		double lastDt = 0;
+
 		uint64_t stepsAtLastCheck = 0;
 		int stepsDuringLastCheckPeriod = 0;
 		double timeAtLastcheck = 0;
@@ -143,16 +145,18 @@ namespace PFM {
 
 		double remainingChangeSinceSaveOnLastCheck = 0;
 		double referenceDt = 0;
+
+		uint32_t substepsLastStep = 0;
 		
 		simParameters_t parametersOnLastCheck;
 		
-		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0;	}
+		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; substepsLastStep = 0; }
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
 		                        sumOfsquaresOfChanges = 0; timeAtLastcheck = 0; timeDuringLastCheckPeriod = 0;
 		                        lastDensityChange = 0; lastAbsoluteChangePerElement = 0; lastRmsAbsChange = 0;
-								lastAbsChangeStdDev = 0;  stepsAtLastCheck = 0;
+								lastAbsChangeStdDev = 0;  lastDt = 0; stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
-		                        remainingChangeSinceSaveOnLastCheck = 0; referenceDt = 0; }
+		                        remainingChangeSinceSaveOnLastCheck = 0; referenceDt = 0; substepsLastStep = 0; }
 		
 		inline const std::string getChecksStr() const {
 			
