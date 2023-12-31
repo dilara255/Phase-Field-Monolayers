@@ -142,7 +142,8 @@ namespace PFM {
 		double totalAbsoluteChangeSinceLastSave = 0;
 
 		double remainingChangeSinceSaveOnLastCheck = 0;
-
+		double referenceDt = 0;
+		
 		simParameters_t parametersOnLastCheck;
 		
 		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0;	}
@@ -151,7 +152,7 @@ namespace PFM {
 		                        lastDensityChange = 0; lastAbsoluteChangePerElement = 0; lastRmsAbsChange = 0;
 								lastAbsChangeStdDev = 0;  stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
-		                        remainingChangeSinceSaveOnLastCheck = 0; }
+		                        remainingChangeSinceSaveOnLastCheck = 0; referenceDt = 0; }
 		
 		inline const std::string getChecksStr() const {
 			
@@ -162,7 +163,7 @@ namespace PFM {
 
 			std::string str = "Checks @ step ";
 			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod) 
-				   + "@ avg dt: " + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) + ")\n";
+				   + " @avg dt: " + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) + ")\n";
 			str += "Density: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensity);
 			str += fmtValsBuffer;

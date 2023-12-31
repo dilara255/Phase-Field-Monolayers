@@ -110,10 +110,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 
 		*stepCount_ptr += 1;
 
+		checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
 		updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
 			                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
-		checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
-
+		
 		//Pause?
 		while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
 	}
@@ -293,6 +293,8 @@ void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, con
 	if(( (step - checks_ptr->stepsAtLastCheck) % stepsPerCheckSaved == 0) || 
 		 checks_ptr->totalAbsoluteChangeSinceLastSave >= absoluteChangePerElementPerCheckSaved) { 
 		
+		checks_ptr->referenceDt = dt;
+
 		//The max is there in case update is called before the simulation begins (to record initial condition)
 		checks_ptr->stepsDuringLastCheckPeriod = std::max(1llu, checks_ptr->step - checks_ptr->stepsAtLastCheck);
 		checks_ptr->stepsAtLastCheck = checks_ptr->step;

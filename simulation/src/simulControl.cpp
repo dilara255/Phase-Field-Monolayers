@@ -9,6 +9,7 @@
 #include "simulControl.hpp"
 
 #include <filesystem>
+#include <math.h>
 
 using namespace PFM;
 
@@ -638,6 +639,7 @@ PFM::parameterBounds_t PFM::calculateParameterBounds(double k, double A, double 
 	return bounds;
 }
 
+#define M_PI_ (3.14159265358979323846) //TODO: usar da biblioteca, entender pq não foi
 double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, const simConfig_t* config_ptr, 
 																		 const checkData_t* lastCheck_ptr) {
 	
@@ -647,9 +649,12 @@ double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, cons
 	//Most change happens in the interface area: 
 	//Average may be a lot smaller than the change we actually care about. Let's roughly account for that:
 
+	double totalArea = config_ptr->width * config_ptr->height;
+	assert(totalArea > 4 * M_PI_ * parameters_ptr->lambda); //so interface area can't be laerger than total
+	double effectiveAbsDensity = std::min(1.0, std::abs(lastCheck_ptr->lastDensity));
+
 	double inverseInterfaceProportion = 
-			(config_ptr->width * config_ptr->height) / (parameters_ptr->lambda * parameters_ptr->lambda);
-	inverseInterfaceProportion = std::sqrt(inverseInterfaceProportion);
+		(0.5 / parameters_ptr->lambda) * std::sqrt(totalArea / (M_PI_ * effectiveAbsDensity) );
 
 	//Note that while this may be artificially high in the initial steps (where interface may be larger,
 	//the initial need more care and should be using "parameter bounds" instead anyway (see PFM_API.hpp)
@@ -660,10 +665,11 @@ double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, cons
 	//Despite the name, this may actually be a slowing factor
 	double speedUpFactor = maxChangePerStep / effectiveChangePerStep;
 
-	double avgDtRelevantPeriod = lastCheck_ptr->timeDuringLastCheckPeriod / lastCheck_ptr->stepsDuringLastCheckPeriod;
-
 	//We don't want to ramp up the speed to fast, so:
-	double adaptativeDt = std::min(PFM::maxAdaptativeDtSpeedUpFactor, speedUpFactor) * avgDtRelevantPeriod;
+	double maxMultiplier = ((double)lastCheck_ptr->stepsDuringLastCheckPeriod / completelyArbitraryStepToUnlockFullDt);
+	maxMultiplier = std::min(PFM::maxAdaptativeDtSpeedUpFactor, 1 + ((PFM::maxAdaptativeDtSpeedUpFactor - 1) * maxMultiplier));
+		
+	double adaptativeDt = std::min(maxMultiplier, speedUpFactor) * lastCheck_ptr->referenceDt;
 
 	//But we don't want the adaptative dt to be unecessarily conservative either, so our final answer is:
 	double minDt = PFM::calculateParameterBounds(parameters_ptr->k, parameters_ptr->A, adaptativeDt,
