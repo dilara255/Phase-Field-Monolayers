@@ -1,4 +1,12 @@
 #include "numericalIntegration.hpp"
+#include "PFM_defaults.hpp"
+
+typedef struct substep_st {
+	bool done;
+	PFM::coordinate_t position;
+	double dtNextSubstep;
+	double timeRemaining;
+} substep_t;
 
 double N_INT::rungeKutaKnAandCcoef(rungeKuttaOrder order, int n) {
 	if(n <= 0) { assert(false); return 0.0; }
@@ -38,10 +46,20 @@ double N_INT::rungeKutaKnBcoef(rungeKuttaOrder order, int n) {
 	else { assert(false); return 0.0; }
 }
 
+void updateChecks(PFM::checkData_t* checks_ptr, const double dt, const double dPhi) {
+
+	checks_ptr->densityChange += dPhi * dt;
+	checks_ptr->absoluteChange += std::abs(dPhi) * dt;
+	checks_ptr->sumOfsquaresOfChanges += (dPhi * dt) * (dPhi * dt);
+}
+
+namespace N_INT { namespace TD { namespace CH { static std::vector<substep_t> g_substepVector; } } }
+
+//Has a little bit of extra logic to also be able to be used when substeps are required. No real overhead.
 void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField, 
 						   PFM::PeriodicDoublesLattice2D* auxField,
 	                       const double dt, const double chK, const double chA, 
-	                       PFM::checkData_t* checks_ptr) {
+	                       PFM::checkData_t* checks_ptr, bool maySubstep) {
 	
 	int height = phiField->getFieldDimensions().height;
 	int width = phiField->getFieldDimensions().width;
@@ -49,6 +67,7 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 	PFM::coordinate_t centerPoint;
 	PFM::neighborhood9_t neigh;
 	
+	//auxField holds the data of the CH potential for each site
 	for (int j = 0; j < height; j++) {
 			centerPoint.y = j;
 
@@ -63,6 +82,7 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 
 	double dPhi;
 
+	//Then we go trhough each point calculating the laplacian of the petential
 	for (int j = 0; j < height; j++) {
 			centerPoint.y = j;
 
@@ -75,13 +95,77 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 			//-lap: the more a point "needs" to be pulled than their neighbor, the more they are pulled
 			//at the same time, the laplacian has sum 0 (on this periodic field), so total phi is conserverd
 
-			phiField->incrementDataPoint(centerPoint, dt * dPhi);
-			
-			checks_ptr->densityChange += dPhi * dt;
-			checks_ptr->absoluteChange += std::abs(dPhi) * dt;
-			checks_ptr->sumOfsquaresOfChanges += (dPhi * dt) * (dPhi * dt);
+			if (!maySubstep || std::abs(dPhi) <= PFM::maxChangePerStep) {
+				//We accept the step and update the checks
+				phiField->incrementDataPoint(centerPoint, dt * dPhi);
+				updateChecks(checks_ptr, dt, dPhi);
+			}		
+			else {
+				//The step was too large, so we'll have to sub-step this
+				g_substepVector.push_back({false, centerPoint, dt, dt});
+			}
 		}
 	}
+}
+
+void N_INT::TD::CH::ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField, 
+						   PFM::PeriodicDoublesLattice2D* auxField,
+	                       const double dt, const double chK, const double chA, 
+	                       PFM::checkData_t* checks_ptr) {
+	
+	//First try the normal step:
+	ftcsStep(phiField, auxField, dt, chK, chA, checks_ptr, true);
+
+	//And then deal with substeps
+	int elementsPending = g_substepVector.size();
+	double timestep;
+	double dPhi;
+	substep_t elementToSubstep;
+	double extraSubsteps = 0;
+	PFM::coordinate_t centerPoint;
+	
+	while (elementsPending > 0) {
+		
+		for (int i = 0; i < elementsPending; i++) {
+		
+			elementToSubstep = g_substepVector.at(i);
+
+			if (!elementToSubstep.done) {
+				//First we check that we won't overstep:
+				elementToSubstep.dtNextSubstep /= 2.0;
+				timestep = std::min(elementToSubstep.dtNextSubstep, elementToSubstep.timeRemaining);
+				
+				//Then we try a new substep:
+				extraSubsteps++;
+
+				//auxField has the original chNumericalF for all elements
+				//phiField has the final value for all elements (so far, or something)
+				dPhi = 1.0; //hopefully not : p
+
+				//And check wether the size of the change was acceptable:
+				if (std::abs(dPhi) <= PFM::maxChangePerStep) {
+					//Accept changes and update checks
+					phiField->incrementDataPoint(centerPoint, dt * dPhi);
+					updateChecks(checks_ptr, dt, dPhi);
+
+					//Prepare for the next substep:
+					elementToSubstep.timeRemaining -= timestep;
+					elementToSubstep.dtNextSubstep *= 2.0;
+					//But also check for the end of the step:
+					if (elementToSubstep.timeRemaining <= 0) {
+						elementToSubstep.done = true;
+						elementsPending--;
+					}					
+				}
+
+				//If the change was too large, just ignore it and the next try will be with half the dt
+			}
+		}
+	}
+
+	//TODO: when restarting the simulation via GUI, this vector will be as large as the largest ever needed
+	//This might mean unecessary memory usage. Profile and decide wether that's okay.
+	g_substepVector.clear();
 }
 
 //Essentially a RK2, or a 2 step predictor-corrector, or the trapezoidal rule applied to FTCS

@@ -89,6 +89,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 			controller_ptr->setBaseAsActive();
 			N_INT::TD::CH::ftcsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
 			break;
+		case PFM::integrationMethods::FTCS_WITH_SUBS:
+			controller_ptr->setBaseAsActive();
+			N_INT::TD::CH::ftcsStepWithSubsteps(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			break;
 		case PFM::integrationMethods::HEUN:
 			controller_ptr->setRotatingLastAsActive();
 			N_INT::TD::CH::heunStep(rotBaseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);

@@ -30,7 +30,12 @@ namespace CH {
 void ftcsStep(PFM::PeriodicDoublesLattice2D* phiField, 
 			  PFM::PeriodicDoublesLattice2D* auxField,
 	          const double dt, const double chK, const double chA, 
-	          PFM::checkData_t* checks_ptr);
+	          PFM::checkData_t* checks_ptr, bool maySubstep = false);
+
+void ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField, 
+						  PFM::PeriodicDoublesLattice2D* auxField,
+						  const double dt, const double chK, const double chA, 
+						  PFM::checkData_t* checks_ptr);
 
 //2 step Predictor Corrector, a RK2, the trapezoidal version of FTCS
 void heunStep(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,

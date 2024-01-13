@@ -17,7 +17,7 @@ namespace PFM {
 											  "ChangePerElementPerStepToStop(double)", "MaximumSteps(uint64)",
 	                                          "StepsPerCheck(uint)", "ChangePerCheck(double)",
 		                                      "CallerKey(uint)", "AdaptativeDt(bool)"};
-	static const char* deafaultArgument = "default";
+	static const char* defaultArgument = "default";
 
 	static const simFuncEnum defaultSimToRun = simFuncEnum::SINGLE_LAYER_CH_SIM;
 
