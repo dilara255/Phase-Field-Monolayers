@@ -2,6 +2,15 @@
 
 //TODO: *in case* this is turned into a shared library, what should or shouldn't get a PFM_API appended?
 
+//This exposes the data types for simulation parameters, configuration, checks and periodic 2D lattices.
+//- simConfig_t deals with stuff like the size of the network, initial conditions, integration methods, etc;
+//- simParameters_t holds the actual parameters, like dt, lambda, gamma, etc;
+//- checkData_t holds runtime checks, like the avg density of the field or it's absolute change, etc;
+//-- All of these have helper functions, specially to print out their data.
+//- PeriodicDoublesLattice2D is a class which helps deal with and acess 2D periodic data (doubles).
+//-- It also holds a public checkData_t and a private vector of them, for checks done on this lattice.
+//--- Note that "checks done on this lattice" may or may not make sense depending on usage.
+
 #include "PFM_API_enums.hpp"
 
 #include "fAux/API/miscStdHeaders.h"
@@ -59,7 +68,7 @@ namespace PFM {
 			str += "Steps: " + std::to_string(stepsRan) + "\n";
 			str += "Per cell layer? " + std::to_string(perCellLayer) + "\n";
 			str += "Start paused? " + std::to_string(startPaused);
-			
+
 			return str;
 		}
 	} simConfig_t;
@@ -70,6 +79,7 @@ namespace PFM {
 		double gamma = -1;
         double A = -1;
 		double k = -1;
+		bool useAdaptativeDt = false;
 
 		inline std::string getSimParamsString() const {
 			std::string str = "";
@@ -78,6 +88,7 @@ namespace PFM {
 			str += "Lambda (interface width): " + std::to_string(lambda) + "\n";
 			str += "k: " + std::to_string(k) + "\n";
 			str += "A: " + std::to_string(A) + "\n";
+			str += "Adaptative dt? " + std::to_string(useAdaptativeDt);
 
 			return str;
 		}
@@ -116,24 +127,36 @@ namespace PFM {
 		double lastDensity = 0;
 		double densityChange = 0;
 		double absoluteChange = 0;
+		double sumOfsquaresOfChanges = 0;
 		
 		double lastDensityChange = 0;
-		double lastAbsoluteChange = 0;
+		double lastAbsoluteChangePerElement = 0;
+		double lastRmsAbsChange = 0;
+		double lastAbsChangeStdDev = 0;
+
+		double lastDt = 0;
 
 		uint64_t stepsAtLastCheck = 0;
 		int stepsDuringLastCheckPeriod = 0;
+		double timeAtLastcheck = 0;
+		double timeDuringLastCheckPeriod = 0;
 		double totalTime = 0;
 		double totalAbsoluteChangeSinceLastSave = 0;
 
 		double remainingChangeSinceSaveOnLastCheck = 0;
+		double referenceDt = 0;
 
+		uint32_t substepsLastStep = 0;
+		
 		simParameters_t parametersOnLastCheck;
 		
-		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; }
+		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; substepsLastStep = 0; }
 		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
-		                        lastDensityChange = 0; lastAbsoluteChange = 0; stepsAtLastCheck = 0;
+		                        sumOfsquaresOfChanges = 0; timeAtLastcheck = 0; timeDuringLastCheckPeriod = 0;
+		                        lastDensityChange = 0; lastAbsoluteChangePerElement = 0; lastRmsAbsChange = 0;
+								lastAbsChangeStdDev = 0;  lastDt = 0; stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
-		                        remainingChangeSinceSaveOnLastCheck = 0; }
+		                        remainingChangeSinceSaveOnLastCheck = 0; referenceDt = 0; substepsLastStep = 0; }
 		
 		inline const std::string getChecksStr() const {
 			
@@ -143,7 +166,8 @@ namespace PFM {
 			char fmtValsBuffer[2*precision + 1];
 
 			std::string str = "Checks @ step ";
-			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + ")\n";
+			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod) 
+				   + " @avg dt: " + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) + ")\n";
 			str += "Density: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensity);
 			str += fmtValsBuffer;
@@ -151,11 +175,18 @@ namespace PFM {
 			str += "Change: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensityChange);
 			str += fmtValsBuffer;
-			str += ", absolute change / step: ";
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, (lastAbsoluteChange / stepsDuringLastCheckPeriod));
+			str += ", absolute change / element per unit time: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, (lastAbsoluteChangePerElement / timeDuringLastCheckPeriod));
 			str += fmtValsBuffer;
 			str += " (since last save: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
+			str += fmtValsBuffer;
+			str += ")\n";
+			str += "Std Dev: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastAbsChangeStdDev / timeDuringLastCheckPeriod);
+			str += fmtValsBuffer;
+			str += " (RMS: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastRmsAbsChange / timeDuringLastCheckPeriod);
 			str += fmtValsBuffer;
 			str += ")\n";
 
@@ -173,7 +204,7 @@ namespace PFM {
 			str += " | Gamma: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.gamma);
 			str += fmtValsBuffer; 
-			str += " | Dt: ";
+			str += " | dt: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.dt);
 			str += fmtValsBuffer; 
 			str += "\n";
@@ -253,7 +284,8 @@ namespace PFM {
 		size_t indexFromPeriodicCoordinate(coordinate_t coordinate) const;
 	};
 
-	//This holds 2 lattices to be used in conjunction, one for the current and another for the last value
+	//This holds 2 lattices to be used together, one for the current and another for the last value
+	//If the checks vector is used, care should be taken to not confuse both (TODO: review this)
 	class CurrentAndLastPerioricDoublesLattice2D {
 	public:
 		CurrentAndLastPerioricDoublesLattice2D(fieldDimensions_t newDimensions, int cellID = ALL_CELLS_ID, 

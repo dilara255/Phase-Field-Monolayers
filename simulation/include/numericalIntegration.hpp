@@ -10,7 +10,7 @@
 namespace N_INT { 
 	
 	enum class rungeKuttaOrder { TWO, FOUR };
-	inline int rkStepsFromOrder(rungeKuttaOrder order) { 
+	constexpr int rkStepsFromOrder(rungeKuttaOrder order) { 
 		if(order == rungeKuttaOrder::TWO) { return 2; }
 		else if (order == rungeKuttaOrder::FOUR) { return 4; }
 		else { assert("BAD RK ORDER"); return 0; }
@@ -30,7 +30,12 @@ namespace CH {
 void ftcsStep(PFM::PeriodicDoublesLattice2D* phiField, 
 			  PFM::PeriodicDoublesLattice2D* auxField,
 	          const double dt, const double chK, const double chA, 
-	          PFM::checkData_t* checks_ptr);
+	          PFM::checkData_t* checks_ptr, bool maySubstep = false);
+
+void ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField, 
+						  PFM::PeriodicDoublesLattice2D* auxField,
+						  const double dt, const double chK, const double chA, 
+						  PFM::checkData_t* checks_ptr);
 
 //2 step Predictor Corrector, a RK2, the trapezoidal version of FTCS
 void heunStep(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,

@@ -8,7 +8,7 @@ namespace PFM {
 	enum mainsArgumentList { PROG_CALL, SIM_TO_RUN, LAMBDA, GAMMA, DT, 
 		                     CELLS, WIDTH, HEIGHT, INITIAL_COND, BIAS, SEED, METHOD, START_PAUSED,
 							 CHANGE_PER_ELEMENT_PER_STEP_TO_STOP, MAXIMUM_STEPS,
-						     STEPS_PER_CHECK, ABSOLUTE_CHANGE_PER_CHECK, CALLER_KEY,
+						     STEPS_PER_CHECK, ABSOLUTE_CHANGE_PER_CHECK, CALLER_KEY, ADAPTATIVE_DT,
 	                         TOTAL_ARGS};
 	static const char* argumentNames[TOTAL_ARGS] = { "ProgramCall", "SimFuncToRun(uint)", "Lamba(double)", "Gamma(double)",
 		                                      "dt(double)", "Cells(uint)", "Width(uint)", "Height(uint)", 
@@ -16,8 +16,8 @@ namespace PFM {
 											  "Method(uint)", "StartPaused(bool)", 
 											  "ChangePerElementPerStepToStop(double)", "MaximumSteps(uint64)",
 	                                          "StepsPerCheck(uint)", "ChangePerCheck(double)",
-		                                      "CallerKey(uint)"};
-	static const char* deafultArgument = "default";
+		                                      "CallerKey(uint)", "AdaptativeDt(bool)"};
+	static const char* deafaultArgument = "default";
 
 	static const simFuncEnum defaultSimToRun = simFuncEnum::SINGLE_LAYER_CH_SIM;
 
@@ -38,9 +38,15 @@ namespace PFM {
 		{1.0, 3.0, 0.06, -1.0, -1.0}, {1.0, 3.0, 0.06, -1.0, -1.0}, {1.0, 3.0, 0.06, -1.0, -1.0}
 	};
 
-	static const uint64_t completelyArbitraryStepToUnlockFullDt = 50;
-	//This is used to help avoid having way too many save in the first few frames
+	static const uint64_t completelyArbitraryStepToUnlockFullDt = 1000;
+	//This is used to help avoid having way too many saves in the first few frames
+	//TODO: review need after implementing adaptative dt
 	static const double absoluteChangeRemainingFactor = 0.2;
+
+	//For adaptative dt:
+	static const double distanceStableEquilibria = 1.0;
+	static const double maxChangePerStep = PFM::distanceStableEquilibria / 4.0;
+	static const double maxAdaptativeDtSpeedUpFactor = 1.01;
 
 	static const uint32_t defaulStepsPerCheck = 5000;
 	static const double defaultAbsChangePerCheck = 0.0025;

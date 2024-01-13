@@ -9,6 +9,7 @@
 #include "simulControl.hpp"
 
 #include <filesystem>
+#include <math.h>
 
 using namespace PFM;
 
@@ -353,8 +354,27 @@ void PFM::SimulationControl::updatePhysicalParametersFromInternals() {
 	updateGammaLambda();
 }
 
-void PFM::SimulationControl::setDTused(double newDT) {
-	m_simParameters.dt = newDT;
+void PFM::SimulationControl::setIntendedDt(double newDt) {
+	m_intendedDt = newDt;
+}
+
+double PFM::SimulationControl::getIntendedDt() {
+	return m_intendedDt;
+}
+
+void PFM::SimulationControl::updateDt() {
+
+	if (m_simParameters.useAdaptativeDt && stepsAlreadyRan() > completelyArbitraryStepToUnlockFullDt) {
+		//use adaptative step size
+		m_simParameters.dt = PFM::calculateMaxAdaptativeDt(&m_simParameters, &m_simConfigs, getActiveFieldsCheckDataPtr());
+	}
+	else {
+		//bind step size to safe values, but otherwise use the intended value
+		m_simParameters.dt = m_intendedDt;
+
+		parameterBounds_t bounds = PFM::calculateParameterBounds(m_simParameters.k, m_simParameters.A, m_simParameters.dt, stepsAlreadyRan());
+		if (m_simParameters.dt > bounds.maxDt) { m_simParameters.dt = bounds.maxDt; }
+	}
 }
 
 void PFM::SimulationControl::setMaxStepsPerCheckAdded(size_t newStepsPerCheckSaved) {
@@ -409,7 +429,7 @@ double PFM::SimulationControl::getAbsoluteChangePerCheckSaved() const {
 	return m_absoluteChangePerCheckSaved;
 }
 
-void PFM::SimulationControl::runForSteps(uint64_t steps, double lambda, double gamma, double dt,
+void PFM::SimulationControl::runForSteps(uint64_t steps, simParameters_t parameters,
 	                                     PFM::simFuncEnum simulationToRun, PFM::integrationMethods method) {
 
 	if(g_controller.isSimulationRunning()) { return; }
@@ -419,10 +439,12 @@ void PFM::SimulationControl::runForSteps(uint64_t steps, double lambda, double g
 	m_stepsToRun = steps;
 	m_simConfigs.simulFunc = simulationToRun;
 	m_simConfigs.method = method;
-	m_simParameters.lambda = lambda;
-	m_simParameters.gamma = gamma;
+	m_simParameters.lambda = parameters.lambda;
+	m_simParameters.gamma = parameters.gamma;
 	updateKandA();
-	m_simParameters.dt = dt;
+	m_simParameters.dt = parameters.dt;
+	m_simParameters.useAdaptativeDt = parameters.useAdaptativeDt;
+	m_intendedDt = m_simParameters.dt;
 	m_isRunning = true;
 
 	m_shouldBePaused = m_simConfigs.startPaused;
@@ -521,6 +543,15 @@ void PFM::resumeSimulation() {
 	g_controller.resume();
 }
 
+void PFM::setIntendedDt(double newDt) {
+	g_controller.setIntendedDt(newDt);
+}
+
+double PFM::getIntendedDt() {
+	return g_controller.getIntendedDt();
+}
+
+
 uint64_t PFM::getStepsRan() {
 	return g_controller.stepsAlreadyRan();
 }
@@ -541,8 +572,7 @@ bool PFM::saveFieldDataAccordingToController() {
 void PFM::runForSteps(uint64_t stepsToRun, simParameters_t parameters, simConfig_t config) {
 
 	g_controller.updateEpochTimeSimCall();
-	g_controller.runForSteps(stepsToRun, parameters.lambda, parameters.gamma, parameters.dt, 
-		                                                  config.simulFunc, config.method);
+	g_controller.runForSteps(stepsToRun, parameters, config.simulFunc, config.method);
 }
 
 PeriodicDoublesLattice2D* PFM::getActiveFieldPtr() {
@@ -607,6 +637,45 @@ PFM::parameterBounds_t PFM::calculateParameterBounds(double k, double A, double 
 	assert(bounds.maxDt > 0 && "Max dt should always be larger than zero");
 	
 	return bounds;
+}
+
+#define M_PI_ (3.14159265358979323846) //TODO: usar da biblioteca, entender pq não foi
+double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, const simConfig_t* config_ptr, 
+																		 const checkData_t* lastCheck_ptr) {
+	
+	double highAvgChangeEstimative = 
+			lastCheck_ptr->lastAbsoluteChangePerElement + (3 * lastCheck_ptr->lastAbsChangeStdDev);
+
+	//Most change happens in the interface area: 
+	//Average may be a lot smaller than the change we actually care about. Let's roughly account for that:
+
+	double totalArea = config_ptr->width * config_ptr->height;
+	assert(totalArea > 4 * M_PI_ * parameters_ptr->lambda); //so interface area can't be laerger than total
+	double effectiveAbsDensity = std::min(1.0, std::abs(lastCheck_ptr->lastDensity));
+
+	double inverseInterfaceProportion = 
+		(0.5 / parameters_ptr->lambda) * std::sqrt(totalArea / (M_PI_ * effectiveAbsDensity) );
+
+	//Note that while this may be artificially high in the initial steps (where interface may be larger,
+	//the initial need more care and should be using "parameter bounds" instead anyway (see PFM_API.hpp)
+
+	double effectiveChangePerStep = 
+			highAvgChangeEstimative * inverseInterfaceProportion / lastCheck_ptr->stepsDuringLastCheckPeriod;
+
+	//Despite the name, this may actually be a slowing factor
+	double speedUpFactor = maxChangePerStep / effectiveChangePerStep;
+
+	//We don't want to ramp up the speed to fast, so:
+	double maxMultiplier = ((double)lastCheck_ptr->stepsDuringLastCheckPeriod / completelyArbitraryStepToUnlockFullDt);
+	maxMultiplier = std::min(PFM::maxAdaptativeDtSpeedUpFactor, 1 + ((PFM::maxAdaptativeDtSpeedUpFactor - 1) * maxMultiplier));
+		
+	double adaptativeDt = std::min(maxMultiplier, speedUpFactor) * lastCheck_ptr->referenceDt;
+
+	//But we don't want the adaptative dt to be unecessarily conservative either, so our final answer is:
+	double minDt = PFM::calculateParameterBounds(parameters_ptr->k, parameters_ptr->A, adaptativeDt,
+		                                                  2 * completelyArbitraryStepToUnlockFullDt).maxDt;
+
+	return std::max(minDt, adaptativeDt);
 }
 
 void PFM::setMaxStepsPerCheckAdded(size_t newMaxStepsPerCheck) {

@@ -8,16 +8,13 @@
 #include "CLcontrolMain.hpp"
 
 #define RUN_CLI_TESTS -1                            
-#define BAD_ORIGINAL_DT (-999.999)
 
 double g_changePerElementPerStepToStop = PFM::defaultAbsChangePerStepToStop;
 uint64_t g_maximumSteps = PFM::defaulMaxSteps;
 int g_checksAtChangeTreshold = 0;
-bool g_dtLoweredForFirstSteps = false;
-double g_originalDt = BAD_ORIGINAL_DT;
 
 bool isArgumentDefault(int argument, char **argv) {
-	return (strcmp(PFM::deafultArgument, argv[argument]) == 0);
+	return (strcmp(PFM::deafaultArgument, argv[argument]) == 0);
 }
 
 void printArgumentsList() {
@@ -28,6 +25,7 @@ void printArgumentsList() {
 }
 
 //TODO: Sanitize input : )
+//TODO: Deal with repetition between this and GUIcontrolMain.cpp
 bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr, 
 	                PFM::simConfig_t* config_ptr, int argc, char **argv) {
 
@@ -44,7 +42,7 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 	//If arguments where provided, first figure out what simulation will be run:
 	if(argc > 1) { 
 		int index = (int)PFM::mainsArgumentList::SIM_TO_RUN;
-		if (strcmp(PFM::deafultArgument, argv[index]) != 0) {
+		if (strcmp(PFM::deafaultArgument, argv[index]) != 0) {
 			//the defaultArgument wasn't passed for the simulation to run, so:
 			*simToRun_ptr = atoi(argv[index]); 
 		}
@@ -76,37 +74,37 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 			} break;
 
 			case PFM::mainsArgumentList::LAMBDA: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(params_ptr->lambda));
 			} break;
 
 			case PFM::mainsArgumentList::GAMMA: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(params_ptr->gamma));
 			} break;
 
 			case PFM::mainsArgumentList::DT: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(params_ptr->dt));
 			} break;
 
 			case PFM::mainsArgumentList::CELLS: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				config_ptr->cells = atoi(argv[i]);
 			} break;
 
 			case PFM::mainsArgumentList::WIDTH: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				config_ptr->width = atoi(argv[i]);
 			} break;
 
 			case PFM::mainsArgumentList::HEIGHT: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				config_ptr->height = atoi(argv[i]);
 			} break;
 
 			case PFM::mainsArgumentList::INITIAL_COND: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				int cond = atoi(argv[i]);
 				if (cond < 0 || cond >= (int)PFM::initialConditions::TOTAL_INITIAL_CONDS) {
 					LOG_ERROR("Bad initial Condition");
@@ -116,17 +114,17 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 			} break;
 
 			case PFM::mainsArgumentList::BIAS: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &(config_ptr->bias));
 			} break;
 
 			case PFM::mainsArgumentList::SEED: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				config_ptr->initialSeed = strtoll(argv[i], NULL, 10);
 			} break;
 
 			case PFM::mainsArgumentList::METHOD: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				int method = atoi(argv[i]);
 				if (method < 0 || method >= (int)PFM::integrationMethods::TOTAL_METHODS) {
 					LOG_ERROR("Bad Integration Method");
@@ -136,22 +134,22 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 			} break;
 
 			case PFM::mainsArgumentList::START_PAUSED: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				config_ptr->startPaused = atoi(argv[i]);
 			} break;
 
 			case PFM::mainsArgumentList::CHANGE_PER_ELEMENT_PER_STEP_TO_STOP: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				sscanf(argv[i], "%lf", &g_changePerElementPerStepToStop);
 			} break;
 
 			case PFM::mainsArgumentList::MAXIMUM_STEPS: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				g_maximumSteps = strtoll(argv[i], NULL, 10);
 			} break;
 
 			case PFM::mainsArgumentList::STEPS_PER_CHECK: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				int64_t steps = strtol(argv[i], NULL, 10);
 				bool valid = (steps > 0) && (steps <= UINT32_MAX);
 				if(!valid) { LOG_ERROR("Bad number of steps per check"); return false;}
@@ -160,7 +158,7 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 			} break;
 
 			case PFM::mainsArgumentList::ABSOLUTE_CHANGE_PER_CHECK: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				double change = sscanf(argv[i], "%lf", &g_changePerElementPerStepToStop);
 				if(change <= 0) { LOG_ERROR("Bad change per check"); return false; }
 
@@ -168,9 +166,14 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 			} break;
 
 			case PFM::mainsArgumentList::CALLER_KEY: {
-				if (strcmp(PFM::deafultArgument, argv[i]) == 0) { break; }
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
 				PFM::setCallerKey((uint32_t)strtoll(argv[i], NULL, 10));
 			} break;	
+
+			case PFM::mainsArgumentList::ADAPTATIVE_DT: {
+				if (strcmp(PFM::deafaultArgument, argv[i]) == 0) { break; }
+				params_ptr->useAdaptativeDt = atoi(argv[i]);
+			} break;
 		}
 	}
 
@@ -223,25 +226,11 @@ int main(int argc, char **argv) {
 }
 
 bool shouldStop(PFM::checkData_t* check_ptr) {
-	if ((check_ptr->lastAbsoluteChange / check_ptr->stepsDuringLastCheckPeriod) <= g_changePerElementPerStepToStop) {
+	if ((check_ptr->lastAbsoluteChangePerElement / check_ptr->stepsDuringLastCheckPeriod) <= g_changePerElementPerStepToStop) {
 		g_checksAtChangeTreshold++;
 	}
 	return (check_ptr->stepsAtLastCheck >= g_maximumSteps) || 
 		   (g_checksAtChangeTreshold >= PFM::stepsAtChangeThresholdToStop);
-}
-
-void sanitizeParams(PFM::simParameters_t* params_ptr, uint64_t stepsRan) {
-	
-	assert(g_originalDt != BAD_ORIGINAL_DT);
-
-	PFM::parameterBounds_t bounds = PFM::calculateParameterBounds(params_ptr->k, params_ptr->A,
-		                                                                g_originalDt, stepsRan);
-
-	params_ptr->dt = g_originalDt;
-	if(params_ptr->dt > bounds.maxDt) { 
-		params_ptr->dt = bounds.maxDt; 
-		g_dtLoweredForFirstSteps = true; 
-	}
 }
 
 //TODO: Pass stuff in just like to the GUI counterpart
@@ -263,8 +252,6 @@ bool PFM_CLI::runSimulationFromCL(PFM::simParameters_t* parameters_ptr, PFM::sim
 	PFM::setIntermediateBINsaves(true);
 	PFM::setIntermediatePGMsaves(true);
 	PFM::initializeSimulation(*config_ptr);
-	g_originalDt = parameters_ptr->dt;
-	sanitizeParams(parameters_ptr, PFM::getStepsRan());
 	LOG_INFO("Simulation initialized. Will run the simulation");
 	PFM::runForSteps(stepsToRun, *parameters_ptr, *config_ptr);
 	
@@ -274,9 +261,7 @@ bool PFM_CLI::runSimulationFromCL(PFM::simParameters_t* parameters_ptr, PFM::sim
 
 	auto simulParams_ptr = PFM::getSimParamsPtr();
 	while (PFM::isSimulationRunning()) {
-		//We make sure to keep dt as close as possible to the desired value witouth exploding stuff:
-		sanitizeParams(simulParams_ptr, stepsRan);
-		//Then we wait for a new step in the simulation:
+		//We wait for a new step in the simulation:
 		while(stepsRan == PFM::getStepsRan()) { 
 			AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI/2));
 		}

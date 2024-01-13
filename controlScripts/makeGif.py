@@ -3,7 +3,7 @@
 #-- from which the simulation was called, passing the data directory's name as the only argument
 #runner automatically calls this appropriately
 
-#Uses "Pillow": you may need to "python3 -m pip install --upgrade Pillow"
+#Uses "Pillow": you may need to "python3 -m pip install --upgrade Pillow" (or just "python", isnted of "python3")
 #More info on https://pillow.readthedocs.io/en/stable/installation.html
 #Note the WARNING: "Pillow and PIL cannot co-exist in the same environment"
 

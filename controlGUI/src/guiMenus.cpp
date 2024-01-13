@@ -21,16 +21,23 @@ void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	ImGui::Text("%s", g_checkData_ptr->getChecksStr().c_str());
 }
 
-PFM::parameterBounds_t createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr) {
+void createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr, double* GUIissuedDt_ptr) {
 	
+	ImGui::Checkbox("Adaptative dt", &param_ptr->useAdaptativeDt);
+
 	PFM::parameterBounds_t bounds = 
 		PFM::calculateParameterBounds(param_ptr->k, param_ptr->A, param_ptr->dt, stepsRan);
 
+	if (param_ptr->useAdaptativeDt) {
+		bounds.maxA = 1.0;
+		bounds.maxK = 1.0;
+	}
+
 	ImGui::SliderScalar("k", ImGuiDataType_Double, &param_ptr->k, &bounds.minK, &bounds.maxK);
 	ImGui::SliderScalar("A", ImGuiDataType_Double, &param_ptr->A, &bounds.minA, &bounds.maxA);
-	ImGui::SliderScalar("dt", ImGuiDataType_Double, &param_ptr->dt, &bounds.minDt, &bounds.maxDt);
-
-	return bounds;
+	if (!param_ptr->useAdaptativeDt) { 
+		ImGui::SliderScalar("dt", ImGuiDataType_Double, GUIissuedDt_ptr, &bounds.minDt, &bounds.maxDt); 
+	}
 }
 
 void controlFlowMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
@@ -101,7 +108,8 @@ void controlFlowMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	
 	ImGui::Text("Parameters for restart:\n");
 	
-	createParameterSliders(1000, g_simParamsNextStart_ptr);
+	createParameterSliders(2 * PFM::completelyArbitraryStepToUnlockFullDt, 
+		                   g_simParamsNextStart_ptr, &(g_simParamsNextStart_ptr->dt));
 	g_simConfigNextStart_ptr->stepsRan = 0; //change place
 
 	g_simParamsNextStart_ptr->lambda = 
@@ -119,21 +127,13 @@ void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	ImGui::Text("Simulation configuration:\n%s", g_simConfig_ptr->getSimDataString().c_str());
 	ImGui::Text("Simulation parameters:\n%s", g_simParams_ptr->getSimParamsString().c_str());
 
-	//dt may be forcibly reduced in the first few steps to prevent bugs. We want it to "spring back" later. So:
-	if(PFM_GUI::g_dtLoweredForFirstSteps) { g_simParams_ptr->dt = PFM_GUI::g_originalDt; }
-	const double dtBeforeSlider = g_simParams_ptr->dt; //to know wether the user issued a change
+	static double GUIissuedDt = PFM::getIntendedDt();
 
-	PFM::parameterBounds_t bounds = createParameterSliders(g_simConfig_ptr->stepsRan, g_simParams_ptr);
+	createParameterSliders(g_simConfig_ptr->stepsRan, g_simParams_ptr, &GUIissuedDt);
 
-	if (g_simParams_ptr->dt != dtBeforeSlider) {
+	if (GUIissuedDt != PFM::getIntendedDt()) {
 		//A change was actually issued by the user, so:
-		PFM_GUI::g_originalDt = g_simParams_ptr->dt;
-	}
-
-	//Now to make sure dt is not too large for the first few steps:
-	if(g_simParams_ptr->dt > bounds.maxDt) { 
-		g_simParams_ptr->dt = bounds.maxDt; 
-		PFM_GUI::g_dtLoweredForFirstSteps = true; 
+		PFM::setIntendedDt(GUIissuedDt);
 	}
 
 	PFM::updatePhysicalParameters();

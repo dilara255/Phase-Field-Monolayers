@@ -64,6 +64,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 	updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
 		                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
 
+	//We call a first dt update to sanitize possibly too high initial dt
+	//This is done before the checks and their printing so they reflect the original intent
+	controller_ptr->updateDt();
+
 	//Start paused?
 	while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
 
@@ -71,6 +75,9 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 	auto params_ptr = controller_ptr->getLastSimParametersPtr();
 	while(!controller_ptr->checkIfShouldStop()) {
 	
+		//Update dt each step so we can deal with the initial few steps, adaptative dt, and client changes
+		controller_ptr->updateDt();
+
 		//TODO: maybe pull into an "updateLocalParameters" function?
 		dt = params_ptr->dt;
 		A = params_ptr->A;
@@ -81,6 +88,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 		case PFM::integrationMethods::FTCS:
 			controller_ptr->setBaseAsActive();
 			N_INT::TD::CH::ftcsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			break;
+		case PFM::integrationMethods::FTCS_WITH_SUBS:
+			controller_ptr->setBaseAsActive();
+			N_INT::TD::CH::ftcsStepWithSubsteps(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
 			break;
 		case PFM::integrationMethods::HEUN:
 			controller_ptr->setRotatingLastAsActive();
@@ -103,10 +114,10 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 
 		*stepCount_ptr += 1;
 
+		checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
 		updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
 			                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
-		checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
-
+		
 		//Pause?
 		while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
 	}
@@ -125,7 +136,7 @@ void PFM::dataAndControllerTest_fn(SimulationControl* controller_ptr, uint64_t* 
 	const double maxValue = 1;
 	controller_ptr->setKused(diffusionFactor);
 	controller_ptr->setAused(maxValue);	
-	controller_ptr->setDTused(1);	
+	controller_ptr->setIntendedDt(1);	
 
 	auto field_ptr = controller_ptr->getRotatingBaseFieldPtr()->getPointerToCurrent();
 
@@ -233,7 +244,7 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 	
 	controller_ptr->setKused(k);
 	controller_ptr->setAused(A);
-	controller_ptr->setDTused(dt);
+	controller_ptr->setIntendedDt(dt);
 
 	auto rotBaseField_ptr = controller_ptr->getRotatingBaseFieldPtr();
 	auto baseField_ptr = controller_ptr->getBaseFieldPtr();
@@ -276,6 +287,7 @@ void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, con
 	                      const double absoluteChangePerElementPerCheckSaved, const double dt) {
 	
 	checks_ptr->step = step;
+	checks_ptr->totalTime += dt;
 
 	const int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
 	checks_ptr->totalAbsoluteChangeSinceLastSave = 
@@ -285,14 +297,24 @@ void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, con
 	if(( (step - checks_ptr->stepsAtLastCheck) % stepsPerCheckSaved == 0) || 
 		 checks_ptr->totalAbsoluteChangeSinceLastSave >= absoluteChangePerElementPerCheckSaved) { 
 		
+		checks_ptr->referenceDt = dt;
+
 		//The max is there in case update is called before the simulation begins (to record initial condition)
 		checks_ptr->stepsDuringLastCheckPeriod = std::max(1llu, checks_ptr->step - checks_ptr->stepsAtLastCheck);
 		checks_ptr->stepsAtLastCheck = checks_ptr->step;
-		checks_ptr->totalTime = checks_ptr->stepsAtLastCheck * dt;
+		//The max is there for the same reason
+		checks_ptr->timeDuringLastCheckPeriod = std::max(1.0, checks_ptr->totalTime - checks_ptr->timeAtLastcheck);
+		checks_ptr->timeAtLastcheck = checks_ptr->totalTime;
 
-		checks_ptr->lastDensity += checks_ptr->densityChange / elements;
 		checks_ptr->lastDensityChange = checks_ptr->densityChange;
-		checks_ptr->lastAbsoluteChange = checks_ptr->absoluteChange / elements;
+		checks_ptr->lastDensity += (checks_ptr->lastDensityChange / elements);
+		checks_ptr->lastAbsoluteChangePerElement = checks_ptr->absoluteChange / elements;
+		
+		double changeMeanSquare = checks_ptr->sumOfsquaresOfChanges / elements;
+		double squaredMeanChange = (checks_ptr->densityChange / elements) * (checks_ptr->densityChange / elements);
+		
+		checks_ptr->lastRmsAbsChange = std::sqrt(changeMeanSquare);
+		checks_ptr->lastAbsChangeStdDev = std::sqrt(changeMeanSquare - squaredMeanChange);
 	
 		//How much did the change overshoot the threshold?
 		checks_ptr->remainingChangeSinceSaveOnLastCheck = PFM::absoluteChangeRemainingFactor 
