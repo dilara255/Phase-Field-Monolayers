@@ -98,13 +98,24 @@ namespace PFM {
 		int x, y;
 	} coordinate_t;
 
+	//TODO: template for arbitrary sizes of (square) neighborhoods
+
+	//in all methods, (x, y) is equivalent to (collum, row)
 	typedef struct neighborhood9_st {
 		double data[9];
+
+		//TODO: add an indexOf method (how should it deal with bad input?)
 
 		inline double getElement(int x, int y) {
 			assert(x >= 0 && y >= 0);
 			assert(y*3 + x < 9);
 			return data[(y*3 + x)];
+		}
+
+		inline void setElement(int x, int y, double value) {
+			assert(x >= 0 && y >= 0);
+			assert(y*3 + x < 9);
+			data[(y*3 + x)] = value;
 		}
 
 		inline double getCenter() const {
@@ -119,7 +130,77 @@ namespace PFM {
 			data[4] += valueChange;
 		}
 
+		neighborhood9_st operator+=(neighborhood9_st const& otherNeigh) {
+			for (size_t i = 0; i < 9; i++) { data[i] += otherNeigh.data[i]; }
+			return *this;
+		}
+
+		neighborhood9_st operator-=(neighborhood9_st const& otherNeigh) {
+			for (size_t i = 0; i < 9; i++) { data[i] -= otherNeigh.data[i]; }
+			return *this;
+		}
+
+		neighborhood9_st operator+=(double const& scalar) {
+			for (size_t i = 0; i < 9; i++) { data[i] += scalar; }
+			return *this;
+		}
+
+		neighborhood9_st operator*=(double const& scalar) {
+			for (size_t i = 0; i < 9; i++) { data[i] *= scalar; }
+			return *this;
+		}
+
 	} neighborhood9_t;
+
+	//in all methods, (x, y) is equivalent to (collum, row)
+	typedef struct neighborhood25_st {
+		double data[25];
+
+		inline double getElement(int x, int y) {
+			assert(x >= 0 && y >= 0);
+			assert(y*5 + x < 25);
+			return data[(y*5 + x)];
+		}
+
+		inline void setElement(int x, int y, double value) {
+			assert(x >= 0 && y >= 0);
+			assert(y*5 + x < 25);
+			data[(y*5 + x)] = value;
+		}
+
+		inline double getCenter() const {
+			return data[12];
+		}
+
+		inline void setCenter(double newValue) {
+			data[12] = newValue;
+		}
+
+		inline void incrementCenter(double valueChange) {
+			data[12] += valueChange;
+		}
+
+		neighborhood25_st operator+=(neighborhood25_st const& otherNeigh) {
+			for (size_t i = 0; i < 25; i++) { data[i] += otherNeigh.data[i]; }
+			return *this;
+		}
+
+		neighborhood25_st operator-=(neighborhood25_st const& otherNeigh) {
+			for (size_t i = 0; i < 25; i++) { data[i] -= otherNeigh.data[i]; }
+			return *this;
+		}
+
+		neighborhood25_st operator+=(double const& scalar) {
+			for (size_t i = 0; i < 25; i++) { data[i] += scalar; }
+			return *this;
+		}
+
+		neighborhood25_st operator*=(double const& scalar) {
+			for (size_t i = 0; i < 25; i++) { data[i] *= scalar; }
+			return *this;
+		}
+
+	} neighborhood25_t;
 
 	typedef struct checkData_st {
 
@@ -239,6 +320,8 @@ namespace PFM {
 		double getElement(size_t index) const;
 		//Gets a structure with the 3x3 neighboorhod of the centerpoint. 
 		neighborhood9_t getNeighborhood(coordinate_t centerPoint) const;
+		//Same, but 5x5.
+		neighborhood25_t getNeighborhood25(coordinate_t centerPoint) const;
 		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.
 		void writeDataPoint(coordinate_t coordinate, double newValue);
 		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.

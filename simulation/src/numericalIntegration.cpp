@@ -2,10 +2,10 @@
 #include "PFM_defaults.hpp"
 
 typedef struct substep_st {
-	bool done;
-	PFM::coordinate_t position;
-	double dtNextSubstep;
-	double timeRemaining;
+	double timeAdvanced = 0;
+	double currentPhi = 0;
+	const double initialPhi = 0;
+	const PFM::coordinate_t coordinate;
 } substep_t;
 
 double N_INT::rungeKutaKnAandCcoef(rungeKuttaOrder order, int n) {
@@ -53,14 +53,26 @@ void updateChecks(PFM::checkData_t* checks_ptr, const double dt, const double dP
 	checks_ptr->sumOfsquaresOfChanges += (dPhi * dt) * (dPhi * dt);
 }
 
-namespace N_INT { namespace TD { namespace CH { static std::vector<substep_t> g_substepVector; } } }
+namespace N_INT { namespace TD { namespace CH { 
+	static std::vector<substep_t> g_substepVector; 
+} } }
 
-//Has a little bit of extra logic to also be able to be used when substeps are required. No real overhead.
+//Note: this does has quite a bit of coupling with ftcsStepWithSubsteps:
+//- It has a little bit of extra logic to also be able to be used when substeps are required. No real overhead;
+//- substepAuxField should only ever be used if maySubstep == true;
+//- this has to update substepAuxField according to the use in the substepping version:
+//-- Currently, the substepping version is using the dPHi of each element. Reason is that this way
+//   we don't have to track what substepping elements might be neighbors of other elements also substepping
+//   and how much time has passed for them. On the other hand, this makes the initial copy slower, since
+//   copying the original values can be done faster, in a single pass (left commented out).
 void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField, 
 						   PFM::PeriodicDoublesLattice2D* auxField,
 	                       const double dt, const double chK, const double chA, 
-	                       PFM::checkData_t* checks_ptr, bool maySubstep) {
+	                       PFM::checkData_t* checks_ptr, 
+	                       PFM::PeriodicDoublesLattice2D* substepAuxField, bool maySubstep) {
 	
+	//if(maySubstep) { substepAuxField->mirrorAllDataFrom(phiField); }
+
 	int height = phiField->getFieldDimensions().height;
 	int width = phiField->getFieldDimensions().width;
 
@@ -70,7 +82,6 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 	//auxField holds the data of the CH potential for each site
 	for (int j = 0; j < height; j++) {
 			centerPoint.y = j;
-
 		for (int i = 0; i < width; i++) {
 			centerPoint.x = i;
 		
@@ -80,12 +91,11 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 		}
 	}
 
-	double dPhi;
+	double dPhi, delta;
 
 	//Then we go trhough each point calculating the laplacian of the petential
 	for (int j = 0; j < height; j++) {
 			centerPoint.y = j;
-
 		for (int i = 0; i < width; i++) {
 			centerPoint.x = i;
 		
@@ -95,76 +105,188 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 			//-lap: the more a point "needs" to be pulled than their neighbor, the more they are pulled
 			//at the same time, the laplacian has sum 0 (on this periodic field), so total phi is conserverd
 
-			if (!maySubstep || std::abs(dPhi) <= PFM::maxChangePerStep) {
-				//We accept the step and update the checks
-				phiField->incrementDataPoint(centerPoint, dt * dPhi);
+			delta = dPhi * dt;
+
+			if (!maySubstep) {
+				//We update the field and the checks:
+				phiField->incrementDataPoint(centerPoint, delta);
 				updateChecks(checks_ptr, dt, dPhi);
-			}		
+			}
 			else {
-				//The step was too large, so we'll have to sub-step this
-				g_substepVector.push_back({false, centerPoint, dt, dt});
+				//in case substepping is enabled, we need to do some extra book keeping:
+
+				if (std::abs(delta) <= PFM::maxChangePerStep) {
+					//We accept the step and update the checks and dPhis:
+					substepAuxField->writeDataPoint(centerPoint, dPhi);
+					phiField->incrementDataPoint(centerPoint, delta);
+					updateChecks(checks_ptr, dt, dPhi);
+				}
+				else {
+					//The step was too large, so we'll have to sub-step this
+					g_substepVector.push_back({0.0, phiField->getDataPoint(centerPoint), 
+						                       phiField->getDataPoint(centerPoint), centerPoint});
+					//And since no change was made to this element, we'll mark its dPhi as 0:
+					substepAuxField->writeDataPoint(centerPoint, 0.0);
+				}
 			}
 		}
 	}
 }
 
-void N_INT::TD::CH::ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField, 
-						   PFM::PeriodicDoublesLattice2D* auxField,
-	                       const double dt, const double chK, const double chA, 
-	                       PFM::checkData_t* checks_ptr) {
-	
-	//First try the normal step:
-	ftcsStep(phiField, auxField, dt, chK, chA, checks_ptr, true);
-
-	//And then deal with substeps
-	int elementsPending = g_substepVector.size();
-	double timestep;
-	double dPhi;
-	substep_t elementToSubstep;
-	double extraSubsteps = 0;
-	PFM::coordinate_t centerPoint;
-	
-	while (elementsPending > 0) {
+PFM::neighborhood9_t computeFforAneighborhood9(PFM::neighborhood25_t* neigh25_ptr, 
+	                                           const double chK, const double chA) {
 		
-		for (int i = 0; i < elementsPending; i++) {
-		
-			elementToSubstep = g_substepVector.at(i);
+	PFM::neighborhood9_t fNeigh;
+	double numF;
 
-			if (!elementToSubstep.done) {
-				//First we check that we won't overstep:
-				elementToSubstep.dtNextSubstep /= 2.0;
-				timestep = std::min(elementToSubstep.dtNextSubstep, elementToSubstep.timeRemaining);
-				
-				//Then we try a new substep:
-				extraSubsteps++;
+	//We want to calculate 9 values "in the center", each using its neighborhood:
+	for (int j = 1; j < 4; j++) { //1, 2, 3: the center
+		for (int i = 1; i < 4; i++) {
+			
+			//But to calculate each value, we actually need the neighborhood around the corresponding point:
+			PFM::neighborhood9_t auxNeigh;
 
-				//auxField has the original chNumericalF for all elements
-				//phiField has the final value for all elements (so far, or something)
-				dPhi = 1.0; //hopefully not : p
+			for (int l = -1; l < 2; l++) { //-1, 0, 1: around the center
+				for (int k = -1; k < 2; k++) {
+					
+					const int row = j + l;
+					const int collum = i + k;
 
-				//And check wether the size of the change was acceptable:
-				if (std::abs(dPhi) <= PFM::maxChangePerStep) {
-					//Accept changes and update checks
-					phiField->incrementDataPoint(centerPoint, dt * dPhi);
-					updateChecks(checks_ptr, dt, dPhi);
-
-					//Prepare for the next substep:
-					elementToSubstep.timeRemaining -= timestep;
-					elementToSubstep.dtNextSubstep *= 2.0;
-					//But also check for the end of the step:
-					if (elementToSubstep.timeRemaining <= 0) {
-						elementToSubstep.done = true;
-						elementsPending--;
-					}					
+					auxNeigh.setElement(k, l, neigh25_ptr->getElement(collum, row));
 				}
-
-				//If the change was too large, just ignore it and the next try will be with half the dt
 			}
+			
+			numF = N_INT::chNumericalF(&auxNeigh, chK, chA);
+
+			const int finalRow = j - 1;
+			const int finalCollum = i - 1;
+
+			fNeigh.setElement(finalCollum, finalRow, numF);
 		}
 	}
 
-	//TODO: when restarting the simulation via GUI, this vector will be as large as the largest ever needed
-	//This might mean unecessary memory usage. Profile and decide wether that's okay.
+	return fNeigh;
+}
+
+//WARNING: the usage of substepAuxField here has to be "synched" with its preparation in ftcsStep.
+//TODO: review / test other strategies to improve performance, ie:
+//- Could use smaller data structures to hold only the needed information, instead of the complete fields;
+//- Receiving the initial phis would simplify the first substep, which is potentially a large chunk of the work;
+//- Avoiding re-populating the entire neighborhoods every step;
+//- Avoiding multiple computations of the potentials for neighbors of multiple substepping elements.
+void N_INT::TD::CH::ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField, 
+						   PFM::PeriodicDoublesLattice2D* auxField,
+	                       const double dt, const double chK, const double chA, 
+	                       PFM::checkData_t* checks_ptr,
+	                       PFM::PeriodicDoublesLattice2D* substepAuxField) {
+	
+	assert(dt > 0);
+
+	//First try the normal step:
+	ftcsStep(phiField, auxField, dt, chK, chA, checks_ptr, substepAuxField, true);
+
+	//And then deal with substeps for the elements in need of it.
+	
+	//note: all times will be treated as if the start of the step was at time 0, since only differences matter
+	double smallestTimeAdvanced = 0;
+	double lastSmallestTimeAdvance = 2*dt; //large value so the first pass works
+	double dtSub = dt/2;
+	double extraSubsteps = 0;
+
+	PFM::neighborhood25_t phiNeigh;
+	PFM::neighborhood25_t dPhiNeigh;
+	PFM::neighborhood9_t fNeigh;
+
+	const size_t totalElements = g_substepVector.size();
+
+	while (smallestTimeAdvanced < dt) {
+		
+		for (size_t i = 0; i < totalElements; i++) {
+			
+			//At each "pass" here, we'll only actually deal with the least advanced elements, and ignore the others.
+			//An alternative to stepping through all elements would be to sort the vector first.
+			//TODO: test wether that may actually be faster in realistic use cases.
+
+			//So, in case this element is lagging behind, we try to update it:
+			substep_t* const elementToSubstep_ptr = &g_substepVector.at(i);
+			const double timeAdvanced = elementToSubstep_ptr->timeAdvanced;
+			const double timeToRewind = dt - smallestTimeAdvanced;
+
+			if (!(timeAdvanced == smallestTimeAdvanced)) {
+				
+				extraSubsteps++;
+				const PFM::coordinate_t centerPoint = elementToSubstep_ptr->coordinate;
+				
+				//auxField has the dPhi for each element and phiField has the last values.
+				//Note that in general we do need to update the phiNeigh each step,
+				//because of possible interactions with other substepping elements.
+				//Also, for elements being substepped, phiField starts with their value at the start of the step.
+				//Later, it will hold projections for the final value. This is so we can deal with substepping
+				//neighbors the same way we deal with all neighbors. This also works in the first step because
+				//both dPhi and time for elements to be substepped start at zero.
+
+				phiNeigh = phiField->getNeighborhood25(centerPoint);
+				dPhiNeigh = substepAuxField->getNeighborhood25(centerPoint);
+
+				//We use a linear interpolation to "rewind" the values of the neighborhood to "timeAdvanced":
+				dPhiNeigh *= timeToRewind;
+				phiNeigh -= dPhiNeigh;
+
+				//Later, we'll store extrapolated intermediate results in the phiField (to help other substeps),
+				//so here we need to revert to the actual current value:
+				phiNeigh.setCenter(elementToSubstep_ptr->currentPhi);
+
+				//Now we can calculate the new dPhi:
+				fNeigh = computeFforAneighborhood9(&phiNeigh, chK, chA);
+				const double dPhi = -PFM::laplacian9pointsAroundNeighCenter(&fNeigh);
+				double change = dPhi*dtSub;
+				
+				//And check wether the size of the change was acceptable:
+				if (std::abs(change) <= PFM::maxChangePerStep) {
+					
+					//Accept the change amd update auxiliar data
+
+					elementToSubstep_ptr->currentPhi += change;
+					elementToSubstep_ptr->timeAdvanced += dtSub;
+					
+					double effectiveDphi = (elementToSubstep_ptr->currentPhi - elementToSubstep_ptr->initialPhi) 
+						                   / elementToSubstep_ptr->timeAdvanced;
+					double projectedFinalChange = effectiveDphi * dt;
+
+					phiField->writeDataPoint(centerPoint, elementToSubstep_ptr->initialPhi + projectedFinalChange);					
+					substepAuxField->writeDataPoint(centerPoint, effectiveDphi);
+				}
+
+				//If the change was too large, just ignore it (and the next try will be with half the dt)
+			}
+		}
+
+		smallestTimeAdvanced = lastSmallestTimeAdvance;
+		for (size_t i = 0; i < totalElements; i++) {
+			if (g_substepVector.at(i).timeAdvanced < smallestTimeAdvanced) {
+				smallestTimeAdvanced = g_substepVector.at(i).timeAdvanced;
+			}
+		}
+
+		if (smallestTimeAdvanced == lastSmallestTimeAdvance) {
+			//the step was too large for some elements, so:
+			dtSub /= 2;
+		}
+		else { dtSub *= 2; } //the last step size was good, so let's try to pick up speed
+		
+		if (dtSub > (dt - smallestTimeAdvanced)) { dtSub = dt - smallestTimeAdvanced; } //prevent over-stepping
+
+		lastSmallestTimeAdvance = smallestTimeAdvanced;
+	}
+
+	//Update checks:
+	for (size_t i = 0; i < totalElements; i++) {
+		const double dPhi = (g_substepVector.at(i).currentPhi - g_substepVector.at(i).initialPhi) / dt;
+		updateChecks(checks_ptr, dt, dPhi);
+	}
+	
+	//TODO: when restarting the simulation via GUI, these vectors will be as large as the largest ever needed
+	//This might mean unecessary memory usage: profile and decide wether that's okay.
 	g_substepVector.clear();
 }
 

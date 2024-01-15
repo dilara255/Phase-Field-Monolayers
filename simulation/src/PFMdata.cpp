@@ -134,22 +134,64 @@ double PFM::PeriodicDoublesLattice2D::getElement(size_t index) const {
 }
 
 //TODO: it might be helpful to optimize this a bit (but measures are still pending)
+//TODO: Template for different neighborhood sizes?
 neighborhood9_t PFM::PeriodicDoublesLattice2D::getNeighborhood(coordinate_t centerPoint) const {
 	int centerX = centerPoint.x;
 	int centerY = centerPoint.y;
 	
 	neighborhood9_t neigh = {
 		getDataPoint({centerX - 1, centerY - 1}),
-		getDataPoint({centerX, centerY - 1}),
+		getDataPoint({centerX + 0, centerY - 1}),
 		getDataPoint({centerX + 1, centerY - 1}),
 
 		getDataPoint({centerX - 1, centerY}),
-		getDataPoint({centerX, centerY}),
+		getDataPoint({centerX + 0, centerY}),
 		getDataPoint({centerX + 1, centerY}),
 
 		getDataPoint({centerX - 1, centerY + 1}),
-		getDataPoint({centerX, centerY + 1}),
+		getDataPoint({centerX + 0, centerY + 1}),
 		getDataPoint({centerX + 1, centerY + 1})
+	};
+
+	return neigh;
+}
+
+neighborhood25_t PFM::PeriodicDoublesLattice2D::getNeighborhood25(coordinate_t centerPoint) const {
+	int centerX = centerPoint.x;
+	int centerY = centerPoint.y;
+	
+	//SO UGLY :' )
+	neighborhood25_t neigh = {
+		
+		getDataPoint({centerX - 2, centerY - 2}),
+		getDataPoint({centerX - 1, centerY - 2}),
+		getDataPoint({centerX + 0, centerY - 2}),
+		getDataPoint({centerX + 1, centerY - 2}),
+		getDataPoint({centerX + 2, centerY - 2}),
+
+		getDataPoint({centerX - 2, centerY - 1}),
+		getDataPoint({centerX - 1, centerY - 1}),
+		getDataPoint({centerX + 0, centerY - 1}),
+		getDataPoint({centerX + 1, centerY - 1}),
+		getDataPoint({centerX + 2, centerY - 1}),
+
+		getDataPoint({centerX - 2, centerY + 0}),
+		getDataPoint({centerX - 1, centerY + 0}),
+		getDataPoint({centerX + 0, centerY + 0}),
+		getDataPoint({centerX + 1, centerY + 0}),
+		getDataPoint({centerX + 2, centerY + 0}),
+
+		getDataPoint({centerX - 2, centerY + 1}),
+		getDataPoint({centerX - 1, centerY + 1}),
+		getDataPoint({centerX + 0, centerY + 1}),
+		getDataPoint({centerX + 1, centerY + 1}),
+		getDataPoint({centerX + 2, centerY + 1}),
+
+		getDataPoint({centerX - 2, centerY + 2}),
+		getDataPoint({centerX - 1, centerY + 2}),
+		getDataPoint({centerX + 0, centerY + 2}),
+		getDataPoint({centerX + 1, centerY + 2}),
+		getDataPoint({centerX + 2, centerY + 2})
 	};
 
 	return neigh;

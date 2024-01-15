@@ -26,16 +26,19 @@ namespace TD {
 //Numerical integration of Cahn-Hilliard potential on 2D fields
 namespace CH {
 	
-
+//The last field is only evver used if "maySubstep" is true
 void ftcsStep(PFM::PeriodicDoublesLattice2D* phiField, 
 			  PFM::PeriodicDoublesLattice2D* auxField,
 	          const double dt, const double chK, const double chA, 
-	          PFM::checkData_t* checks_ptr, bool maySubstep = false);
+	          PFM::checkData_t* checks_ptr, 
+			  PFM::PeriodicDoublesLattice2D* substepAuxField = nullptr,
+	          bool maySubstep = false);
 
 void ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField, 
 						  PFM::PeriodicDoublesLattice2D* auxField,
 						  const double dt, const double chK, const double chA, 
-						  PFM::checkData_t* checks_ptr);
+						  PFM::checkData_t* checks_ptr,
+	                      PFM::PeriodicDoublesLattice2D* substepAuxField);
 
 //2 step Predictor Corrector, a RK2, the trapezoidal version of FTCS
 void heunStep(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,
