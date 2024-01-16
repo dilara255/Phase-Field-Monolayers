@@ -51,6 +51,7 @@ void updateChecks(PFM::checkData_t* checks_ptr, const double change) {
 
 	checks_ptr->densityChange += change;
 	checks_ptr->absoluteChangeLastStep += std::abs(change);
+	checks_ptr->totalAbsoluteChange += std::abs(change);
 	checks_ptr->sumOfsquaresOfChangesLastStep += change * change;
 }
 
@@ -273,24 +274,34 @@ void N_INT::TD::CH::ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField
 
 					elementToSubstep_ptr->currentPhi += change;
 					elementToSubstep_ptr->timeAdvanced += dtSub;
-					
-					double effectiveDphi = (elementToSubstep_ptr->currentPhi - elementToSubstep_ptr->initialPhi) 
-						                   / elementToSubstep_ptr->timeAdvanced;
-					double projectedFinalChange = effectiveDphi * dt;
-
-					phiField->writeDataPoint(centerPoint, elementToSubstep_ptr->initialPhi + projectedFinalChange);					
-					substepAuxField->writeDataPoint(centerPoint, effectiveDphi);
 				}
 
 				//If the change was too large, just ignore it (and the next try will be with half the dt)
 			}
 		}
 
+		//We need to update the smallest value as well as the auxiliar field with the new data:
 		smallestTimeAdvanced = 2*dt; //just a large value
 		for (size_t i = 0; i < totalElements; i++) {
-			if (g_substepVector.at(i).timeAdvanced < smallestTimeAdvanced) {
-				smallestTimeAdvanced = g_substepVector.at(i).timeAdvanced;
+
+			auto elementToSubstep_ptr = &g_substepVector.at(i);
+
+			//Update smallest:
+			if (g_substepVector.at(i).timeAdvanced < smallestTimeAdvanced) {			
+				smallestTimeAdvanced = elementToSubstep_ptr->timeAdvanced;
 			}
+
+			//For elements which have stepped, update aux data (even if they haven't stepped this pass)
+			//TODO: maybe only update the relevant ones somehow?
+			if (elementToSubstep_ptr->timeAdvanced > 0) {
+				double effectiveDphi = (elementToSubstep_ptr->currentPhi - elementToSubstep_ptr->initialPhi) 
+					                   / elementToSubstep_ptr->timeAdvanced;
+				double projectedFinalChange = effectiveDphi * dt;
+
+				phiField->writeDataPoint(elementToSubstep_ptr->coordinate, 
+					                     elementToSubstep_ptr->initialPhi + projectedFinalChange);					
+				substepAuxField->writeDataPoint(elementToSubstep_ptr->coordinate, effectiveDphi);
+			}					
 		}
 
 		if (smallestTimeAdvanced == lastSmallestTimeAdvance) {

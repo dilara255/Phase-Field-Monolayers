@@ -240,6 +240,8 @@ namespace PFM {
 		double referenceDt = 0;
 
 		uint32_t substepsLastStep = 0;
+
+		double totalAbsoluteChange = 0;
 		
 		simParameters_t parametersOnLastCheck;
 		
@@ -254,6 +256,7 @@ namespace PFM {
 								lastAbsChangeStdDev = 0;  lastDt = 0; stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
 		                        remainingChangeSinceSaveOnLastCheck = 0; referenceDt = 0; substepsLastStep = 0;
+								totalAbsoluteChange = 0;
 		}
 		
 		inline const std::string getChecksStr() const {
@@ -279,6 +282,9 @@ namespace PFM {
 			str += fmtValsBuffer;
 			str += " (since last save: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
+			str += fmtValsBuffer;
+			str += " - total: ";
+			sprintf(fmtValsBuffer, "%.*f", 3, totalAbsoluteChange);
 			str += fmtValsBuffer;
 			str += ")\n";
 			str += "Std Dev: ";
