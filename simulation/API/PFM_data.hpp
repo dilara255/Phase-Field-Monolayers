@@ -96,6 +96,10 @@ namespace PFM {
 
 	typedef struct coordinate_st {
 		int x, y;
+
+		bool operator==(coordinate_st const& otherCoord) const {
+			return ((x == otherCoord.x) && (y == otherCoord.y));
+		}
 	} coordinate_t;
 
 	//TODO: template for arbitrary sizes of (square) neighborhoods
@@ -204,7 +208,15 @@ namespace PFM {
 
 	typedef struct checkData_st {
 
+		//TODO: rename stuff so it's clear what is reffering to the last step and what's about the last period
+		//Also, what is per element or per unit time and what is not
+
 		uint64_t step = 0;
+		double absoluteChangeLastStep = 0;
+		double sumOfsquaresOfChangesLastStep = 0;
+
+		double totalChangeFromStart = 0;
+
 		double lastDensity = 0;
 		double densityChange = 0;
 		double absoluteChange = 0;
@@ -231,13 +243,18 @@ namespace PFM {
 		
 		simParameters_t parametersOnLastCheck;
 		
+		//TODO: also improve the naming of these
+		inline void clearLastStepsChanges() { absoluteChangeLastStep = 0; sumOfsquaresOfChangesLastStep = 0; }
 		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; substepsLastStep = 0; }
-		inline void zeroOut() { step = 0; lastDensity = 0; densityChange = 0; absoluteChange = 0;
-		                        sumOfsquaresOfChanges = 0; timeAtLastcheck = 0; timeDuringLastCheckPeriod = 0;
-		                        lastDensityChange = 0; lastAbsoluteChangePerElement = 0; lastRmsAbsChange = 0;
+		inline void zeroOut() { step = 0; totalChangeFromStart = 0; absoluteChangeLastStep = 0; 
+							    sumOfsquaresOfChangesLastStep = 0; lastDensity = 0; densityChange = 0; 
+								absoluteChange = 0; sumOfsquaresOfChanges = 0; timeAtLastcheck = 0; 
+								timeDuringLastCheckPeriod = 0; lastDensityChange = 0; 
+								lastAbsoluteChangePerElement = 0; lastRmsAbsChange = 0;
 								lastAbsChangeStdDev = 0;  lastDt = 0; stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
-		                        remainingChangeSinceSaveOnLastCheck = 0; referenceDt = 0; substepsLastStep = 0; }
+		                        remainingChangeSinceSaveOnLastCheck = 0; referenceDt = 0; substepsLastStep = 0;
+		}
 		
 		inline const std::string getChecksStr() const {
 			
@@ -247,7 +264,8 @@ namespace PFM {
 			char fmtValsBuffer[2*precision + 1];
 
 			std::string str = "Checks @ step ";
-			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod) 
+			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) 
+				   + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod) 
 				   + " @avg dt: " + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) + ")\n";
 			str += "Density: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensity);

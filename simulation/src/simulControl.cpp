@@ -364,7 +364,8 @@ double PFM::SimulationControl::getIntendedDt() {
 
 void PFM::SimulationControl::updateDt() {
 
-	if (m_simParameters.useAdaptativeDt && stepsAlreadyRan() > completelyArbitraryStepToUnlockFullDt) {
+	if (m_simParameters.useAdaptativeDt && stepsAlreadyRan() > completelyArbitraryStepToUnlockFullDt) {	
+		
 		//use adaptative step size
 		m_simParameters.dt = PFM::calculateMaxAdaptativeDt(&m_simParameters, &m_simConfigs, getActiveFieldsCheckDataPtr());
 	}
@@ -643,34 +644,66 @@ PFM::parameterBounds_t PFM::calculateParameterBounds(double k, double A, double 
 double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, const simConfig_t* config_ptr, 
 																		 const checkData_t* lastCheck_ptr) {
 	
-	double highAvgChangeEstimative = 
-			lastCheck_ptr->lastAbsoluteChangePerElement + (3 * lastCheck_ptr->lastAbsChangeStdDev);
-
-	//Most change happens in the interface area: 
-	//Average may be a lot smaller than the change we actually care about. Let's roughly account for that:
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!! CHANGES HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	const double stdDevs = 10.0; //was 3
 
 	double totalArea = config_ptr->width * config_ptr->height;
-	assert(totalArea > 4 * M_PI_ * parameters_ptr->lambda); //so interface area can't be laerger than total
+	assert(totalArea > 0);
+
+	double avgAbsChangeLastStep = lastCheck_ptr->absoluteChangeLastStep / totalArea;
+	double rmsChangeLastStep = std::sqrt(lastCheck_ptr->sumOfsquaresOfChangesLastStep / totalArea);
+
+	//Since the actual density change is zero, the RMS is the same as the deviation. So:
+	double highAvgChangeEstimative = avgAbsChangeLastStep + stdDevs * rmsChangeLastStep;
+	//double highAvgChangeEstimative = lastCheck_ptr->lastAbsoluteChangePerElement + (stdDevs * lastCheck_ptr->lastAbsChangeStdDev);
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	//Most change happens in the interface area: 
+	//TODO: IS THIS EVEN TRUE?
+	//Average may be a lot smaller than the change we actually care about. Let's roughly account for that:
+
+	assert(totalArea > 4 * M_PI_ * parameters_ptr->lambda); //so interface area can't be larger than total
 	double effectiveAbsDensity = std::min(1.0, std::abs(lastCheck_ptr->lastDensity));
 
-	double inverseInterfaceProportion = 
-		(0.5 / parameters_ptr->lambda) * std::sqrt(totalArea / (M_PI_ * effectiveAbsDensity) );
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!! CHANGES HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	double inverseInterfaceProportion = 1.0;
+	//double inverseInterfaceProportion = (0.5 / parameters_ptr->lambda) * std::sqrt(totalArea / (M_PI_ * effectiveAbsDensity) );
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	//Note that while this may be artificially high in the initial steps (where interface may be larger,
-	//the initial need more care and should be using "parameter bounds" instead anyway (see PFM_API.hpp)
+	//the initial steps need more care and should be using "parameter bounds" instead anyway (see PFM_API.hpp)
 
 	double effectiveChangePerStep = 
 			highAvgChangeEstimative * inverseInterfaceProportion / lastCheck_ptr->stepsDuringLastCheckPeriod;
 
 	//Despite the name, this may actually be a slowing factor
-	double speedUpFactor = maxChangePerStep / effectiveChangePerStep;
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!! CHANGES HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	//double speedUpFactor = maxChangePerStep / effectiveChangePerStep;
+	double speedUpFactor = maxChangePerStep / highAvgChangeEstimative;
 
+	
+	//Override proportion in favour of:
+	if(speedUpFactor > 1.00002) { speedUpFactor = 1.00002; }
+	if(speedUpFactor < 0.97) { speedUpFactor = 0.97; }
+	//TODO: if this is kept, actually define on defaults
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	
 	//We don't want to ramp up the speed to fast, so:
-	double maxMultiplier = ((double)lastCheck_ptr->stepsDuringLastCheckPeriod / completelyArbitraryStepToUnlockFullDt);
-	maxMultiplier = std::min(PFM::maxAdaptativeDtSpeedUpFactor, 1 + ((PFM::maxAdaptativeDtSpeedUpFactor - 1) * maxMultiplier));
+	double maxMultiplier = 
+		((double)lastCheck_ptr->stepsDuringLastCheckPeriod / completelyArbitraryStepToUnlockFullDt);
+	maxMultiplier = 
+		std::min(PFM::maxAdaptativeDtSpeedUpFactor, 1 + ((PFM::maxAdaptativeDtSpeedUpFactor - 1) * maxMultiplier));
 		
-	double adaptativeDt = std::min(maxMultiplier, speedUpFactor) * lastCheck_ptr->referenceDt;
-
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	//!!!!!!!!!!!!! CHANGES HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	//double adaptativeDt = std::min(maxMultiplier, speedUpFactor) * lastCheck_ptr->referenceDt;
+	double adaptativeDt = speedUpFactor * parameters_ptr->dt;
+	//ignores the maxMultiplier
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	
 	//But we don't want the adaptative dt to be unecessarily conservative either, so our final answer is:
 	double minDt = PFM::calculateParameterBounds(parameters_ptr->k, parameters_ptr->A, adaptativeDt,
 		                                                  2 * completelyArbitraryStepToUnlockFullDt).maxDt;

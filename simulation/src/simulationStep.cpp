@@ -77,6 +77,7 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 	
 		//Update dt each step so we can deal with the initial few steps, adaptative dt, and client changes
 		controller_ptr->updateDt();
+		checks_ptr->clearLastStepsChanges();
 
 		//TODO: maybe pull into an "updateLocalParameters" function?
 		dt = params_ptr->dt;
@@ -289,6 +290,9 @@ void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, con
 	
 	checks_ptr->step = step;
 	checks_ptr->totalTime += dt;
+
+	checks_ptr->absoluteChange += checks_ptr->absoluteChangeLastStep;
+	checks_ptr->sumOfsquaresOfChanges += checks_ptr->sumOfsquaresOfChangesLastStep;
 
 	const int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
 	checks_ptr->totalAbsoluteChangeSinceLastSave = 
