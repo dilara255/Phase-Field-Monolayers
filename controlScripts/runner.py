@@ -9,22 +9,26 @@ makeGifFilename = "makeGif.py"
 
 #all fields can be set to 'default'
 
-simToRun = '1' #only 1 (single layer) is currently implemented
-lambda_ = '7.824813' #def = 3, 7.824813 used on some tests
-gamma = '0.043986' #def = 0.06, 0.043986 used on some tests
-dt = '1.4' #def = 1, may be brought down depending on other parameters
-cells = '5' # Must be > 0, and if initial conditions ask for cells, is set to at least 1
-width = '64' #default depends on the sim chosen. Must be > 0
-height = '96' #default depends on the sim chosen Must be > 0
-initialCond = '1' #default depends on the sim chosen
-bias = '0.0' #bias only applies to randomized initial conditions
+simToRun = 'default' #only 1 (single layer) is currently implemented
+lambda_ = 'default' #def = 3, 7.824813 used on some tests
+gamma = 'default' #def = 0.06, 0.043986 used on some tests
+dt = 'default' #def = 1, may be brought down depending on other parameters
+cells = 'default' # Must be > 0, and if initial conditions ask for cells, is set to at least 1
+width = 'default' #default depends on the sim chosen. Must be > 0
+height = 'default' #default depends on the sim chosen Must be > 0
+initialCond = 'default' #default depends on the sim chosen
+bias = 'default' #bias only applies to randomized initial conditions
 seed = 'default' #some known-good seeds are available on depend/fAux/include/fAux/API/prng.hpp
-method = '1' #Numerical method. 0-3, each slower then the previous : )
-startPaused = 'default' #starting paused here will just hang forever
+method = 'default' #Numerical method. 0-4: FCTS, FCTS with substeps, Heun, RK2, RK4
+startPaused = 'default' #starting paused here will just hang forever, so leave default or 0
 changePerElmPerStepToStop = 'default' #default waits for fairly minimal changes
-maxSteps = '10000' #default gives enough time for most tested networks to converge
+maxSteps = 'default' #default gives enough time for most tested networks to converge
 stepsPerCheck = 'default' #default is 5k on debug and 25k on release (~100s)
 changePerCheck = 'default' #default is 5k on debug and 25k on release (~100s)
+useAdaptativeDt = 'default' #default is 0 (false), use 0 or 1
+maxChange = 'default' #default is fairly conservative to avoid "skipping" potential changes
+maxSpeedUpMult = 'default' #default is very slow. Should be above 1
+minSlowDownMult = 'default' #default is way more drastic than the speed up. Should be bellow 1
 
 time = str(time.time())
 
@@ -53,7 +57,11 @@ argumentsString = (r'..\bin\Release-windows-x86_64\controlCL\controlCL.exe '
 + maxSteps + ' '
 + stepsPerCheck + ' '
 + changePerCheck + ' '
-+ str(keyInt)
++ str(keyInt) + ' '
++ useAdaptativeDt + ' '
++ maxChange + ' '
++ maxSpeedUpMult + ' '
++ minSlowDownMult
 )
 
 print('\n' + argumentsString + '\n')

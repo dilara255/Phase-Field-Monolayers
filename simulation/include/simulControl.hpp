@@ -110,7 +110,7 @@ namespace PFM {
         void setSavingOnDATofTheParamsBeforeEachCheck(bool shouldSave);
 
         const simConfig_t* getLastSimConfigPtr() const;
-        std::string getSimDataString() const;
+        std::string getSimConfigString() const;
 
         simParameters_t* getLastSimParametersPtr();
         std::string getSimParamsString() const;

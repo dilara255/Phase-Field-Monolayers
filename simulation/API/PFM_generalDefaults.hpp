@@ -25,8 +25,9 @@ namespace PFM {
 
 	//For adaptative dt:
 	static const double distanceStableEquilibria = 1.0;
-	static const double maxChangePerStep = PFM::distanceStableEquilibria / 8.0;
-	static const double maxAdaptativeDtSpeedUpFactor = 1.01;
+	static const double defaultMaxChangePerStep = PFM::distanceStableEquilibria / 8.0;
+	static const double defaultMaxSpeedupMult = 1.00002;
+	static const double defaultMinSlowdownMult = 0.97;
 
 	static const uint32_t defaulStepsPerCheck = 5000;
 	static const double defaultAbsChangePerCheck = 0.0025;

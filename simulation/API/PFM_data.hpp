@@ -30,6 +30,12 @@ namespace PFM {
 		double maxK;
 		double maxA;
 		double maxDt;
+		double minMaxChange = distanceStableEquilibria / 32;
+		double minMaxSpeedUpMult = 1.000001;
+		double minMinSlowDownMult = 0.5;
+		double maxMaxChange = distanceStableEquilibria / 4;
+		double maxMaxSpeedupMult = 1.00005;
+		double maxMinSlowdownMult = 0.985;
 	} parameterBounds_t;
 
 	typedef struct simConfig_st {
@@ -45,7 +51,6 @@ namespace PFM {
         integrationMethods method = integrationMethods::TOTAL_METHODS;
 		bool perCellLayer = false;
 		bool startPaused = false;
-		bool maxChange = maxChangePerStep;
 
 		std::chrono::system_clock::time_point epochTimeSimCall;
  
@@ -56,7 +61,7 @@ namespace PFM {
 			return (uint32_t)(seconds & UINT32_MAX);
 		}
 		
-		inline std::string getSimDataString() const {
+		inline std::string getSimConfigString() const {
 			std::string str = "";
 			str += "Width: " + std::to_string(width) + "\n";
 			str += "Height: " + std::to_string(height) + "\n";
@@ -82,6 +87,9 @@ namespace PFM {
         double A = -1;
 		double k = -1;
 		bool useAdaptativeDt = false;
+		double maxAvgElementChangePerStep = defaultMaxChangePerStep;
+		double maxSpeedUpMult = defaultMaxSpeedupMult;
+		double minSlowDownMult = defaultMinSlowdownMult;
 
 		inline std::string getSimParamsString() const {
 			std::string str = "";
@@ -91,6 +99,11 @@ namespace PFM {
 			str += "k: " + std::to_string(k) + "\n";
 			str += "A: " + std::to_string(A) + "\n";
 			str += "Adaptative dt? " + std::to_string(useAdaptativeDt);
+			if(useAdaptativeDt) {
+				str += "\t(max change: " + std::to_string(maxAvgElementChangePerStep)
+					+ ", mult: [" + std::to_string(minSlowDownMult) 
+					+ ", " + std::to_string(maxSpeedUpMult) + "])";
+			}
 
 			return str;
 		}

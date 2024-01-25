@@ -195,6 +195,21 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
 				params_ptr->useAdaptativeDt = atoi(argv[i]);
 			} break;
+
+			case PFM::mainsArgumentList::MAX_CHANGE_PER_STEP: {
+				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
+				params_ptr->maxAvgElementChangePerStep = atoi(argv[i]);
+			} break;
+
+			case PFM::mainsArgumentList::MAX_SPEEDUP_MULT: {
+				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
+				params_ptr->maxSpeedUpMult = atoi(argv[i]);
+			} break;
+
+			case PFM::mainsArgumentList::MIN_SLOWDOWN_MULT: {
+				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
+				params_ptr->minSlowDownMult = atoi(argv[i]);
+			} break;
 		}
 	}
 

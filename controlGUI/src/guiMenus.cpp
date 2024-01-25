@@ -23,8 +23,6 @@ void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 
 void createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr, double* GUIissuedDt_ptr) {
 	
-	ImGui::Checkbox("Adaptative dt", &param_ptr->useAdaptativeDt);
-
 	PFM::parameterBounds_t bounds = 
 		PFM::calculateParameterBounds(param_ptr->k, param_ptr->A, param_ptr->dt, stepsRan);
 
@@ -35,8 +33,22 @@ void createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr, doubl
 
 	ImGui::SliderScalar("k", ImGuiDataType_Double, &param_ptr->k, &bounds.minK, &bounds.maxK);
 	ImGui::SliderScalar("A", ImGuiDataType_Double, &param_ptr->A, &bounds.minA, &bounds.maxA);
+
 	if (!param_ptr->useAdaptativeDt) { 
 		ImGui::SliderScalar("dt", ImGuiDataType_Double, GUIissuedDt_ptr, &bounds.minDt, &bounds.maxDt); 
+	}
+
+	ImGui::Checkbox("Adaptative dt", &param_ptr->useAdaptativeDt);
+
+	if (param_ptr->useAdaptativeDt) {
+
+		ImGui::SliderScalar("maxChange", ImGuiDataType_Double, &param_ptr->maxAvgElementChangePerStep, 
+			&bounds.minMaxChange, &bounds.maxMaxChange); 
+
+		ImGui::SliderScalar("maxSpeedup", ImGuiDataType_Double, &param_ptr->maxSpeedUpMult, 
+			&bounds.minMaxSpeedUpMult, &bounds.maxMaxSpeedupMult); 
+		ImGui::SliderScalar("minSlowdown", ImGuiDataType_Double, &param_ptr->minSlowDownMult, 
+			&bounds.minMinSlowDownMult, &bounds.maxMinSlowdownMult); 
 	}
 }
 
@@ -124,7 +136,7 @@ void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	if(g_simConfig_ptr == nullptr) { return; }
 	if(g_simParams_ptr == nullptr) { return; }
 
-	ImGui::Text("Simulation configuration:\n%s", g_simConfig_ptr->getSimDataString().c_str());
+	ImGui::Text("Simulation configuration:\n%s", g_simConfig_ptr->getSimConfigString().c_str());
 	ImGui::Text("Simulation parameters:\n%s", g_simParams_ptr->getSimParamsString().c_str());
 
 	static double GUIissuedDt = PFM::getIntendedDt();
@@ -140,7 +152,11 @@ void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 
 	double changeToSave = PFM::getMaxTotalChangePerElementPerCheckAdded();
 	ImGui::InputDouble("Total Change/Element to save", &changeToSave, 0.0001, 0.005);
-	changeToSave = std::clamp(changeToSave, 0.0000000000001, 0.5);
+	
+	const double changeToSaveSliderMax = 
+		std::max(0.5, g_simParams_ptr->useAdaptativeDt * 10 * g_simParams_ptr->maxAvgElementChangePerStep);
+	
+	changeToSave = std::clamp(changeToSave, 0.0000000000001, changeToSaveSliderMax);
 	PFM::setMaxTotalChangePerElementPerCheckAdded(changeToSave);
 
 	int stepsPerCheck = PFM::getMaxStepsPerCheckAdded();

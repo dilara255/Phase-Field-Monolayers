@@ -117,7 +117,7 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 			else {
 				//in case substepping is enabled, we need to do some extra book keeping:
 
-				if (std::abs(delta) <= PFM::maxChangePerStep) {
+				if (std::abs(delta) <= PFM::defaultMaxChangePerStep) {
 					//We accept the step and update the checks and dPhis:
 					substepAuxField->writeDataPoint(centerPoint, dPhi);
 					phiField->incrementDataPoint(centerPoint, delta);
@@ -268,7 +268,7 @@ void N_INT::TD::CH::ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField
 				double change = dPhi*dtSub;
 				
 				//And check wether the size of the change was acceptable:
-				if (std::abs(change) <= PFM::maxChangePerStep) {
+				if (std::abs(change) <= PFM::defaultMaxChangePerStep) {
 					
 					//Accept the change amd update auxiliar data
 

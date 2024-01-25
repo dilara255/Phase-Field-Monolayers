@@ -292,7 +292,7 @@ bool PFM::SimulationControl::saveFieldData(bool savePGM, bool saveBIN, bool save
 		fp_dat = fopen((baseFilename + ".dat").c_str(), "w");
 		if(fp_dat == NULL) { return false; }
 
-		fprintf(fp_dat, "%s\n", getSimDataString().c_str());
+		fprintf(fp_dat, "%s\n", getSimConfigString().c_str());
 		fprintf(fp_dat, "%s\n\n", getSimParamsString().c_str());
 
 		size_t numberChecks = getActiveFieldsCheckVectorElements();
@@ -459,8 +459,8 @@ const simConfig_t* PFM::SimulationControl::getLastSimConfigPtr() const {
 	return &m_simConfigs;
 }
 
-std::string PFM::SimulationControl::getSimDataString() const { 
-	return m_simConfigs.getSimDataString();
+std::string PFM::SimulationControl::getSimConfigString() const { 
+	return m_simConfigs.getSimConfigString();
 }
 
 simParameters_t* PFM::SimulationControl::getLastSimParametersPtr() {
@@ -492,7 +492,7 @@ std::string PFM::SimulationControl::getActiveFieldsParamStringBeforeAGivenCheck(
 }
 
 void PFM::SimulationControl::printSimDataAndParams() const {
-	printf("%s\n%s\n", getSimDataString().c_str(), getSimParamsString().c_str());
+	printf("%s\n%s\n", getSimConfigString().c_str(), getSimParamsString().c_str());
 }
 
 bool PFM::SimulationControl::isSimulationRunning() const {
@@ -682,20 +682,19 @@ double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, cons
 	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	//!!!!!!!!!!!!! CHANGES HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	//double speedUpFactor = maxChangePerStep / effectiveChangePerStep;
-	double speedUpFactor = maxChangePerStep / highAvgChangeEstimative;
+	double speedUpFactor = parameters_ptr->maxAvgElementChangePerStep / highAvgChangeEstimative;
 
-	
 	//Override proportion in favour of:
-	if(speedUpFactor > 1.00002) { speedUpFactor = 1.00002; }
-	if(speedUpFactor < 0.97) { speedUpFactor = 0.97; }
-	//TODO: if this is kept, actually define on defaults
+	speedUpFactor = std::clamp(speedUpFactor, parameters_ptr->minSlowDownMult, parameters_ptr->maxSpeedUpMult);
 	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	
-	//We don't want to ramp up the speed to fast, so:
+	/* THIS BECAME IRRELEVANT:
+	//We don't want to ramp up the speed too fast, so:
 	double maxMultiplier = 
 		((double)lastCheck_ptr->stepsDuringLastCheckPeriod / completelyArbitraryStepToUnlockFullDt);
 	maxMultiplier = 
-		std::min(PFM::maxAdaptativeDtSpeedUpFactor, 1 + ((PFM::maxAdaptativeDtSpeedUpFactor - 1) * maxMultiplier));
+		std::min(config_ptr->maxSpeedUpMult, 1 + ((config_ptr->maxSpeedUpMult - 1) * maxMultiplier));
+	*/
 		
 	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	//!!!!!!!!!!!!! CHANGES HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
