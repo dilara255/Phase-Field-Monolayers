@@ -160,10 +160,10 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 
 			case PFM::mainsArgumentList::ABSOLUTE_CHANGE_PER_CHECK: {
 				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
-				double change = sscanf(argv[i], "%lf", &g_changePerElementPerStepToStop);
+				double change;
+				sscanf(argv[i], "%lf", &change);
 				if(change <= 0) { LOG_ERROR("Bad change per check"); return false; }
-
-				PFM::setMaxTotalChangePerElementPerCheckAdded(change);
+				else { PFM::setMaxTotalChangePerElementPerCheckAdded(change); }
 			} break;
 
 			case PFM::mainsArgumentList::CALLER_KEY: {
