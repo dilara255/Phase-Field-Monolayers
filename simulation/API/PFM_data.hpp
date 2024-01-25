@@ -302,7 +302,6 @@ namespace PFM {
 					    (lastAbsoluteChangePerElement / timeDuringLastCheckPeriod));
 				str += fmtValsBuffer;
 			}
-			str += fmtValsBuffer;
 			str += " (since last save: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
 			str += fmtValsBuffer;
