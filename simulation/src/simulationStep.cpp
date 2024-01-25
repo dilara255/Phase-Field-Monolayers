@@ -345,7 +345,7 @@ void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkDat
 		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
 		PFM::saveFieldDataAccordingToController();
 		
-		const int checksPerPrintout = 5; //TODO: parametrize this
+		int checksPerPrintout = 5; //TODO: parametrize this
 		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
 			checksPerPrintout = 1;
 		#endif
