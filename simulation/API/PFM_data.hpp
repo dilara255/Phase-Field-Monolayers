@@ -33,9 +33,9 @@ namespace PFM {
 		double minMaxChange = distanceStableEquilibria / 32;
 		double minMaxSpeedUpMult = 1.000001;
 		double minMinSlowDownMult = 0.5;
-		double maxMaxChange = distanceStableEquilibria / 4;
-		double maxMaxSpeedupMult = 1.00005;
-		double maxMinSlowdownMult = 0.985;
+		double maxMaxChange = distanceStableEquilibria / 2;
+		double maxMaxSpeedupMult =  1.00005;
+		double maxMinSlowdownMult = 0.99990;
 	} parameterBounds_t;
 
 	typedef struct simConfig_st {
@@ -86,7 +86,7 @@ namespace PFM {
         double A = -1;
 		double k = -1;
 		bool useAdaptativeDt = false;
-		bool useMaxSafeDt = false;
+		bool useMaxSafeDt = true;
 		double maxAvgElementChangePerStep = defaultMaxChangePerStep;
 		double maxSpeedUpMult = defaultMaxSpeedupMult;
 		double minSlowDownMult = defaultMinSlowdownMult;

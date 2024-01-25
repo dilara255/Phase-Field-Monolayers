@@ -30,8 +30,8 @@ namespace PFM {
 	//For adaptative dt:
 	static const double distanceStableEquilibria = 1.0;
 	static const double defaultMaxChangePerStep = PFM::distanceStableEquilibria / 8.0;
-	static const double defaultMaxSpeedupMult = 1.00002;
-	static const double defaultMinSlowdownMult = 0.97;
+	static const double defaultMaxSpeedupMult = 1.00001; //note that larger values may make the average *slower*
+	static const double defaultMinSlowdownMult = 0.97; //because it might cause more drastic bump downs (to avoid crashes)
 
 	static const uint32_t defaulStepsPerCheck = 5000;
 	static const double defaultAbsChangePerCheck = 0.0025;

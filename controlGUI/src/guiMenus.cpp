@@ -22,7 +22,7 @@ void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 }
 
 inline double changeToSaveSliderMax(void) {
-	return std::max(0.5, g_simParams_ptr->useAdaptativeDt * 10 * g_simParams_ptr->maxAvgElementChangePerStep);
+	return std::max(0.5, g_simParams_ptr->useAdaptativeDt * 100 * g_simParams_ptr->maxAvgElementChangePerStep);
 }
 		
 
@@ -56,6 +56,9 @@ void createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr, doubl
 		ImGui::Checkbox("Safe max", &param_ptr->useMaxSafeDt);
 
 		if (!param_ptr->useMaxSafeDt) {
+
+			ImGui::Text("* MAY CRASH on extreme values *");
+
 			ImGui::SliderScalar("maxChange", ImGuiDataType_Double, &param_ptr->maxAvgElementChangePerStep, 
 								&bounds.minMaxChange, &bounds.maxMaxChange); 
 
