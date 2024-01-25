@@ -247,7 +247,8 @@ std::string PFM::getDirAndFileName(int steps, bool calledFromGUI) {
 }
 
 //TODO: an actual reasonable save system : p
-//NOTE: values are clamped to [0, 1] for the .pgm image
+//TODO: more reasonable error handlig
+//NOTE: values are clamped from [-0.x, 1.x] to [0, 1] for the .pgm image (x = defaultPGMmargin)
 bool PFM::SimulationControl::saveFieldData(bool savePGM, bool saveBIN, bool saveDAT) const {
 
 	if(!savePGM && !saveBIN && !saveDAT) { return true; } //sucessfully did nothing : )
@@ -263,17 +264,20 @@ bool PFM::SimulationControl::saveFieldData(bool savePGM, bool saveBIN, bool save
 	std::string baseFilename = getDirAndFileName(m_simConfigs.stepsRan, false);
 	
 	int maxColor = 255;
-	FILE* fp_pgm = nullptr;
+	FILE* fp_pgm = NULL;
 	if(savePGM) {
 		fp_pgm = fopen((baseFilename + ".pgm").c_str(), "wb");
-		if(fp_pgm == nullptr) { return false; }
+		if(fp_pgm == NULL) { return false; }
 		fprintf(fp_pgm, "P5\n%d %d\n%d\n", (int)dimensions.width, (int)dimensions.height, maxColor);
 	}
 
 	FILE* fp_bin = nullptr;
 	if(saveBIN) {
 		fp_bin = fopen((baseFilename + ".bin").c_str(), "wb");
-		if(fp_bin == nullptr) { return false; }
+		if(fp_bin == NULL) { 
+			if(fp_pgm != NULL) { fclose(fp_pgm); }
+			return false; 
+		}
 	}
 
 	double value;
@@ -281,16 +285,22 @@ bool PFM::SimulationControl::saveFieldData(bool savePGM, bool saveBIN, bool save
 		for (int i = 0; i < (int)dimensions.width; i++) {
 		  value = m_activeBaseField_ptr->getDataPoint({i,j});
 		  if(saveBIN) { fwrite(&value, sizeof(value), 1, fp_bin); }
-		  if(savePGM) { fprintf(fp_pgm, "%c", (char)(std::clamp(value, 0.0, 1.0) * maxColor)); }
+		  if(savePGM) { 
+			  const double effectiveValue = (value + defaultPGMmargin) / (1 + 2 * defaultPGMmargin);
+			  fprintf(fp_pgm, "%c", (char)(std::clamp(effectiveValue, 0.0, 1.0) * maxColor)); }
 		}
 	}
 	if(saveBIN) { fclose(fp_bin); }
 	if(savePGM) { fclose(fp_pgm); }
 
-	FILE* fp_dat = nullptr;
+	FILE* fp_dat = NULL;
 	if(saveDAT) {
 		fp_dat = fopen((baseFilename + ".dat").c_str(), "w");
-		if(fp_dat == NULL) { return false; }
+		if(fp_dat == NULL) { 
+			if(fp_pgm != NULL) { fclose(fp_pgm); }
+			if(fp_bin != NULL) { fclose(fp_bin); }
+			return false; 
+		}
 
 		fprintf(fp_dat, "%s\n", getSimConfigString().c_str());
 		fprintf(fp_dat, "%s\n\n", getSimParamsString().c_str());
@@ -707,7 +717,7 @@ double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, cons
 	double minDt = PFM::calculateParameterBounds(parameters_ptr->k, parameters_ptr->A, adaptativeDt,
 		                                                  2 * completelyArbitraryStepToUnlockFullDt).maxDt;
 
-	return std::max(minDt, adaptativeDt);
+	return std::max(minDt, adaptativeDt * !parameters_ptr->useMaxSafeDt);
 }
 
 void PFM::setMaxStepsPerCheckAdded(size_t newMaxStepsPerCheck) {

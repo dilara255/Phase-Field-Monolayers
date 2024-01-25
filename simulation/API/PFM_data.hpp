@@ -87,6 +87,7 @@ namespace PFM {
         double A = -1;
 		double k = -1;
 		bool useAdaptativeDt = false;
+		bool useMaxSafeDt = false;
 		double maxAvgElementChangePerStep = defaultMaxChangePerStep;
 		double maxSpeedUpMult = defaultMaxSpeedupMult;
 		double minSlowDownMult = defaultMinSlowdownMult;
@@ -104,6 +105,7 @@ namespace PFM {
 					+ ", mult: [" + std::to_string(minSlowDownMult) 
 					+ ", " + std::to_string(maxSpeedUpMult) + "])";
 			}
+			str += "\nCap dt at safe max? " + std::to_string(useMaxSafeDt);
 
 			return str;
 		}

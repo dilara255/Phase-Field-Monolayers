@@ -173,7 +173,7 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
 				int64_t steps = strtol(argv[i], NULL, 10);
 				bool valid = (steps > 0) && (steps <= UINT32_MAX);
-				if(!valid) { LOG_ERROR("Bad number of steps per check"); return false;}
+				if(!valid) { LOG_ERROR("Bad number of steps per check"); return false; }
 
 				PFM::setMaxStepsPerCheckAdded((uint32_t)steps);
 			} break;
@@ -209,6 +209,11 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 			case PFM::mainsArgumentList::MIN_SLOWDOWN_MULT: {
 				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
 				params_ptr->minSlowDownMult = atoi(argv[i]);
+			} break;
+
+			case PFM::mainsArgumentList::SAFE_MAX_DT: {
+				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
+				params_ptr->useMaxSafeDt = atoi(argv[i]);
 			} break;
 		}
 	}

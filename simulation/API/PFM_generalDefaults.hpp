@@ -15,8 +15,12 @@ namespace PFM {
 											  "Method(uint)", "StartPaused(bool)", 
 											  "ChangePerElementPerStepToStop(double)", "MaximumSteps(uint64)",
 	                                          "StepsPerCheck(uint)", "ChangePerCheck(double)",
-		                                      "CallerKey(uint)", "AdaptativeDt(bool)"};
+		                                      "CallerKey(uint)", "AdaptativeDt(bool)", "MaxAvgChangePerStep(double)",
+											  "MaxSpeedupMult(double)", "MinSlowdownMult(double)", 
+											  "UseMaxSafeDt(bool)"};
 	static const char* defaultArgument = "default";
+
+	static const double defaultPGMmargin = 0.2;
 
 	static const uint64_t completelyArbitraryStepToUnlockFullDt = 1000;
 	//This is used to help avoid having way too many saves in the first few frames

@@ -29,6 +29,7 @@ useAdaptativeDt = 'default' #default is 0 (false), use 0 or 1
 maxChange = 'default' #default is fairly conservative to avoid "skipping" potential changes
 maxSpeedUpMult = 'default' #default is very slow. Should be above 1
 minSlowDownMult = 'default' #default is way more drastic than the speed up. Should be bellow 1
+useMaxSafeDt = 'default' #default is 1 (true). Boolean. Only applies if useAdaptativeDt is also 1
 
 time = str(time.time())
 
@@ -61,7 +62,8 @@ argumentsString = (r'..\bin\Release-windows-x86_64\controlCL\controlCL.exe '
 + useAdaptativeDt + ' '
 + maxChange + ' '
 + maxSpeedUpMult + ' '
-+ minSlowDownMult
++ minSlowDownMult + ' '
++ useMaxSafeDt
 )
 
 print('\n' + argumentsString + '\n')

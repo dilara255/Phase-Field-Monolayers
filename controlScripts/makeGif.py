@@ -22,9 +22,9 @@ def pgmToColoredJpg(source_path, dest_path):
     R, G, B = 0, 1, 2
 
     fullBlack = 0
-    fullBlue = 66
+    fullBlue = 36
     fullYellow = 128
-    fullRed = 190
+    fullRed = 219
     fullWhite = 255
 
     maskFullBlack = source[R].point(lambda i: i <= fullBlack and 255)
