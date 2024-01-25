@@ -247,8 +247,11 @@ int main(int argc, char **argv) {
 }
 
 bool shouldStop(PFM::checkData_t* check_ptr) {
-	if ((check_ptr->lastAbsoluteChangePerElement / check_ptr->stepsDuringLastCheckPeriod) <= g_changePerElementPerStepToStop) {
-		g_checksAtChangeTreshold++;
+	if(check_ptr->wasLastCheckApreCheck) { 
+		if ((check_ptr->lastAbsoluteChangePerElement / check_ptr->stepsDuringLastCheckPeriod) 
+														  <= g_changePerElementPerStepToStop) {
+			g_checksAtChangeTreshold++;
+		}
 	}
 	return (check_ptr->stepsAtLastCheck >= g_maximumSteps) || 
 		   (g_checksAtChangeTreshold >= PFM::stepsAtChangeThresholdToStop);

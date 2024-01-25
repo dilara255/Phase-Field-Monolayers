@@ -222,10 +222,12 @@ namespace PFM {
 
 	} neighborhood25_t;
 
+	//Note when taking rates that in some cases some values may be zero
 	typedef struct checkData_st {
 
 		//TODO: rename stuff so it's clear what is reffering to the last step and what's about the last period
 		//Also, what is per element or per unit time and what is not
+		bool wasLastCheckApreCheck = true;
 
 		uint64_t step = 0;
 		double absoluteChangeLastStep = 0;
@@ -277,7 +279,7 @@ namespace PFM {
 		
 		inline const std::string getChecksStr() const {
 			
-			assert(stepsDuringLastCheckPeriod > 0 && "Bad number of steps on last Check");
+			assert(stepsDuringLastCheckPeriod >= 0 && "Bad number of steps on last Check");
 			
 			const size_t precision = 10;
 			char fmtValsBuffer[2*precision + 1];
@@ -294,7 +296,12 @@ namespace PFM {
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensityChange);
 			str += fmtValsBuffer;
 			str += ", absolute change / element per unit time: ";
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, (lastAbsoluteChangePerElement / timeDuringLastCheckPeriod));
+			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
+			else {
+				sprintf(fmtValsBuffer, "%.*f", (int)precision, 
+					    (lastAbsoluteChangePerElement / timeDuringLastCheckPeriod));
+				str += fmtValsBuffer;
+			}
 			str += fmtValsBuffer;
 			str += " (since last save: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
@@ -304,11 +311,17 @@ namespace PFM {
 			str += fmtValsBuffer;
 			str += ")\n";
 			str += "Std Dev: ";
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastAbsChangeStdDev / timeDuringLastCheckPeriod);
-			str += fmtValsBuffer;
+			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
+			else {
+				sprintf(fmtValsBuffer, "%.*f", (int)precision, lastAbsChangeStdDev / timeDuringLastCheckPeriod);
+				str += fmtValsBuffer;
+			}
 			str += " (RMS: ";
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastRmsAbsChange / timeDuringLastCheckPeriod);
-			str += fmtValsBuffer;
+			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
+			else {
+				sprintf(fmtValsBuffer, "%.*f", (int)precision, lastRmsAbsChange / timeDuringLastCheckPeriod);
+				str += fmtValsBuffer;
+			}
 			str += ")\n";
 
 			return str;

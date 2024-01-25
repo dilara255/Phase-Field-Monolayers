@@ -13,7 +13,8 @@
 void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius, 
 	                                 double cellSeedValue, bool invertValueOn);
 
-void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, const int stepsPerCheckSaved, 
+void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkData_t* checks_ptr, 
+	                      const uint64_t step, const int stepsPerCheckSaved, 
 	                      const double absoluteChangePerElementPerCheckSaved, const double dt);
 
 void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr, 
@@ -60,9 +61,9 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 	auto tempKsAndDphis_ptr = controller_ptr->getLastDphisAndTempKsFieldPtr();
 	
 	controller_ptr->printSimDataAndParams();
-	checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
-	updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
-		                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
+
+	updatedAndSaveChecks(controller_ptr, checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
+		                                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
 
 	//We call a first dt update to sanitize possibly too high initial dt
 	//This is done before the checks and their printing so they reflect the original intent
@@ -116,9 +117,8 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 
 		*stepCount_ptr += 1;
 
-		checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
-		updatedAndSaveChecks(checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
-			                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
+		updatedAndSaveChecks(controller_ptr, checks_ptr, *stepCount_ptr, controller_ptr->getStepsPerCheckSaved(), 
+			                                                controller_ptr->getAbsoluteChangePerCheckSaved(), dt);
 		
 		//Pause?
 		while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
@@ -285,9 +285,12 @@ void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr
 		             radiusToWidth, initialCellRadius, expectedInterfaceWidth );
 }
 
-void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, const int stepsPerCheckSaved, 
+void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkData_t* checks_ptr, 
+	                      const uint64_t step, const int stepsPerCheckSaved, 
 	                      const double absoluteChangePerElementPerCheckSaved, const double dt) {
 	
+	checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
+
 	checks_ptr->step = step;
 	checks_ptr->totalTime += dt;
 
@@ -298,14 +301,21 @@ void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, con
 	checks_ptr->totalAbsoluteChangeSinceLastSave = 
 				checks_ptr->remainingChangeSinceSaveOnLastCheck  + checks_ptr->absoluteChange / elements;
 	
+	double effectiveAbsChangeToSave = absoluteChangePerElementPerCheckSaved;
+	if (step <= PFM::completelyArbitraryStepToUnlockFullDt) {
+		effectiveAbsChangeToSave = PFM::defaultAbsChangePerCheck;
+	}
+
 	static uint64_t stepsSinceCheckPrintout = 0;
 	if(( (step - checks_ptr->stepsAtLastCheck) % stepsPerCheckSaved == 0) || 
-		 checks_ptr->totalAbsoluteChangeSinceLastSave >= absoluteChangePerElementPerCheckSaved) { 
+		 checks_ptr->totalAbsoluteChangeSinceLastSave >= effectiveAbsChangeToSave) { 
 		
+		checks_ptr->wasLastCheckApreCheck = step == 0; //so we don't use data which doesn't matter
+
 		checks_ptr->referenceDt = dt;
 
 		//The max is there in case update is called before the simulation begins (to record initial condition)
-		checks_ptr->stepsDuringLastCheckPeriod = std::max(1llu, checks_ptr->step - checks_ptr->stepsAtLastCheck);
+		checks_ptr->stepsDuringLastCheckPeriod = checks_ptr->step - checks_ptr->stepsAtLastCheck;
 		checks_ptr->stepsAtLastCheck = checks_ptr->step;
 		//The max is there for the same reason
 		checks_ptr->timeDuringLastCheckPeriod = std::max(1.0, checks_ptr->totalTime - checks_ptr->timeAtLastcheck);
@@ -315,8 +325,9 @@ void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, con
 		checks_ptr->lastDensity += (checks_ptr->lastDensityChange / elements);
 		checks_ptr->lastAbsoluteChangePerElement = checks_ptr->absoluteChange / elements;
 		
-		double changeMeanSquare = checks_ptr->sumOfsquaresOfChanges / elements;
-		double squaredMeanChange = (checks_ptr->densityChange / elements) * (checks_ptr->densityChange / elements);
+		const double changeMeanSquare = checks_ptr->sumOfsquaresOfChanges / elements;
+		const double squaredMeanChange = (checks_ptr->densityChange / elements) 
+											* (checks_ptr->densityChange / elements);
 		
 		checks_ptr->lastRmsAbsChange = std::sqrt(changeMeanSquare);
 		checks_ptr->lastAbsChangeStdDev = std::sqrt(changeMeanSquare - squaredMeanChange);
@@ -334,11 +345,11 @@ void updatedAndSaveChecks(PFM::checkData_t* checks_ptr, const uint64_t step, con
 		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
 		PFM::saveFieldDataAccordingToController();
 		
-		int checksPerPrintout = 5; //TODO: parametrize this
+		const int checksPerPrintout = 5; //TODO: parametrize this
 		#ifdef AS_DEBUG //TODO: this is a definition from the build system which should change
 			checksPerPrintout = 1;
 		#endif
-		uint64_t minPrintOutPeriod = stepsPerCheckSaved * checksPerPrintout;
+		const uint64_t minPrintOutPeriod = stepsPerCheckSaved * checksPerPrintout;
 		
 
 		if(stepsSinceCheckPrintout >= minPrintOutPeriod || step == 0) {
