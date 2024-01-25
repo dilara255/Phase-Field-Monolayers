@@ -51,7 +51,6 @@ namespace PFM {
         integrationMethods method = integrationMethods::TOTAL_METHODS;
 		bool perCellLayer = false;
 		bool startPaused = false;
-
 		std::chrono::system_clock::time_point epochTimeSimCall;
  
 		inline uint32_t reducedSecondsSinceEpochOnSimCall() const {

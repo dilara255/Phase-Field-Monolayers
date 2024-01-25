@@ -448,13 +448,13 @@ void PFM::SimulationControl::runForSteps(uint64_t steps, simParameters_t paramet
 	if((int)method >=  (int)PFM::integrationMethods::TOTAL_METHODS) { return; }
 
 	m_stepsToRun = steps;
+	
 	m_simConfigs.simulFunc = simulationToRun;
 	m_simConfigs.method = method;
-	m_simParameters.lambda = parameters.lambda;
-	m_simParameters.gamma = parameters.gamma;
+
+	m_simParameters = parameters;
 	updateKandA();
-	m_simParameters.dt = parameters.dt;
-	m_simParameters.useAdaptativeDt = parameters.useAdaptativeDt;
+
 	m_intendedDt = m_simParameters.dt;
 	m_isRunning = true;
 

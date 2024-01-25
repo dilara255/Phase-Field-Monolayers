@@ -62,10 +62,11 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 	for (int i = 1; i < argc; i++) {
 		switch (i) {
 		
-			default: 
+			default: {
 				LOG_ERROR("A valid argument is not being handled in processClInput");
 				printf("arg: %d\n", i);
 				return false;
+			}
 		
 			case PFM::mainsArgumentList::PROG_CALL: {
 			} break;
@@ -177,17 +178,17 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 
 			case PFM::mainsArgumentList::MAX_CHANGE_PER_STEP: {
 				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
-				params_ptr->maxAvgElementChangePerStep = atoi(argv[i]);
+				sscanf(argv[i], "%lf", &params_ptr->maxAvgElementChangePerStep);
 			} break;
 
 			case PFM::mainsArgumentList::MAX_SPEEDUP_MULT: {
 				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
-				params_ptr->maxSpeedUpMult = atoi(argv[i]);
+				sscanf(argv[i], "%lf", &params_ptr->maxSpeedUpMult);
 			} break;
 
 			case PFM::mainsArgumentList::MIN_SLOWDOWN_MULT: {
 				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
-				params_ptr->minSlowDownMult = atoi(argv[i]);
+				sscanf(argv[i], "%lf", &params_ptr->minSlowDownMult);
 			} break;
 
 			case PFM::mainsArgumentList::SAFE_MAX_DT: {
