@@ -12,6 +12,7 @@
 //--- Note that "checks done on this lattice" may or may not make sense depending on usage.
 
 #include "PFM_API_enums.hpp"
+#include "PFM_generalDefaults.hpp"
 
 #include "fAux/API/miscStdHeaders.h"
 #include "fAux/API/prng.hpp"
@@ -44,6 +45,7 @@ namespace PFM {
         integrationMethods method = integrationMethods::TOTAL_METHODS;
 		bool perCellLayer = false;
 		bool startPaused = false;
+		bool maxChange = maxChangePerStep;
 
 		std::chrono::system_clock::time_point epochTimeSimCall;
  

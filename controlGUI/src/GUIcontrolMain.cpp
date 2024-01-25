@@ -7,7 +7,7 @@
 #include "fViz2D/API/GUI_API.hpp"
 
 #include "PFM_API.hpp"
-#include "PFM_defaults.hpp"
+#include "PFM_dataDefaults.hpp"
 #include "PFM_tests.hpp"
 
 #include "guiTests.hpp"
@@ -36,7 +36,7 @@ bool isArgumentDefault(int argument, char **argv) {
 }
 
 void printArgumentsList() {
-	for (int i = 0; i < PFM::mainsArgumentList::TOTAL_ARGS; i++) {
+	for (int i = 0; i < PFM::mainsArgumentList::TOTAL_MAIN_ARGS; i++) {
 		printf("%s ", PFM::argumentNames[i]);
 	}
 	puts("\n");
@@ -49,7 +49,7 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 
 	LOG_TRACE("Will preccess command line inputs...");
 
-	if (argc > 1 && argc != PFM::mainsArgumentList::TOTAL_ARGS) {
+	if (argc > 1 && argc != PFM::mainsArgumentList::TOTAL_MAIN_ARGS) {
 		LOG_ERROR("BAD NUBER OF CL ARGUMENTS: either just run the program or specify all arguments");
 		printArgumentsList();
 		return false;

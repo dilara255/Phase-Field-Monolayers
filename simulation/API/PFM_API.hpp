@@ -2,9 +2,11 @@
 
 //TODO: make sure no threads can be orphaned under normal circunstances
 //Also, thread safety is a crutch : )
+//TODO: look into the dependent projects and decide which files should actually be kept in the API folder
 
 #include "PFM_API_enums.hpp"
-#include "PFM_defaults.hpp"
+#include "PFM_generalDefaults.hpp"
+#include "PFM_dataDefaults.hpp"
 #include "PFM_data.hpp"
 #include "fAux/API/miscStdHeaders.h"
 #include "fAux/API/prng.hpp"
