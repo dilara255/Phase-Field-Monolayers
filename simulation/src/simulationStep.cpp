@@ -292,14 +292,13 @@ void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkDat
 	checks_ptr->parametersOnLastCheck = *controller_ptr->getLastSimParametersPtr();
 
 	checks_ptr->step = step;
-	checks_ptr->totalTime += dt;
+	if(step > 0) { checks_ptr->totalTime += dt; }
 
 	checks_ptr->absoluteChange += checks_ptr->absoluteChangeLastStep;
 	checks_ptr->sumOfsquaresOfChanges += checks_ptr->sumOfsquaresOfChangesLastStep;
 
 	const int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
-	checks_ptr->totalAbsoluteChangeSinceLastSave = 
-				checks_ptr->remainingChangeSinceSaveOnLastCheck  + checks_ptr->absoluteChange / elements;
+	checks_ptr->totalAbsoluteChangeSinceLastSave += checks_ptr->absoluteChange / elements;
 	
 	double effectiveAbsChangeToSave = absoluteChangePerElementPerCheckSaved;
 	if (step <= PFM::completelyArbitraryStepToUnlockFullDt) {
@@ -318,29 +317,27 @@ void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkDat
 		checks_ptr->stepsDuringLastCheckPeriod = checks_ptr->step - checks_ptr->stepsAtLastCheck;
 		checks_ptr->stepsAtLastCheck = checks_ptr->step;
 		//The max is there for the same reason
-		checks_ptr->timeDuringLastCheckPeriod = std::max(1.0, checks_ptr->totalTime - checks_ptr->timeAtLastcheck);
+		checks_ptr->timeDuringLastCheckPeriod = checks_ptr->totalTime - checks_ptr->timeAtLastcheck;
 		checks_ptr->timeAtLastcheck = checks_ptr->totalTime;
 
 		checks_ptr->lastDensityChange = checks_ptr->densityChange;
 		checks_ptr->lastDensity += (checks_ptr->lastDensityChange / elements);
-		checks_ptr->lastAbsoluteChangePerElement = checks_ptr->absoluteChange / elements;
 		
-		const double changeMeanSquare = checks_ptr->sumOfsquaresOfChanges / elements;
-		const double squaredMeanChange = (checks_ptr->densityChange / elements) 
+		checks_ptr->lastAbsoluteChangePerElementPerStep = checks_ptr->absoluteChange / elements;		
+		double changeMeanSquare = checks_ptr->sumOfsquaresOfChanges / elements;
+		double squaredMeanChange = (checks_ptr->densityChange / elements) 
 											* (checks_ptr->densityChange / elements);
+		if (checks_ptr->stepsDuringLastCheckPeriod > 0) {
+			//We check before diving  by time because there might be no steps in the last check
+			//if so, changes are also zero, so these will all be already zero too, as they should
+
+			checks_ptr->lastAbsoluteChangePerElementPerStep /= checks_ptr->stepsDuringLastCheckPeriod;
+			changeMeanSquare /= checks_ptr->stepsDuringLastCheckPeriod;
+			squaredMeanChange /= checks_ptr->stepsDuringLastCheckPeriod;
+		}
 		
 		checks_ptr->lastRmsAbsChange = std::sqrt(changeMeanSquare);
 		checks_ptr->lastAbsChangeStdDev = std::sqrt(changeMeanSquare - squaredMeanChange);
-	
-		//How much did the change overshoot the threshold?
-		checks_ptr->remainingChangeSinceSaveOnLastCheck = PFM::absoluteChangeRemainingFactor 
-				* (checks_ptr->totalAbsoluteChangeSinceLastSave - absoluteChangePerElementPerCheckSaved);
-
-		//In case change was actually *smaller* than the threshold:
-		if (checks_ptr->remainingChangeSinceSaveOnLastCheck < 0) {
-			//Just keep the change for the next cycle:
-			checks_ptr->remainingChangeSinceSaveOnLastCheck = checks_ptr->totalAbsoluteChangeSinceLastSave;
-		}
 
 		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
 		PFM::saveFieldDataAccordingToController();

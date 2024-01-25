@@ -666,7 +666,7 @@ double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, cons
 
 	//Since the actual density change is zero, the RMS is the same as the deviation. So:
 	double highAvgChangeEstimative = avgAbsChangeLastStep + stdDevs * rmsChangeLastStep;
-	//double highAvgChangeEstimative = lastCheck_ptr->lastAbsoluteChangePerElement + (stdDevs * lastCheck_ptr->lastAbsChangeStdDev);
+	//double highAvgChangeEstimative = lastCheck_ptr->lastAbsoluteChangePerElementPerStep + (stdDevs * lastCheck_ptr->lastAbsChangeStdDev);
 	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	//Most change happens in the interface area: 

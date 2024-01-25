@@ -241,7 +241,7 @@ namespace PFM {
 		double sumOfsquaresOfChanges = 0;
 		
 		double lastDensityChange = 0;
-		double lastAbsoluteChangePerElement = 0;
+		double lastAbsoluteChangePerElementPerStep = 0;
 		double lastRmsAbsChange = 0;
 		double lastAbsChangeStdDev = 0;
 
@@ -254,7 +254,6 @@ namespace PFM {
 		double totalTime = 0;
 		double totalAbsoluteChangeSinceLastSave = 0;
 
-		double remainingChangeSinceSaveOnLastCheck = 0;
 		double referenceDt = 0;
 
 		uint32_t substepsLastStep = 0;
@@ -265,15 +264,16 @@ namespace PFM {
 		
 		//TODO: also improve the naming of these
 		inline void clearLastStepsChanges() { absoluteChangeLastStep = 0; sumOfsquaresOfChangesLastStep = 0; }
-		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; substepsLastStep = 0; }
+		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; 
+		                                    substepsLastStep = 0; totalAbsoluteChangeSinceLastSave = 0; }
 		inline void zeroOut() { step = 0; totalChangeFromStart = 0; absoluteChangeLastStep = 0; 
 							    sumOfsquaresOfChangesLastStep = 0; lastDensity = 0; densityChange = 0; 
 								absoluteChange = 0; sumOfsquaresOfChanges = 0; timeAtLastcheck = 0; 
 								timeDuringLastCheckPeriod = 0; lastDensityChange = 0; 
-								lastAbsoluteChangePerElement = 0; lastRmsAbsChange = 0;
+								lastAbsoluteChangePerElementPerStep = 0; lastRmsAbsChange = 0;
 								lastAbsChangeStdDev = 0;  lastDt = 0; stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
-		                        remainingChangeSinceSaveOnLastCheck = 0; referenceDt = 0; substepsLastStep = 0;
+		                        referenceDt = 0; substepsLastStep = 0;
 								totalAbsoluteChange = 0;
 		}
 		
@@ -296,12 +296,8 @@ namespace PFM {
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensityChange);
 			str += fmtValsBuffer;
 			str += ", absolute change / element per unit time: ";
-			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
-			else {
-				sprintf(fmtValsBuffer, "%.*f", (int)precision, 
-					    (lastAbsoluteChangePerElement / timeDuringLastCheckPeriod));
-				str += fmtValsBuffer;
-			}
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastAbsoluteChangePerElementPerStep);
+			str += fmtValsBuffer;
 			str += " (since last save: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
 			str += fmtValsBuffer;
@@ -311,16 +307,11 @@ namespace PFM {
 			str += ")\n";
 			str += "Std Dev: ";
 			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
-			else {
-				sprintf(fmtValsBuffer, "%.*f", (int)precision, lastAbsChangeStdDev / timeDuringLastCheckPeriod);
-				str += fmtValsBuffer;
-			}
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastAbsChangeStdDev);
+			str += fmtValsBuffer;
 			str += " (RMS: ";
-			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
-			else {
-				sprintf(fmtValsBuffer, "%.*f", (int)precision, lastRmsAbsChange / timeDuringLastCheckPeriod);
-				str += fmtValsBuffer;
-			}
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastRmsAbsChange);
+			str += fmtValsBuffer;
 			str += ")\n";
 
 			return str;
