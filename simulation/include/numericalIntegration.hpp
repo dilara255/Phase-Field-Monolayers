@@ -32,13 +32,15 @@ void ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 	          const double dt, const double chK, const double chA, 
 	          PFM::checkData_t* checks_ptr, 
 			  PFM::PeriodicDoublesLattice2D* substepAuxField = nullptr,
-	          bool maySubstep = false);
+	          bool maySubstep = false,
+	          double maxStepForSubstepping = PFM::defaultMaxChangePerStep);
 
 void ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField, 
 						  PFM::PeriodicDoublesLattice2D* auxField,
 						  const double dt, const double chK, const double chA, 
 						  PFM::checkData_t* checks_ptr,
-	                      PFM::PeriodicDoublesLattice2D* substepAuxField);
+	                      PFM::PeriodicDoublesLattice2D* substepAuxField,
+	                      double maxOriginalStep);
 
 //2 step Predictor Corrector, a RK2, the trapezoidal version of FTCS
 void heunStep(PFM::CurrentAndLastPerioricDoublesLattice2D* rotatingField_ptr,

@@ -101,7 +101,8 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 				//We're past the start, so lets unluck substepping as well
 				controller_ptr->setBaseAsActive();
 				N_INT::TD::CH::ftcsStepWithSubsteps(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr,
-								                                    rotBaseField_ptr->getPointerToCurrent());
+								                    rotBaseField_ptr->getPointerToCurrent(), 
+					                                params_ptr->maxAvgElementChangePerStep);
 			}
 			break;
 		case PFM::integrationMethods::HEUN:
@@ -307,6 +308,9 @@ void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkDat
 
 	const int elements = PFM::getActiveFieldConstPtr()->getNumberOfActualElements();
 	checks_ptr->totalAbsoluteChangeSinceLastSave += checks_ptr->absoluteChange / elements;
+
+	checks_ptr->substepsLastCheck += checks_ptr->substepsLastStep;
+	checks_ptr->totalSubsteps += checks_ptr->substepsLastStep;
 	
 	double effectiveAbsChangeToSave = absoluteChangePerElementPerCheckSaved;
 	if (step <= PFM::completelyArbitraryStepToUnlockFullDt) {
@@ -362,7 +366,8 @@ void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkDat
 			stepsSinceCheckPrintout = 0;
 		}
 
-		checks_ptr->clearCurrentChanges();
+		checks_ptr->clearAccumulators();
 	}	
+
 	stepsSinceCheckPrintout++;
 }

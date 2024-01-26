@@ -126,6 +126,8 @@ namespace PFM {
 	typedef struct neighborhood9_st {
 		double data[9];
 
+		enum indexes { FIRST, N, NE, W, CENTER, E, SW, S, LAST };
+
 		//TODO: add an indexOf method (how should it deal with bad input?)
 
 		inline double getElement(int x, int y) {
@@ -259,15 +261,22 @@ namespace PFM {
 		double referenceDt = 0;
 
 		uint32_t substepsLastStep = 0;
+		uint32_t substepsLastCheck = 0;
+		uint32_t totalSubsteps = 0;
+		uint32_t elementsSubstepedLastCheck = 0;
 
 		double totalAbsoluteChange = 0;
 		
 		simParameters_t parametersOnLastCheck;
 		
 		//TODO: also improve the naming of these
-		inline void clearLastStepsChanges() { absoluteChangeLastStep = 0; sumOfsquaresOfChangesLastStep = 0; }
-		inline void clearCurrentChanges() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; 
-		                                    substepsLastStep = 0; totalAbsoluteChangeSinceLastSave = 0; }
+		inline void clearLastStepsChanges() { absoluteChangeLastStep = 0; sumOfsquaresOfChangesLastStep = 0; 
+		                                      substepsLastStep = 0; 
+		}
+		inline void clearAccumulators() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; 
+		                                  substepsLastCheck = 0; totalAbsoluteChangeSinceLastSave = 0; 
+										  elementsSubstepedLastCheck = 0;
+		}
 		inline void zeroOut() { step = 0; totalChangeFromStart = 0; absoluteChangeLastStep = 0; 
 							    sumOfsquaresOfChangesLastStep = 0; lastDensity = 0; densityChange = 0; 
 								absoluteChange = 0; sumOfsquaresOfChanges = 0; timeAtLastcheck = 0; 
@@ -275,8 +284,8 @@ namespace PFM {
 								lastAbsoluteChangePerElementPerStep = 0; lastRmsAbsChange = 0;
 								lastAbsChangeStdDev = 0;  lastDt = 0; stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
-		                        referenceDt = 0; substepsLastStep = 0;
-								totalAbsoluteChange = 0;
+		                        referenceDt = 0; substepsLastStep = 0; substepsLastCheck = 0;
+								totalAbsoluteChange = 0; totalAbsoluteChange = 0;
 		}
 		
 		inline const std::string getChecksStr() const {
@@ -288,8 +297,10 @@ namespace PFM {
 
 			std::string str = "Checks @ step ";
 			str += std::to_string(stepsAtLastCheck) + " (time: " + std::to_string(totalTime) 
-				   + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod) 
-				   + " @avg dt: " + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) + ")\n";
+				   + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod)
+				   + " + " + std::to_string(substepsLastCheck) + " subs (" + std::to_string(totalSubsteps)
+				   + " total), @avg dt: " + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) 
+				   + ")\n";
 			str += "Density: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensity);
 			str += fmtValsBuffer;

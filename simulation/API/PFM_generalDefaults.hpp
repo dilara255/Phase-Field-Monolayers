@@ -20,15 +20,24 @@ namespace PFM {
 											  "UseMaxSafeDt(bool)"};
 	static const char* defaultArgument = "default";
 
-	static const double defaultPGMmargin = 0.1; //maps [-this, 1 + this] to PRGMs [0,255], to see "around" the wells
+	static const double lowStableEq = 0;
+	static const double highStableEq = 1;
 
 	static const uint64_t completelyArbitraryStepToUnlockFullDt = 1000;
 
 	//For adaptative dt:
-	static const double distanceStableEquilibria = 1.0;
+	
+	static const double distanceStableEquilibria = highStableEq - lowStableEq;
 	static const double defaultMaxChangePerStep = PFM::distanceStableEquilibria / 8.0;
 	static const double defaultMaxSpeedupMult = 1.00001; //note that larger values may make the average *slower*
 	static const double defaultMinSlowdownMult = 0.97; //because it might cause more drastic bump downs (to avoid crashes)
+
+	//"Margin" from the equilibrium points away from the interface. 
+	//"Climbing" the potential too far outside from this may cause numerical instability.
+	static const double outsideLimits = distanceStableEquilibria/10;
+
+	//Maps [-this, 1 + this] to PRGMs [0,255], to see "around" the wells
+	static const double defaultPGMmargin = outsideLimits;
 
 	static const uint32_t defaulStepsPerCheck = 5000;
 	static const double defaultAbsChangePerCheck = 0.0025;
