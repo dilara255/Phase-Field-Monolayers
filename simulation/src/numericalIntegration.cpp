@@ -66,12 +66,11 @@ namespace N_INT { namespace TD { namespace CH {
 		
 		bool isOk = std::abs(tentativeDelta) <= maxDelta;
 		
-		/*
 		const double projectedPhi = currentPhi + tentativeDelta;
 		
 		isOk &= (projectedPhi >= PFM::lowStableEq - PFM::outsideLimits)
 		     && (projectedPhi <= PFM::highStableEq + PFM::outsideLimits);
-		*/
+
 		return isOk;			
 	}
 
