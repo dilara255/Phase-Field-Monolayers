@@ -300,7 +300,8 @@ namespace PFM {
 				   + " (time: " + std::to_string(totalTime) 
 				   + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod)
 				   + " + " + std::to_string(substepsLastCheck) + " subs (" 
-				   + std::to_string(elementsSubstepedLastCheck) + " elements), @avg dt: " 
+				   + std::to_string((double)elementsSubstepedLastCheck / stepsDuringLastCheckPeriod) 
+				   + " elements/step), @avg dt: " 
 				   + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) 
 				   + ")\n";
 			str += "Density: ";
