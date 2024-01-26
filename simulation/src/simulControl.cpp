@@ -209,17 +209,18 @@ std::string PFM::getDirAndFileName(int steps, bool calledFromGUI) {
 	const PFM::simConfig_t* simConfig_ptr = g_controller.getLastSimConfigPtr();
 	const PFM::simParameters_t* simParams_ptr = g_controller.getLastSimParametersPtr();
 
-	std::string dirname = "Sim" + std::to_string((int)simConfig_ptr->simulFunc) 
+	uint32_t callerKey = PFM::getCallerKey();
+
+	std::string dirname = "s" + std::to_string((int)simConfig_ptr->simulFunc) 
 						+ "_w" + std::to_string(dimensions.width) 
 						+ "_h" + std::to_string(dimensions.height)
-						+ "_c" + std::to_string(simConfig_ptr->cells)
-						+ "_ini" + std::to_string((int)simConfig_ptr->initialContidion) 		    
+						+ "_i" + std::to_string((int)simConfig_ptr->initialContidion) 		    
 						+ "_b" + std::to_string(simConfig_ptr->bias)
-						+ "m" + std::to_string((int)simConfig_ptr->method)
-						+ "_t" + std::to_string(simConfig_ptr->reducedSecondsSinceEpochOnSimCall());	
+						+ "_m" + std::to_string((int)simConfig_ptr->method)
+						+ "_k" + std::to_string(callerKey);
 	
 	bool createdDirectory = std::filesystem::create_directory(dirname);
-	uint32_t callerKey = PFM::getCallerKey();
+	
 
 	if (createdDirectory && (callerKey != PFM::defaultCallerKey)) {
 		//We should let the caller know the path to the new folder:

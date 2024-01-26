@@ -51,6 +51,7 @@ namespace PFM {
         integrationMethods method = integrationMethods::TOTAL_METHODS;
 		bool perCellLayer = false;
 		bool startPaused = false;
+		uint32_t callerKey = 0;
 		std::chrono::system_clock::time_point epochTimeSimCall;
  
 		inline uint32_t reducedSecondsSinceEpochOnSimCall() const {
@@ -73,7 +74,8 @@ namespace PFM {
 			str += "Simulation: " + std::to_string((int)simulFunc) + "\n";
 			str += "Steps: " + std::to_string(stepsRan) + "\n";
 			str += "Per cell layer? " + std::to_string(perCellLayer) + "\n";
-			str += "Start paused? " + std::to_string(startPaused);
+			str += "Start paused? " + std::to_string(startPaused); + "\n";
+			str += "Caller key: " + std::to_string(callerKey);
 
 			return str;
 		}

@@ -20,12 +20,9 @@ namespace PFM {
 											  "UseMaxSafeDt(bool)"};
 	static const char* defaultArgument = "default";
 
-	static const double defaultPGMmargin = 0.2;
+	static const double defaultPGMmargin = 0.1; //maps [-this, 1 + this] to PRGMs [0,255], to see "around" the wells
 
 	static const uint64_t completelyArbitraryStepToUnlockFullDt = 1000;
-	//This is used to help avoid having way too many saves in the first few frames
-	//TODO: review need after implementing adaptative dt
-	static const double absoluteChangeRemainingFactor = 0.2;
 
 	//For adaptative dt:
 	static const double distanceStableEquilibria = 1.0;

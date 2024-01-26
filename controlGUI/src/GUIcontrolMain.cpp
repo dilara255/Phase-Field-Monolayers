@@ -190,6 +190,7 @@ bool processClInput(int* simToRun_ptr, PFM::simParameters_t* params_ptr,
 			case PFM::mainsArgumentList::CALLER_KEY: {
 				if (strcmp(PFM::defaultArgument, argv[i]) == 0) { break; }
 				PFM::setCallerKey((uint32_t)strtoll(argv[i], NULL, 10));
+				config_ptr->callerKey = PFM::getCallerKey();
 			} break;		
 
 			case PFM::mainsArgumentList::ADAPTATIVE_DT: {
