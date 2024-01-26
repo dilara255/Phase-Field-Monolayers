@@ -92,9 +92,17 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 			N_INT::TD::CH::ftcsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
 			break;
 		case PFM::integrationMethods::FTCS_WITH_SUBS:
-			controller_ptr->setBaseAsActive();
-			N_INT::TD::CH::ftcsStepWithSubsteps(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr,
-				                                rotBaseField_ptr->getPointerToCurrent());
+			if (PFM::getStepsRan() < completelyArbitraryStepToUnlockFullDt) {
+				//Disabled at the start just to keep things consistent
+				controller_ptr->setBaseAsActive();
+				N_INT::TD::CH::ftcsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			}
+			else {
+				//We're past the start, so lets unluck substepping as well
+				controller_ptr->setBaseAsActive();
+				N_INT::TD::CH::ftcsStepWithSubsteps(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr,
+								                                    rotBaseField_ptr->getPointerToCurrent());
+			}
 			break;
 		case PFM::integrationMethods::HEUN:
 			controller_ptr->setRotatingLastAsActive();

@@ -219,8 +219,7 @@ std::string PFM::getDirAndFileName(int steps, bool calledFromGUI) {
 						+ "_m" + std::to_string((int)simConfig_ptr->method)
 						+ "_k" + std::to_string(callerKey);
 	
-	bool createdDirectory = std::filesystem::create_directory(dirname);
-	
+	bool createdDirectory = std::filesystem::create_directory(dirname);	
 
 	if (createdDirectory && (callerKey != PFM::defaultCallerKey)) {
 		//We should let the caller know the path to the new folder:

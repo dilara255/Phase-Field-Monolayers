@@ -24,7 +24,7 @@ namespace PFM {
     typedef void SimulationSteps_fn(SimulationControl* controller_ptr, uint64_t* stepCount_ptr, 
                                     const bool* shouldPause_ptr, bool* isRunning_ptr, integrationMethods method);
     
-    //WARNING: these should always be kept in synch with PFM::simFuncEnum (@PFM_API.hpp)
+    //WARNING: these should always be kept in synch with PFM::simFuncEnum (@PFM_API_enums.hpp)
     SimulationSteps_fn dataAndControllerTest_fn;
     SimulationSteps_fn singleLayerCHsim_fn;
     SimulationSteps_fn multiLayerCHsim_fn;
