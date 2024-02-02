@@ -296,7 +296,7 @@ namespace PFM {
 			char fmtValsBuffer[2*precision + 1];
 
 			std::string str = "Checks @ step ";
-			str += std::to_string(stepsAtLastCheck) + "(" + std::to_string(totalSubsteps) + " subs)"
+			str += std::to_string(stepsAtLastCheck) + " (" + std::to_string(totalSubsteps) + " subs)"
 				   + " (time: " + std::to_string(totalTime) 
 				   + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod)
 				   + " + " + std::to_string(substepsLastCheck) + " subs (" 
