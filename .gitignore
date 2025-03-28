@@ -13,3 +13,6 @@ bin-int/
 *.png
 *.jpg
 *.dat
+
+#keep files in "res" regardless of type
+!res/*

@@ -24,6 +24,12 @@ namespace PFM {
 
 	static const simParameters_t defaultSimParams[(int)simFuncEnum::TOTAL_SIM_FUNCS] = {
 		//{1.0, 7.824813, 0.043986, ...}
-		{1.0, 3.0, 0.06, -1.0, -1.0}, {1.0, 3.0, 0.06, -1.0, -1.0}, {1.0, 3.0, 0.06, -1.0, -1.0}
+
+		//DATA_CONTROL_TEST
+		{1.0, 3.0, 0.06, -1.0, -1.0, -1.0}, 
+		//SINGLE_LAYER_CH_SIM
+		{1.0, 3.0, 0.06, -1.0, -1.0, 0.25}, 
+		//MULTI_LAYER_CH_SIM
+		{1.0, 3.0, 0.06, -1.0, -1.0, -1.0}
 	};
 }

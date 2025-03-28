@@ -158,6 +158,11 @@ project "controlGUI"
 
 	links ("simulation")
 	links ("%{LibDir.F_AUX}/fAux")
+
+	filter "system:linux"
+		links { "glfw", "OpenGL" } -- TEST: IS THIS NEEDED HERE ON WIN?
+	filter {}
+
 	links ("%{LibDir.F_VIZ2D}/fViz2D")
 
 	targetdir (binDir)

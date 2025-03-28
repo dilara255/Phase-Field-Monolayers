@@ -1,0 +1,606 @@
+#pragma once
+
+//TODO: *in case* this is turned into a shared library, what should or shouldn't get a PFM_API appended?
+
+//This exposes the data types for simulation parameters, configuration, checks and periodic 2D lattices.
+//- simConfig_t deals with stuff like the size of the network, initial conditions, integration methods, etc;
+//- simParameters_t holds the actual parameters, like dt, lambda, gamma, etc;
+//- checkData_t holds runtime checks, like the avg density of the field or it's absolute change, etc;
+//-- All of these have helper functions, specially to print out their data.
+//- PeriodicDoublesLattice2D is a class which helps deal with and acess 2D periodic data (doubles).
+//-- It also holds a public checkData_t and a private vector of them, for checks done on this lattice.
+//--- Note that "checks done on this lattice" may or may not make sense depending on usage.
+
+#include "PFM_API_enums.hpp"
+#include "PFM_generalDefaults.hpp"
+
+#include "fAux/API/miscStdHeaders.h"
+#include "fAux/API/prng.hpp"
+
+#include <assert.h>
+
+#define ALL_CELLS_ID -1
+
+namespace PFM {
+
+	typedef struct parameterBounds_st {
+		double minK = 0;
+		double minA = 0;
+		double minDt = 0;
+		double maxK;
+		double maxA;
+		double maxDt;
+		double minMaxChange = distanceStableEquilibria / 32;
+		double minMaxSpeedUpMult = 1.000001;
+		double minMinSlowDownMult = 0.5;
+		double maxMaxChange = distanceStableEquilibria / 2;
+		double maxMaxSpeedupMult =  1.00005;
+		double maxMinSlowdownMult = 0.99990;
+	} parameterBounds_t;
+
+	typedef struct simConfig_st {
+		uint64_t stepsRan = 0;
+		int cells = 0;
+		int width = 0;
+		int height = 0;
+        double cellSeedValue = 0;
+        uint64_t initialSeed = 0;
+        simFuncEnum simulFunc = simFuncEnum::TOTAL_SIM_FUNCS;        
+        initialConditions initialContidion = initialConditions::TOTAL_INITIAL_CONDS;
+        double bias = -9999;
+        integrationMethods method = integrationMethods::TOTAL_METHODS;
+		bool perCellLayer = false;
+		bool startPaused = false;
+		uint32_t callerKey = 0;
+		std::chrono::system_clock::time_point epochTimeSimCall;
+		
+		//Total number of elements on the general field. NOT per cell, or sum of cells.
+		inline int getTotalSitesOnNetwork() const {
+			return width * height;
+		}
+
+		inline uint32_t reducedSecondsSinceEpochOnSimCall() const {
+			uint64_t seconds = 
+				std::chrono::duration_cast<std::chrono::seconds>(epochTimeSimCall.time_since_epoch()).count();
+
+			return (uint32_t)(seconds & UINT32_MAX);
+		}
+		
+		inline std::string getSimConfigString() const {
+			std::string str = "";
+			str += "Width: " + std::to_string(width) + "\n";
+			str += "Height: " + std::to_string(height) + "\n";
+			str += "Cells: " + std::to_string(cells) + "\n";
+			str += "Bias: " + std::to_string(bias) + "\n";
+			str += "PRNG Seed: " + std::to_string(initialSeed) + "\n";
+			str += "Initial Cell Seed: " + std::to_string(cellSeedValue) + "\n";
+			str += "Initial Condition: " + std::to_string((int)initialContidion) + "\n";
+			str += "Method: " + std::to_string((int)method) + "\n";
+			str += "Simulation: " + std::to_string((int)simulFunc) + "\n";
+			str += "Steps: " + std::to_string(stepsRan) + "\n";
+			str += "Per cell layer? " + std::to_string(perCellLayer) + "\n";
+			str += "Start paused? " + std::to_string(startPaused); + "\n";
+			str += "Caller key: " + std::to_string(callerKey);
+
+			return str;
+		}
+	} simConfig_t;
+
+	typedef struct simParameters_st {     
+        double dt = -1;
+		double lambda = -1; //CH, physical
+		double gamma = -1; //CH, physical
+        double A = -1; //CH, mathematical
+		double k = -1; //CH, mathematical
+		double mu = -1; //area
+		double a0 = -1; //area
+		bool useAdaptativeDt = false;
+		bool useMaxSafeDt = true;
+		bool disableAreaTerm = false;
+		double maxAvgElementChangePerStep = defaultMaxChangePerStep;
+		double maxSpeedUpMult = defaultMaxSpeedupMult;
+		double minSlowDownMult = defaultMinSlowdownMult;
+
+		inline std::string getSimParamsString() const {
+			std::string str = "";
+			str += "dt: " + std::to_string(dt) + "\n";
+			str += "Gamma (surface tension): " + std::to_string(gamma) + "\n";
+			str += "Lambda (interface width): " + std::to_string(lambda) + "\n";
+			str += "k: " + std::to_string(k) + "\n";
+			str += "A: " + std::to_string(A) + "\n";
+			str += "mu: " + std::to_string(mu) + "\n";
+			str += "a0: " + std::to_string(a0) + "\n";
+			str += "Area Term disabled? " + std::to_string(disableAreaTerm) + "\n";
+			str += "Adaptative dt? " + std::to_string(useAdaptativeDt);
+			if(useAdaptativeDt) {
+				str += "\t(max change: " + std::to_string(maxAvgElementChangePerStep)
+					+ ", mult: [" + std::to_string(minSlowDownMult) 
+					+ ", " + std::to_string(maxSpeedUpMult) + "])";
+			}
+			str += "\nCap dt at safe max? " + std::to_string(useMaxSafeDt);
+
+			return str;
+		}
+	} simParameters_t;
+
+	typedef struct coordinate_st {
+		int x, y;
+
+		bool operator==(coordinate_st const& otherCoord) const {
+			return ((x == otherCoord.x) && (y == otherCoord.y));
+		}
+	} coordinate_t;
+
+	//TODO: template for arbitrary sizes of (square) neighborhoods
+
+	//in all methods, (x, y) is equivalent to (collum, row)
+	typedef struct neighborhood9_st {
+		double data[9];
+
+		enum indexes { FIRST, N, NE, W, CENTER, E, SW, S, LAST };
+
+		//TODO: add an indexOf method (how should it deal with bad input?)
+
+		inline double getElement(int x, int y) {
+			assert(x >= 0 && y >= 0);
+			assert(y*3 + x < 9);
+			return data[(y*3 + x)];
+		}
+
+		inline void setElement(int x, int y, double value) {
+			assert(x >= 0 && y >= 0);
+			assert(y*3 + x < 9);
+			data[(y*3 + x)] = value;
+		}
+
+		inline double getCenter() const {
+			return data[4];
+		}
+
+		inline void setCenter(double newValue) {
+			data[4] = newValue;
+		}
+
+		inline void incrementCenter(double valueChange) {
+			data[4] += valueChange;
+		}
+
+		neighborhood9_st operator+=(neighborhood9_st const& otherNeigh) {
+			for (size_t i = 0; i < 9; i++) { data[i] += otherNeigh.data[i]; }
+			return *this;
+		}
+
+		neighborhood9_st operator-=(neighborhood9_st const& otherNeigh) {
+			for (size_t i = 0; i < 9; i++) { data[i] -= otherNeigh.data[i]; }
+			return *this;
+		}
+
+		neighborhood9_st operator+=(double const& scalar) {
+			for (size_t i = 0; i < 9; i++) { data[i] += scalar; }
+			return *this;
+		}
+
+		neighborhood9_st operator*=(double const& scalar) {
+			for (size_t i = 0; i < 9; i++) { data[i] *= scalar; }
+			return *this;
+		}
+
+	} neighborhood9_t;
+
+	//in all methods, (x, y) is equivalent to (collum, row)
+	typedef struct neighborhood25_st {
+		double data[25];
+
+		inline double getElement(int x, int y) {
+			assert(x >= 0 && y >= 0);
+			assert(y*5 + x < 25);
+			return data[(y*5 + x)];
+		}
+
+		inline void setElement(int x, int y, double value) {
+			assert(x >= 0 && y >= 0);
+			assert(y*5 + x < 25);
+			data[(y*5 + x)] = value;
+		}
+
+		inline double getCenter() const {
+			return data[12];
+		}
+
+		inline void setCenter(double newValue) {
+			data[12] = newValue;
+		}
+
+		inline void incrementCenter(double valueChange) {
+			data[12] += valueChange;
+		}
+
+		neighborhood25_st operator+=(neighborhood25_st const& otherNeigh) {
+			for (size_t i = 0; i < 25; i++) { data[i] += otherNeigh.data[i]; }
+			return *this;
+		}
+
+		neighborhood25_st operator-=(neighborhood25_st const& otherNeigh) {
+			for (size_t i = 0; i < 25; i++) { data[i] -= otherNeigh.data[i]; }
+			return *this;
+		}
+
+		neighborhood25_st operator+=(double const& scalar) {
+			for (size_t i = 0; i < 25; i++) { data[i] += scalar; }
+			return *this;
+		}
+
+		neighborhood25_st operator*=(double const& scalar) {
+			for (size_t i = 0; i < 25; i++) { data[i] *= scalar; }
+			return *this;
+		}
+
+	} neighborhood25_t;
+
+	//TODO: Relocate this
+	class StringFmtBuffer {
+	
+	public:
+		StringFmtBuffer(const size_t precision);
+		~StringFmtBuffer();
+
+		template <typename T>
+		const char* getFormatedString(const T value);
+
+		const char* read();
+
+		//same as sprintif, except you don't pass the buffer
+		void write(const int64_t value);
+		void write(const uint64_t value);
+		void write(const double value);
+
+	private:
+		char* m_fmtValsBuffer_ptr;
+		size_t m_precision;
+	};
+
+	//Note when taking rates that in some cases some values may be zero
+	//TODO: This should just be a class, right? Also deal with some of its updating
+	typedef struct checkData_st {
+
+		//TODO: rename stuff so it's clear what is reffering to the last step and what's about the last period
+		//Also, what is per element or per unit time and what is not
+		bool wasLastCheckApreCheck = true;
+
+		uint64_t step = 0;
+		double absoluteChangeLastStep = 0;
+		double sumOfsquaresOfChangesLastStep = 0;
+		double areaLastStep = 0;
+
+		double totalChangeFromStart = 0;
+
+		double density = 0;
+		double densityChange = 0;
+		double absoluteChange = 0;
+		double sumOfsquaresOfChanges = 0;
+		double proportionBelow0 = 0;
+		double proportionOutside = 0;
+		double proportionInterface = 0;
+		double proportionInside = 0;
+		double proportionAbove1 = 0;
+		double area = 0;
+		double interfaceArea = 0;
+		
+		double absoluteChangePerElementPerStep = 0;
+		double absChangeRms = 0;
+		double absChangeStdDev = 0;
+
+		double lastDensityChange = 0;
+		double lastDt = 0;
+
+		uint64_t stepsAtLastCheck = 0;
+		int stepsDuringLastCheckPeriod = 0;
+		double timeAtLastcheck = 0;
+		double timeDuringLastCheckPeriod = 0;
+		double totalTime = 0;
+		double totalAbsoluteChangeSinceLastSave = 0;
+
+		double referenceDt = 0;
+
+		uint32_t substepsLastStep = 0;
+		uint32_t substepsLastCheck = 0;
+		uint32_t totalSubsteps = 0;
+		uint32_t elementsSubstepedLastCheck = 0;
+
+		double totalAbsoluteChange = 0;
+		
+		simParameters_t parametersOnLastCheck;
+		
+		//TODO: also improve the naming of these
+		inline void resetProportions() { proportionBelow0 = 0; proportionOutside = 0; 
+										 proportionInterface = 0; proportionInside = 0; 
+										 proportionAbove1 = 0;
+		}
+		inline void clearLastStepsChanges() { absoluteChangeLastStep = 0; sumOfsquaresOfChangesLastStep = 0; 
+		                                      substepsLastStep = 0; 
+		}
+		inline void clearAccumulators() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; 
+		                                  substepsLastCheck = 0; totalAbsoluteChangeSinceLastSave = 0; 
+										  elementsSubstepedLastCheck = 0;
+		}
+		inline void zeroOut() { step = 0; totalChangeFromStart = 0; absoluteChangeLastStep = 0; 
+							    sumOfsquaresOfChangesLastStep = 0; areaLastStep = 0; density = 0; densityChange = 0;
+								absoluteChange = 0; sumOfsquaresOfChanges = 0; area = 0; interfaceArea = 0;
+								timeAtLastcheck = 0; timeDuringLastCheckPeriod = 0;
+								absoluteChangePerElementPerStep = 0; absChangeRms = 0;
+								absChangeStdDev = 0;  lastDensityChange = 0; lastDt = 0; 
+								stepsAtLastCheck = 0;
+		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
+		                        referenceDt = 0; substepsLastStep = 0; substepsLastCheck = 0;
+								totalAbsoluteChange = 0; totalAbsoluteChange = 0;
+		}
+		
+		inline void addToProportions(double phi, int totalElements) {
+			const double extremesMargin = 0.1;
+			const double marginTowardsInterface = 0.1;
+			
+			const double effectiveBelow0 = 0 - extremesMargin;
+			const double effectiveAbove1 = 1 + extremesMargin;
+
+			const double minInside = 1 - marginTowardsInterface;
+			const double maxOutside = 0 + marginTowardsInterface;
+
+			double perElementDensity = 1.0 / totalElements;
+
+			if (phi < effectiveBelow0) {
+				proportionBelow0 += perElementDensity;
+				proportionOutside += perElementDensity;
+			}
+			else if (phi < maxOutside) {
+				proportionOutside += perElementDensity;
+			}
+			else if (phi < minInside) {
+				proportionInterface += perElementDensity;
+			}
+			else if (phi < effectiveAbove1) {
+				proportionInside += perElementDensity;
+			}
+			else {
+				proportionInside += perElementDensity;
+				proportionAbove1 += perElementDensity;
+			}	
+		}
+
+		inline void addTointerfaceArea(double phi) {
+			const double effectivePhi = std::clamp(phi, 0., 1.);
+			double impact = 1 - 2 * abs(effectivePhi - 0.5);
+			interfaceArea += impact * impact;
+		}
+		
+		inline const std::string getChecksStr() const {
+			
+			assert(stepsDuringLastCheckPeriod >= 0 && "Bad number of steps on last Check");
+			
+			const size_t precision = 10;
+			char fmtValsBuffer[2*precision + 1];
+
+			std::string str = "Checks @ step ";
+			str += std::to_string(stepsAtLastCheck) + " (" + std::to_string(totalSubsteps) + " subs)"
+				   + " (time: " + std::to_string(totalTime) 
+				   + " steps during check: " + std::to_string(stepsDuringLastCheckPeriod)
+				   + " + " + std::to_string(substepsLastCheck) + " subs (" 
+				   + std::to_string((double)elementsSubstepedLastCheck / stepsDuringLastCheckPeriod) 
+				   + " elements/step), @avg dt: " 
+				   + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) 
+				   + ")\n";
+
+			str += "Density: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, density);
+			str += fmtValsBuffer;
+			str += "\n";
+
+			str += "Area: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, area);
+			str += fmtValsBuffer;
+			str += " (last: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, areaLastStep);
+			str += fmtValsBuffer;
+			str += " | change: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, area - areaLastStep);
+			str += fmtValsBuffer;
+			str += " )\n";
+
+			str += "Change: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensityChange);
+			str += fmtValsBuffer;
+			str += ", absolute change / element per unit time: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, absoluteChangePerElementPerStep);
+			str += fmtValsBuffer;
+			str += " (since last save: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
+			str += fmtValsBuffer;
+			str += " - total: ";
+			sprintf(fmtValsBuffer, "%.*f", 3, totalAbsoluteChange);
+			str += fmtValsBuffer;
+			str += ")\n";
+
+			str += "Std Dev: ";
+			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
+			else {
+				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeStdDev);
+				str += fmtValsBuffer;
+				str += " (RMS: ";
+				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeRms);
+				str += fmtValsBuffer;
+				str += ")";
+			}
+			str += "\n";
+
+			return str;
+		}
+
+		inline const std::string getParametersLastUpdateStr() const {
+
+			const size_t precision = 10;
+			char fmtValsBuffer[2*precision + 1];
+
+			std::string str = "Parameters on the previous check:\nLambda: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.lambda);
+			str += fmtValsBuffer; 
+			str += " | Gamma: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.gamma);
+			str += fmtValsBuffer; 
+			str += " | Mu: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.mu);
+			str += fmtValsBuffer;
+			str += " | A0: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.a0);
+			str += fmtValsBuffer;
+			str += " | dt: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.dt);
+			str += fmtValsBuffer; 
+			str += "\n";
+
+			return str;
+		}
+
+		inline const std::string getCSVchecksString(int version) const {
+
+			StringFmtBuffer buff(10);
+			std::string str = std::to_string(version) + " , ";
+
+			switch (version) {
+
+			case 0:
+				//Format v0: 
+				//step, totalTime, lastDt, [lastParams], 
+				//density, densityChange, absChangeRms, absChangeStdDev, 
+				//area, interfaceArea, 
+				//[proportions]\n
+
+				str += buff.getFormatedString(step); str += " , ";
+				str += buff.getFormatedString(totalTime); str += " , ";
+				str += buff.getFormatedString(lastDt); str += " , ";
+
+				str += buff.getFormatedString(parametersOnLastCheck.lambda); str += " , ";
+				str += buff.getFormatedString(parametersOnLastCheck.gamma); str += " , ";
+				str += buff.getFormatedString(parametersOnLastCheck.mu); str += " , ";
+				str += buff.getFormatedString(parametersOnLastCheck.a0); str += " , ";
+
+				str += buff.getFormatedString(density); str += " , ";
+				str += buff.getFormatedString(densityChange); str += " , ";
+				str += buff.getFormatedString(absChangeRms); str += " , ";
+				str += buff.getFormatedString(absChangeStdDev); str += " , ";
+
+				str += buff.getFormatedString(area); str += " , ";
+				str += buff.getFormatedString(interfaceArea); str += " , ";
+
+				str += buff.getFormatedString(proportionBelow0); str += " , ";
+				str += buff.getFormatedString(proportionOutside); str += " , ";
+				str += buff.getFormatedString(proportionInterface); str += " , ";				
+				str += buff.getFormatedString(proportionInside); str += " , ";
+				str += buff.getFormatedString(proportionAbove1);
+				
+				str += "\n";
+			break;
+
+			default:
+				str += "Bad Format Version \n";
+			break;
+			}
+
+			return str;
+		}
+
+	} checkData_t;
+
+	typedef struct fieldDimensions_st {
+		size_t width, height;
+		size_t totalElements() const;
+	} fieldDimensions_t;
+
+	class PeriodicDoublesLattice2D {
+	public:
+		//If invalid dimensions are passed, no memory is allocated. 
+		//If no initialData is passed, no data is initialized, but memory is allocated.
+		//If the size of the data passed doesn't fit the dimensions *exactly*, the field is filled with 0s.
+		PeriodicDoublesLattice2D(fieldDimensions_t newDimensions, int cellID = ALL_CELLS_ID, 
+			                                           std::vector<double> initialData = {});
+
+		bool hasAllocated() const;
+		bool isInitialized() const;		
+		size_t getNumberOfAllocatedElements() const;
+		size_t getNumberOfActualElements() const;
+		fieldDimensions_t getFieldDimensions() const;
+
+		//WARNING: *WON'T* check wether the field is initialized: will return junk if it's not!
+		//If an out-of-bounds element is asked, will return NAN.
+		double getDataPoint(coordinate_t coordinate) const;
+		double getElement(size_t index) const;
+		//Gets a structure with the 3x3 neighboorhod of the centerpoint. 
+		neighborhood9_t getNeighborhood(coordinate_t centerPoint) const;
+		//Same, but 5x5.
+		neighborhood25_t getNeighborhood25(coordinate_t centerPoint) const;
+		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.
+		void writeDataPoint(coordinate_t coordinate, double newValue);
+		//WARNING: If an out-of-bounds element is asked, will ignore *with no warning*.
+		void incrementDataPoint(coordinate_t coordinate, double changeInValue);
+		
+		//Adds to the checkData vector;
+		void addFieldCheckData(checkData_t checkData);
+
+		//Allocates a new buffer and passes the data. *dimensions_ptr will hold the dimensions of the new buffer.
+		//The new buffer becomes a responsability of the caller.
+		//Will return null if not yet allocated or initialized or if the new allocation fails.
+		double* createCopyOfAllData(fieldDimensions_t* dimensions_ptr) const;
+		
+		//If elements in newData is different from the (actual) size of the field, returns false.
+		//Otherwise, accepts the new data and marks the field as initialized.
+		bool rewriteAllData(std::vector<double> newData);
+
+		//If elements in newData > the size of the field after the starting point, returns false.
+		//If the field is not yet initialized or allocated, also returns false (and doesn't accept new data).
+		bool acceptBulkData(coordinate_t startingPoint, std::vector<double> newData);
+
+		//If the fields don't have the exact same size, returns false.
+		//If either of the fields are not yet initialized or allocated, also returns false.
+		bool mirrorAllDataFrom(PeriodicDoublesLattice2D* otherField_ptr);
+
+		const std::vector<checkData_t>* getCheckVectorConstPtr() const;
+
+		//To hold check data for the field. Is initialized on field initialization
+		//Other than that, is of responsability of the user of the class
+		checkData_t checks;
+
+	private:
+		std::vector<double> m_data;
+
+		bool m_hasAllocated;
+		bool m_hasIntialized;
+		fieldDimensions_t m_dimensions;
+		size_t m_elements;
+
+		std::vector<checkData_t> m_fieldChecks;
+		
+		size_t indexFromBoundedCoordinate(coordinate_t coordinate) const;
+		size_t indexFromPeriodicCoordinate(coordinate_t coordinate) const;
+	};
+
+	//This holds 2 lattices to be used together, one for the current and another for the last value
+	//If the checks vector is used, care should be taken to not confuse both (TODO: review this)
+	class CurrentAndLastPerioricDoublesLattice2D {
+	public:
+		CurrentAndLastPerioricDoublesLattice2D(fieldDimensions_t newDimensions, int cellID = ALL_CELLS_ID, 
+			                                                            std::vector<double> initialData = {});
+		
+		PeriodicDoublesLattice2D* getPointerToCurrent();
+		PeriodicDoublesLattice2D* getPointerToLast();
+
+		void rotatePointers(); 
+
+		void releaseFields();
+
+		//TODO: write method to write into both fields
+
+	private:
+		std::unique_ptr<PeriodicDoublesLattice2D> m_lattice1_ptr;
+		std::unique_ptr<PeriodicDoublesLattice2D> m_latticeA_ptr;
+		
+		bool m_isLattice1current = true;
+	};
+}

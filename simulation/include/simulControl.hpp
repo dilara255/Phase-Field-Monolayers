@@ -95,6 +95,13 @@ namespace PFM {
         void setKused(double newK);
         void setLambdaUsed(double newLambda);
         void setGammaUsed(double newGamma);
+        //Strenght of the area term
+        void setMuUsed(double newMu);
+        //A0 will be set so the target area (sum of phi squared) is the current area
+        void setA0fromActiveField();
+        //Set desired A0 manually
+        void setA0fromDouble(double newA0);
+        
         //Just returns in case the new lambda = 0
         void updatePhysicalParametersFromInternals();
         void setIntendedDt(double newDt);
@@ -144,8 +151,9 @@ namespace PFM {
         //Asks the controller to stop, but otherwise keeps going. *Use with caution*.
         //WARNING: When the simulation actually stops, its thread is STILL HANGING. Does nothing if not running.
         void nonBlockingStop();
-        //These will just return in case their dividend is zero:
+        //Will just return in case their dividend is zero
         void updateGammaLambda();
+        //Will just return in case their dividend is zero
         void updateKandA();
 
         bool m_hasInitialized = false;

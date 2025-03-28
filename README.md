@@ -19,11 +19,11 @@ Parameters and configurations can be defined via command line or GUI (supports r
 
 - Uses fAux as a utility library (included). The **simulation** project doesn't need to link to it (but uses some headers).
 - The **GUI application** is built on top of fViz2D (also included), and **requires openGL 3.3** or better.
-- The build system is controlled by **premake5** (and tested for gmake and Visual Studio).
+- The build system is controlled by **premake5** (tested for gmake and Visual Studio). Windows binary included in the depend folder.
 - **Expects 64 bit Windows or Linux**.
 - The scripts use **Python 3**.
 
 ## Compilation:
 
 - premake5.lua describes the solution's configuration. It's set up to use **clang**.
-- run **"./premake5 gmake"** to use **make**, or run **generateProjects_VS2019.bat** (on windows) for **VS**.
+- run **"premake5 gmake"** to use **make**, run **generateProjects_VS2022.bat** (on windows) for **VS**, or run premake5 with any other supported option.

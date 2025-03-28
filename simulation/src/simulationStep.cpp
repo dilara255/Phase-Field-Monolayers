@@ -46,10 +46,12 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 	
 	const double initialCellDiameterDensity = 1.0/2;
 
-	double dt = controller_ptr->getLastSimParametersPtr()->dt;
-	double A = controller_ptr->getLastSimParametersPtr()->A;
-	double k = controller_ptr->getLastSimParametersPtr()->k;
-	double lambda = controller_ptr->getLastSimParametersPtr()->lambda;
+	auto params_ptr = controller_ptr->getLastSimParametersPtr();
+
+	double dt = params_ptr->dt;
+	double A = params_ptr->A;
+	double k = params_ptr->k;
+	double lambda = params_ptr->lambda;
 
 	//Preparation to start stepping:
 	preProccessFieldsAndUpdateController(controller_ptr, initialCellDiameterDensity, k, A, dt, lambda, invertField);
@@ -73,7 +75,6 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 	while(*shouldPause_ptr) { AZ::hybridBusySleepForMicros(std::chrono::microseconds(MICROS_IN_A_MILLI)); }
 
 	//The actual steps:
-	auto params_ptr = controller_ptr->getLastSimParametersPtr();
 	while(!controller_ptr->checkIfShouldStop()) {
 	
 		//Update dt each step so we can deal with the initial few steps, adaptative dt, and client changes
@@ -84,23 +85,44 @@ void PFM::singleLayerCHsim_fn(SimulationControl* controller_ptr, uint64_t* stepC
 		dt = params_ptr->dt;
 		A = params_ptr->A;
 		k = params_ptr->k;
+		//We simply set mu to 0 to disable the area term
+		double mu = params_ptr->mu * !params_ptr->disableAreaTerm * (params_ptr->mu > 0);
+		double a0 = params_ptr->a0;
+		//In case we need to initialize a0
+		if (a0 < 0) { 
+			controller_ptr->setA0fromActiveField();
+			a0 = params_ptr->a0;
+		}
+
+		//TODO: proper data structures and functions to halndle this:
+		double areaLastStep = -1;
+		//Do we need to initialize the area?
+		if (!params_ptr->disableAreaTerm && areaLastStep == -1) {
+			auto field_ptr = controller_ptr->getActiveFieldPtr();
+			int elements = field_ptr->getNumberOfActualElements();
+
+			for (int i = 0; i < elements; i++) {
+				areaLastStep += field_ptr->getElement(i) * field_ptr->getElement(i);
+			}
+		}
 
 		switch (method)
 		{
 		case PFM::integrationMethods::FTCS:
 			controller_ptr->setBaseAsActive();
-			N_INT::TD::CH::ftcsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+			N_INT::TD::CH::ftcsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, mu, a0, &areaLastStep, checks_ptr);
 			break;
 		case PFM::integrationMethods::FTCS_WITH_SUBS:
 			if (PFM::getStepsRan() < completelyArbitraryStepToUnlockFullDt) {
 				//Disabled at the start just to keep things consistent
 				controller_ptr->setBaseAsActive();
-				N_INT::TD::CH::ftcsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr);
+				N_INT::TD::CH::ftcsStep(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, mu, a0, &areaLastStep, checks_ptr);
 			}
 			else {
 				//We're past the start, so lets unluck substepping as well
 				controller_ptr->setBaseAsActive();
-				N_INT::TD::CH::ftcsStepWithSubsteps(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, checks_ptr,
+				N_INT::TD::CH::ftcsStepWithSubsteps(baseField_ptr, tempKsAndDphis_ptr, dt, k, A, 
+					                                mu, a0, &areaLastStep, checks_ptr,
 								                    rotBaseField_ptr->getPointerToCurrent(), 
 					                                params_ptr->maxAvgElementChangePerStep);
 			}
@@ -241,11 +263,11 @@ void expandCells(PFM::PeriodicDoublesLattice2D* lattice_ptr, float cellRadius,
 			else { newValue = valueOff; }
 			
 			lattice_ptr->writeDataPoint({i,j}, newValue);
-			lattice_ptr->checks.lastDensity += newValue;
+			lattice_ptr->checks.density += newValue;
 		}
 	}
 
-	lattice_ptr->checks.lastDensity /= (width * height);
+	lattice_ptr->checks.density /= (width * height);
 }
 
 void preProccessFieldsAndUpdateController(PFM::SimulationControl* controller_ptr, 
@@ -333,9 +355,9 @@ void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkDat
 		checks_ptr->timeAtLastcheck = checks_ptr->totalTime;
 
 		checks_ptr->lastDensityChange = checks_ptr->densityChange;
-		checks_ptr->lastDensity += (checks_ptr->lastDensityChange / elements);
+		checks_ptr->density += (checks_ptr->lastDensityChange / elements);
 		
-		checks_ptr->lastAbsoluteChangePerElementPerStep = checks_ptr->absoluteChange / elements;		
+		checks_ptr->absoluteChangePerElementPerStep = checks_ptr->absoluteChange / elements;		
 		double changeMeanSquare = checks_ptr->sumOfsquaresOfChanges / elements;
 		double squaredMeanChange = (checks_ptr->densityChange / elements) 
 											* (checks_ptr->densityChange / elements);
@@ -343,13 +365,13 @@ void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkDat
 			//We check before diving  by time because there might be no steps in the last check
 			//if so, changes are also zero, so these will all be already zero too, as they should
 
-			checks_ptr->lastAbsoluteChangePerElementPerStep /= checks_ptr->stepsDuringLastCheckPeriod;
+			checks_ptr->absoluteChangePerElementPerStep /= checks_ptr->stepsDuringLastCheckPeriod;
 			changeMeanSquare /= checks_ptr->stepsDuringLastCheckPeriod;
 			squaredMeanChange /= checks_ptr->stepsDuringLastCheckPeriod;
 		}
 		
-		checks_ptr->lastRmsAbsChange = std::sqrt(changeMeanSquare);
-		checks_ptr->lastAbsChangeStdDev = std::sqrt(changeMeanSquare - squaredMeanChange);
+		checks_ptr->absChangeRms = std::sqrt(changeMeanSquare);
+		checks_ptr->absChangeStdDev = std::sqrt(changeMeanSquare - squaredMeanChange);
 
 		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
 		PFM::saveFieldDataAccordingToController();

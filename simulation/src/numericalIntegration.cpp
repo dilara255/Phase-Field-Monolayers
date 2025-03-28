@@ -50,12 +50,18 @@ double N_INT::rungeKutaKnBcoef(rungeKuttaOrder order, int n) {
 	else { assert(false); return 0.0; }
 }
 
-void updateChecks(PFM::checkData_t* checks_ptr, const double change) {
+void updateChecksPerElement(PFM::checkData_t* checks_ptr, const double change) {
 
 	checks_ptr->densityChange += change;
 	checks_ptr->absoluteChangeLastStep += std::abs(change);
 	checks_ptr->totalAbsoluteChange += std::abs(change);
 	checks_ptr->sumOfsquaresOfChangesLastStep += change * change;
+}
+
+void updateChecksPerFieldStep(PFM::checkData_t* checks_ptr, const double newArea) {
+
+	checks_ptr->areaLastStep = checks_ptr->area;
+	checks_ptr->area = newArea;
 }
 
 namespace N_INT { namespace TD { namespace CH { 
@@ -76,7 +82,7 @@ namespace N_INT { namespace TD { namespace CH {
 
 } } }
 
-//Note: this does has quite a bit of coupling with ftcsStepWithSubsteps:
+//Note: this does have quite a bit of coupling with ftcsStepWithSubsteps:
 //- It has a little bit of extra logic to also be able to be used when substeps are required. No real overhead;
 //- substepAuxField should only ever be used if maySubstep == true;
 //- this has to update substepAuxField according to the use in the substepping version:
@@ -84,12 +90,13 @@ namespace N_INT { namespace TD { namespace CH {
 //   we don't have to track what substepping elements might be neighbors of other elements also substepping
 //   and how much time has passed for them. On the other hand, this makes the initial copy slower, since
 //   copying the original values can be done faster, in a single pass (left commented out).
-void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField, 
-						   PFM::PeriodicDoublesLattice2D* auxField,
-	                       const double dt, const double chK, const double chA, 
-	                       PFM::checkData_t* checks_ptr, 
-	                       PFM::PeriodicDoublesLattice2D* substepAuxField, 
-						   bool maySubstep, double maxStepForSubstepping) {
+void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
+							 PFM::PeriodicDoublesLattice2D* auxField,
+							 const double dt, const double chK, const double chA,
+							 const double mu, const double a0, double* area_ptr,
+							 PFM::checkData_t* checks_ptr,
+							 PFM::PeriodicDoublesLattice2D* substepAuxField,
+							 bool maySubstep, double maxStepForSubstepping) {
 	
 	int height = phiField->getFieldDimensions().height;
 	int width = phiField->getFieldDimensions().width;
@@ -110,8 +117,13 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 	}
 
 	double dPhi, delta;
+	double inverseA0 = 1 / a0;
+	double lastArea = *area_ptr;
+	*area_ptr = 0;
 
-	//Then we go trhough each point calculating the laplacian of the petential
+	//Then we go trhough each point calculating the laplacian of the potential
+	//as well as the area term.
+	//After the field value is updated, so is the area contribution
 	for (int j = 0; j < height; j++) {
 			centerPoint.y = j;
 		for (int i = 0; i < width; i++) {
@@ -119,7 +131,8 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 		
 			neigh = auxField->getNeighborhood(centerPoint);
 		
-			dPhi = -PFM::laplacian9pointsAroundNeighCenter(&neigh);
+			dPhi = - PFM::laplacian9pointsAroundNeighCenter(&neigh) 
+				   + negativeAreaTerm(lastArea, inverseA0, mu, phiField->getDataPoint(centerPoint));
 			//-lap: the more a point "needs" to be pulled than their neighbor, the more they are pulled
 			//at the same time, the laplacian has sum 0 (on this periodic field), so total phi is conserverd
 
@@ -128,9 +141,12 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 			if (!maySubstep) {
 				//We update the field and the checks:
 				phiField->incrementDataPoint(centerPoint, delta);
-				updateChecks(checks_ptr, delta);
+				*area_ptr += phiField->getDataPoint(centerPoint) * phiField->getDataPoint(centerPoint);
+				updateChecksPerElement(checks_ptr, delta);
 			}
 			else {
+				//TODO: TAKE THIS OFF?
+				//TODO: none of the area term stuff is here
 				//in case substepping is enabled, we need to do some extra book keeping:
 				const double phi = phiField->getDataPoint(centerPoint);
 
@@ -138,7 +154,7 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 					//We accept the step and update the checks and dPhis:
 					substepAuxField->writeDataPoint(centerPoint, dPhi);
 					phiField->incrementDataPoint(centerPoint, delta);
-					updateChecks(checks_ptr, delta);
+					updateChecksPerElement(checks_ptr, delta);
 				}
 				else {				
 					//The step was too large, so we'll have to sub-step this
@@ -152,6 +168,8 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 			}
 		}
 	}
+
+	updateChecksPerFieldStep(checks_ptr, *area_ptr);
 }
 
 PFM::neighborhood9_t computeFforAneighborhood9(PFM::neighborhood25_t* neigh25_ptr, 
@@ -217,7 +235,8 @@ int indexOfThisCoordinateOnThisSubstepVector(const PFM::coordinate_t coordinate,
 //- Improvements to make rebalancing easier (and better, maybe).
 void N_INT::TD::CH::ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField, 
 						   PFM::PeriodicDoublesLattice2D* auxField,
-	                       const double dt, const double chK, const double chA, 
+	                       const double dt, const double chK, const double chA,
+	                       const double mu, const double a0, double* area_ptr,
 	                       PFM::checkData_t* checks_ptr,
 	                       PFM::PeriodicDoublesLattice2D* substepAuxField,
 	                       double maxOriginalStep) {
@@ -225,7 +244,7 @@ void N_INT::TD::CH::ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField
 	assert(dt > 0);
 
 	//First try the normal step:
-	ftcsStep(phiField, auxField, dt, chK, chA, checks_ptr, substepAuxField, true, maxOriginalStep);
+	ftcsStep(phiField, auxField, dt, chK, chA, mu, a0, area_ptr, checks_ptr, substepAuxField, true, maxOriginalStep);
 
 	//And then deal with substeps for the elements in need of it.
 	
@@ -420,7 +439,7 @@ void N_INT::TD::CH::ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField
 		//For the checks, we need to account both for the final delta phi and for the effect on the neighbors.
 		const double deltaPhi = g_substepVector.at(i).currentPhi - g_substepVector.at(i).initialPhi;
 		const double effectiveNeighborChange = actualDifferenceForNeighbors;
-		updateChecks(checks_ptr, deltaPhi + effectiveNeighborChange);
+		updateChecksPerElement(checks_ptr, deltaPhi + effectiveNeighborChange);
 		//note that this "final" dPhi may actually be final, since neighbors may change it here as well.
 	}
 

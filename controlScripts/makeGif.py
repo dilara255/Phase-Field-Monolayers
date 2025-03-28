@@ -3,7 +3,7 @@
 #-- from which the simulation was called, passing the data directory's name as the only argument
 #runner automatically calls this appropriately
 
-#Uses "Pillow": you may need to "python3 -m pip install --upgrade Pillow" (or just "python", isnted of "python3")
+#Uses "Pillow": you may need to "python3 -m pip install --upgrade Pillow" (or just "python", instead of "python3")
 #More info on https://pillow.readthedocs.io/en/stable/installation.html
 #Note the WARNING: "Pillow and PIL cannot co-exist in the same environment"
 
@@ -12,7 +12,10 @@ from PIL import Image
 import sys
 
 gifName = 'out.gif'
-gifFrameDuration = 40
+
+gifFrameDuration = 20
+stride = 10
+initialFramesWithoutJumping = 10
 
 def pgmToColoredJpg(source_path, dest_path):
     im = Image.open(source_path)
@@ -89,9 +92,12 @@ for path in pgmPaths:
     
 jpgPaths = sorted(glob.glob(dataPath + "*.jpg"), key = len)
 images = []
+frame = 0
 for path in jpgPaths:
-    im = Image.open(path)
-    images.append(im)
+    if frame < initialFramesWithoutJumping or (frame % stride) == 0:
+        im = Image.open(path)
+        images.append(im)
+    frame += 1
 images[0].save(dataPath + gifName, save_all=True, append_images=images[1:], 
                optimize=True, duration=gifFrameDuration, loop=0, comment=jpgPaths[0])
 

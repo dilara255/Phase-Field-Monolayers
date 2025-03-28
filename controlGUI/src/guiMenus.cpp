@@ -23,10 +23,9 @@ void checksMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 
 inline double changeToSaveSliderMax(void) {
 	return std::max(0.5, g_simParams_ptr->useAdaptativeDt * 100 * g_simParams_ptr->maxAvgElementChangePerStep);
-}
-		
+}		
 
-void createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr, double* GUIissuedDt_ptr) {
+void createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr, double* GUIissuedDt_ptr, int fieldSize) {
 	
 	PFM::parameterBounds_t bounds = 
 		PFM::calculateParameterBounds(param_ptr->k, param_ptr->A, param_ptr->dt, stepsRan);
@@ -36,8 +35,16 @@ void createParameterSliders(int stepsRan, PFM::simParameters_t* param_ptr, doubl
 		bounds.maxK = 1.0;
 	}
 
+	//TODO: pull into bounds
+	double minMu = 0;
+	double maxMu = 1;
+	double minA0 = 0;
+	double maxA0 = fieldSize;
+
 	ImGui::SliderScalar("k", ImGuiDataType_Double, &param_ptr->k, &bounds.minK, &bounds.maxK);
 	ImGui::SliderScalar("A", ImGuiDataType_Double, &param_ptr->A, &bounds.minA, &bounds.maxA);
+	ImGui::SliderScalar("mu", ImGuiDataType_Double, &param_ptr->mu, &minMu, &maxMu);
+	ImGui::SliderScalar("A0", ImGuiDataType_Double, &param_ptr->a0, &minA0, &maxA0);
 
 	if (!param_ptr->useAdaptativeDt) { 
 		ImGui::SliderScalar("dt", ImGuiDataType_Double, GUIissuedDt_ptr, &bounds.minDt, &bounds.maxDt); 
@@ -135,11 +142,14 @@ void controlFlowMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 	}
 	
 	ImGui::Checkbox("Start Paused", &g_simConfigNextStart_ptr->startPaused);
+	ImGui::SameLine();
+	ImGui::Checkbox("Disable Area", &g_simParamsNextStart_ptr->disableAreaTerm);
 	
 	ImGui::Text("Parameters for restart:\n");
 	
 	createParameterSliders(2 * PFM::completelyArbitraryStepToUnlockFullDt, 
-		                   g_simParamsNextStart_ptr, &(g_simParamsNextStart_ptr->dt));
+		                   g_simParamsNextStart_ptr, &(g_simParamsNextStart_ptr->dt),
+		                   PFM::getSimConfigPtr()->getTotalSitesOnNetwork());
 	g_simConfigNextStart_ptr->stepsRan = 0; //change place
 
 	g_simParamsNextStart_ptr->lambda = 
@@ -148,6 +158,7 @@ void controlFlowMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 		PFM::getGammaFromKandA(g_simParamsNextStart_ptr->k, g_simParamsNextStart_ptr->A);
 
 	ImGui::Text("Lambda: %f\nGamma: %f", g_simParamsNextStart_ptr->lambda, g_simParamsNextStart_ptr->gamma);
+	if(ImGui::Button("Recalc A0")) { g_simParamsNextStart_ptr->a0 = -1; }
 }
 
 void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
@@ -159,7 +170,8 @@ void configAndParamsMenuFunc(F_V2::rendererControlPtrs_t* rendererCtrl_ptrs) {
 
 	static double GUIissuedDt = PFM::getIntendedDt();
 
-	createParameterSliders(g_simConfig_ptr->stepsRan, g_simParams_ptr, &GUIissuedDt);
+	createParameterSliders(g_simConfig_ptr->stepsRan, g_simParams_ptr, &GUIissuedDt,
+		                   PFM::getSimConfigPtr()->getTotalSitesOnNetwork());
 
 	if (GUIissuedDt != PFM::getIntendedDt()) {
 		//A change was actually issued by the user, so:

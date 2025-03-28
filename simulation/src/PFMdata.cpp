@@ -62,7 +62,7 @@ PFM::PeriodicDoublesLattice2D::PeriodicDoublesLattice2D(fieldDimensions_t newDim
 		if (initialData.size() == m_elements) {
 			for (size_t i = 0; i < m_elements; i++) {
 				m_data.push_back(initialData[i]);
-				checks.lastDensity += initialData[i];
+				checks.density += initialData[i];
 			}
 			m_hasIntialized = true;
 		}
@@ -73,10 +73,10 @@ PFM::PeriodicDoublesLattice2D::PeriodicDoublesLattice2D(fieldDimensions_t newDim
 		}
 	}
 
-	checks.lastDensity /= newDimensions.totalElements();
+	checks.density /= newDimensions.totalElements();
 	
 	//TODO: do I really want this printif here?
-	printf("Field loaded with density %f\n", checks.lastDensity);
+	printf("Field loaded with density %f\n", checks.density);
 
 	return;
 }
@@ -263,4 +263,49 @@ void PFM::PeriodicDoublesLattice2D::addFieldCheckData(PFM::checkData_t checkData
  const std::vector<checkData_t>* PFM::PeriodicDoublesLattice2D::getCheckVectorConstPtr() const {
 	 return (const std::vector<checkData_t>*)&m_fieldChecks;
  }
+
+ class StringFmtBuffer {
+
+ public:
+	 StringFmtBuffer(const size_t precision) {
+		 m_precision = precision;
+		 m_fmtValsBuffer_ptr = (char*)malloc(2 * precision + 1);
+	 }
+
+	 ~StringFmtBuffer() {
+		 free(m_fmtValsBuffer_ptr);
+		 m_fmtValsBuffer_ptr = nullptr;
+	 }
+
+	 template <typename T>
+	 const char* getFormatedString(const T value) {
+		 write(value);
+		 return read();
+	 }
+
+	 const char* read() {
+		 if (m_fmtValsBuffer_ptr == nullptr) { return "Bad Buffer!\n"; }
+		 return (const char*)m_fmtValsBuffer_ptr;
+	 }
+
+	 //same as sprintif, except you don't pass the buffer
+	 void write(const int64_t value) {
+		 if (m_fmtValsBuffer_ptr == nullptr) { return; }
+		 sprintf(m_fmtValsBuffer_ptr, "%*lld", (int)m_precision, value);
+	 }
+
+	 void write(const uint64_t value) {
+		 if (m_fmtValsBuffer_ptr == nullptr) { return; }
+		 sprintf(m_fmtValsBuffer_ptr, "%*llu", (int)m_precision, value);
+	 }
+
+	 void write(const double value) {
+		 if (m_fmtValsBuffer_ptr == nullptr) { return; }
+		 sprintf(m_fmtValsBuffer_ptr, "%.*f", (int)m_precision, value);
+	 }
+
+ private:
+	 char* m_fmtValsBuffer_ptr;
+	 size_t m_precision;
+ };
  

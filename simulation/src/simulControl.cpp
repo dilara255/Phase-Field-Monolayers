@@ -1,4 +1,3 @@
-#include "fAux/API/miscStdHeaders.h"
 #include "fAux/API/timeHelpers.hpp"
 #include "fAux/API/miscDefines.hpp"
 #include "fAux/API/prng.hpp"
@@ -360,6 +359,32 @@ void PFM::SimulationControl::setGammaUsed(double newGamma) {
 	updateKandA();
 }
 
+//Strenght of the area term
+void PFM::SimulationControl::setMuUsed(double newMu) {
+	m_simParameters.mu = newMu;
+}
+
+//A0 will be set so the target area (sum of phi squared) is the current area
+//TODO: should the actual calculation actually be here?
+void PFM::SimulationControl::setA0fromActiveField() {
+	auto active_p = getActiveFieldConstPtr();
+	if (active_p == nullptr) { return; }
+
+	int elements = active_p->getNumberOfActualElements();
+
+	double newA0 = 0;
+	for (int i = 0; i < elements; i++) {
+		newA0 += active_p->getElement(i) * active_p->getElement(i);
+	}
+
+	m_simParameters.a0 = newA0;
+}
+
+//Set desired A0 manually
+void PFM::SimulationControl::setA0fromDouble(double newA0) {
+	m_simParameters.a0 = newA0;
+}
+
 void PFM::SimulationControl::updatePhysicalParametersFromInternals() {
 	updateGammaLambda();
 }
@@ -666,7 +691,7 @@ double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, cons
 
 	//Since the actual density change is zero, the RMS is the same as the deviation. So:
 	double highAvgChangeEstimative = avgAbsChangeLastStep + stdDevs * rmsChangeLastStep;
-	//double highAvgChangeEstimative = lastCheck_ptr->lastAbsoluteChangePerElementPerStep + (stdDevs * lastCheck_ptr->lastAbsChangeStdDev);
+	//double highAvgChangeEstimative = lastCheck_ptr->absoluteChangePerElementPerStep + (stdDevs * lastCheck_ptr->absChangeStdDev);
 	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	//Most change happens in the interface area: 
@@ -674,7 +699,7 @@ double PFM::calculateMaxAdaptativeDt(const simParameters_t* parameters_ptr, cons
 	//Average may be a lot smaller than the change we actually care about. Let's roughly account for that:
 
 	assert(totalArea > 4 * M_PI_ * parameters_ptr->lambda); //so interface area can't be larger than total
-	double effectiveAbsDensity = std::min(1.0, std::abs(lastCheck_ptr->lastDensity));
+	double effectiveAbsDensity = std::min(1.0, std::abs(lastCheck_ptr->density));
 
 	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	//!!!!!!!!!!!!! CHANGES HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!

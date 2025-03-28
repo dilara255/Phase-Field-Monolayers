@@ -18,6 +18,17 @@ namespace N_INT {
 	}
 
 	//TODO: FIX chNumericalA IF VERLET IS EVER RE-IMPLEMENTED
+	//(it won't be)
+
+	//From the potential V_area
+	//mu: constant dealing with the strenght of the area term
+	//a: area, defined as the summation of phi^2 over the network
+	//a0: "target" area, inverted here to use muliplication instead of division
+	//Note that we will use the negative of the area term, since it is restorative
+	inline double negativeAreaTerm(const double a, const double inverseA0, const double mu, const double phi) {
+		return 4 * mu * inverseA0 * (1 - a * inverseA0) * phi;
+	}
+
 }
 
 

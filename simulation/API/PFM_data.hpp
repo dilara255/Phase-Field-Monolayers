@@ -53,7 +53,12 @@ namespace PFM {
 		bool startPaused = false;
 		uint32_t callerKey = 0;
 		std::chrono::system_clock::time_point epochTimeSimCall;
- 
+		
+		//Total number of elements on the general field. NOT per cell, or sum of cells.
+		inline int getTotalSitesOnNetwork() const {
+			return width * height;
+		}
+
 		inline uint32_t reducedSecondsSinceEpochOnSimCall() const {
 			uint64_t seconds = 
 				std::chrono::duration_cast<std::chrono::seconds>(epochTimeSimCall.time_since_epoch()).count();
@@ -83,12 +88,15 @@ namespace PFM {
 
 	typedef struct simParameters_st {     
         double dt = -1;
-		double lambda = -1;
-		double gamma = -1;
-        double A = -1;
-		double k = -1;
+		double lambda = -1; //CH, physical
+		double gamma = -1; //CH, physical
+        double A = -1; //CH, mathematical
+		double k = -1; //CH, mathematical
+		double mu = -1; //area
+		double a0 = -1; //area
 		bool useAdaptativeDt = false;
 		bool useMaxSafeDt = true;
+		bool disableAreaTerm = false;
 		double maxAvgElementChangePerStep = defaultMaxChangePerStep;
 		double maxSpeedUpMult = defaultMaxSpeedupMult;
 		double minSlowDownMult = defaultMinSlowdownMult;
@@ -100,6 +108,9 @@ namespace PFM {
 			str += "Lambda (interface width): " + std::to_string(lambda) + "\n";
 			str += "k: " + std::to_string(k) + "\n";
 			str += "A: " + std::to_string(A) + "\n";
+			str += "mu: " + std::to_string(mu) + "\n";
+			str += "a0: " + std::to_string(a0) + "\n";
+			str += "Area Term disabled? " + std::to_string(disableAreaTerm) + "\n";
 			str += "Adaptative dt? " + std::to_string(useAdaptativeDt);
 			if(useAdaptativeDt) {
 				str += "\t(max change: " + std::to_string(maxAvgElementChangePerStep)
@@ -226,7 +237,30 @@ namespace PFM {
 
 	} neighborhood25_t;
 
+	//TODO: Relocate this
+	class StringFmtBuffer {
+	
+	public:
+		StringFmtBuffer(const size_t precision);
+		~StringFmtBuffer();
+
+		template <typename T>
+		const char* getFormatedString(const T value);
+
+		const char* read();
+
+		//same as sprintif, except you don't pass the buffer
+		void write(const int64_t value);
+		void write(const uint64_t value);
+		void write(const double value);
+
+	private:
+		char* m_fmtValsBuffer_ptr;
+		size_t m_precision;
+	};
+
 	//Note when taking rates that in some cases some values may be zero
+	//TODO: This should just be a class, right? Also deal with some of its updating
 	typedef struct checkData_st {
 
 		//TODO: rename stuff so it's clear what is reffering to the last step and what's about the last period
@@ -236,19 +270,27 @@ namespace PFM {
 		uint64_t step = 0;
 		double absoluteChangeLastStep = 0;
 		double sumOfsquaresOfChangesLastStep = 0;
+		double areaLastStep = 0;
 
 		double totalChangeFromStart = 0;
 
-		double lastDensity = 0;
+		double density = 0;
 		double densityChange = 0;
 		double absoluteChange = 0;
 		double sumOfsquaresOfChanges = 0;
+		double proportionBelow0 = 0;
+		double proportionOutside = 0;
+		double proportionInterface = 0;
+		double proportionInside = 0;
+		double proportionAbove1 = 0;
+		double area = 0;
+		double interfaceArea = 0;
 		
-		double lastDensityChange = 0;
-		double lastAbsoluteChangePerElementPerStep = 0;
-		double lastRmsAbsChange = 0;
-		double lastAbsChangeStdDev = 0;
+		double absoluteChangePerElementPerStep = 0;
+		double absChangeRms = 0;
+		double absChangeStdDev = 0;
 
+		double lastDensityChange = 0;
 		double lastDt = 0;
 
 		uint64_t stepsAtLastCheck = 0;
@@ -270,6 +312,10 @@ namespace PFM {
 		simParameters_t parametersOnLastCheck;
 		
 		//TODO: also improve the naming of these
+		inline void resetProportions() { proportionBelow0 = 0; proportionOutside = 0; 
+										 proportionInterface = 0; proportionInside = 0; 
+										 proportionAbove1 = 0;
+		}
 		inline void clearLastStepsChanges() { absoluteChangeLastStep = 0; sumOfsquaresOfChangesLastStep = 0; 
 		                                      substepsLastStep = 0; 
 		}
@@ -278,14 +324,52 @@ namespace PFM {
 										  elementsSubstepedLastCheck = 0;
 		}
 		inline void zeroOut() { step = 0; totalChangeFromStart = 0; absoluteChangeLastStep = 0; 
-							    sumOfsquaresOfChangesLastStep = 0; lastDensity = 0; densityChange = 0; 
-								absoluteChange = 0; sumOfsquaresOfChanges = 0; timeAtLastcheck = 0; 
-								timeDuringLastCheckPeriod = 0; lastDensityChange = 0; 
-								lastAbsoluteChangePerElementPerStep = 0; lastRmsAbsChange = 0;
-								lastAbsChangeStdDev = 0;  lastDt = 0; stepsAtLastCheck = 0;
+							    sumOfsquaresOfChangesLastStep = 0; areaLastStep = 0; density = 0; densityChange = 0;
+								absoluteChange = 0; sumOfsquaresOfChanges = 0; area = 0; interfaceArea = 0;
+								timeAtLastcheck = 0; timeDuringLastCheckPeriod = 0;
+								absoluteChangePerElementPerStep = 0; absChangeRms = 0;
+								absChangeStdDev = 0;  lastDensityChange = 0; lastDt = 0; 
+								stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
 		                        referenceDt = 0; substepsLastStep = 0; substepsLastCheck = 0;
 								totalAbsoluteChange = 0; totalAbsoluteChange = 0;
+		}
+		
+		inline void addToProportions(double phi, int totalElements) {
+			const double extremesMargin = 0.1;
+			const double marginTowardsInterface = 0.1;
+			
+			const double effectiveBelow0 = 0 - extremesMargin;
+			const double effectiveAbove1 = 1 + extremesMargin;
+
+			const double minInside = 1 - marginTowardsInterface;
+			const double maxOutside = 0 + marginTowardsInterface;
+
+			double perElementDensity = 1.0 / totalElements;
+
+			if (phi < effectiveBelow0) {
+				proportionBelow0 += perElementDensity;
+				proportionOutside += perElementDensity;
+			}
+			else if (phi < maxOutside) {
+				proportionOutside += perElementDensity;
+			}
+			else if (phi < minInside) {
+				proportionInterface += perElementDensity;
+			}
+			else if (phi < effectiveAbove1) {
+				proportionInside += perElementDensity;
+			}
+			else {
+				proportionInside += perElementDensity;
+				proportionAbove1 += perElementDensity;
+			}	
+		}
+
+		inline void addTointerfaceArea(double phi) {
+			const double effectivePhi = std::clamp(phi, 0., 1.);
+			double impact = 1 - 2 * abs(effectivePhi - 0.5);
+			interfaceArea += impact * impact;
 		}
 		
 		inline const std::string getChecksStr() const {
@@ -304,15 +388,28 @@ namespace PFM {
 				   + " elements/step), @avg dt: " 
 				   + std::to_string(timeDuringLastCheckPeriod / stepsDuringLastCheckPeriod) 
 				   + ")\n";
+
 			str += "Density: ";
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensity);
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, density);
 			str += fmtValsBuffer;
 			str += "\n";
+
+			str += "Area: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, area);
+			str += fmtValsBuffer;
+			str += " (last: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, areaLastStep);
+			str += fmtValsBuffer;
+			str += " | change: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, area - areaLastStep);
+			str += fmtValsBuffer;
+			str += " )\n";
+
 			str += "Change: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastDensityChange);
 			str += fmtValsBuffer;
 			str += ", absolute change / element per unit time: ";
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastAbsoluteChangePerElementPerStep);
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, absoluteChangePerElementPerStep);
 			str += fmtValsBuffer;
 			str += " (since last save: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, totalAbsoluteChangeSinceLastSave);
@@ -321,14 +418,18 @@ namespace PFM {
 			sprintf(fmtValsBuffer, "%.*f", 3, totalAbsoluteChange);
 			str += fmtValsBuffer;
 			str += ")\n";
+
 			str += "Std Dev: ";
 			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastAbsChangeStdDev);
-			str += fmtValsBuffer;
-			str += " (RMS: ";
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastRmsAbsChange);
-			str += fmtValsBuffer;
-			str += ")\n";
+			else {
+				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeStdDev);
+				str += fmtValsBuffer;
+				str += " (RMS: ";
+				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeRms);
+				str += fmtValsBuffer;
+				str += ")";
+			}
+			str += "\n";
 
 			return str;
 		}
@@ -344,10 +445,64 @@ namespace PFM {
 			str += " | Gamma: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.gamma);
 			str += fmtValsBuffer; 
+			str += " | Mu: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.mu);
+			str += fmtValsBuffer;
+			str += " | A0: ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.a0);
+			str += fmtValsBuffer;
 			str += " | dt: ";
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, parametersOnLastCheck.dt);
 			str += fmtValsBuffer; 
 			str += "\n";
+
+			return str;
+		}
+
+		inline const std::string getCSVchecksString(int version) const {
+
+			StringFmtBuffer buff(10);
+			std::string str = std::to_string(version) + " , ";
+
+			switch (version) {
+
+			case 0:
+				//Format v0: 
+				//step, totalTime, lastDt, [lastParams], 
+				//density, densityChange, absChangeRms, absChangeStdDev, 
+				//area, interfaceArea, 
+				//[proportions]\n
+
+				str += buff.getFormatedString(step); str += " , ";
+				str += buff.getFormatedString(totalTime); str += " , ";
+				str += buff.getFormatedString(lastDt); str += " , ";
+
+				str += buff.getFormatedString(parametersOnLastCheck.lambda); str += " , ";
+				str += buff.getFormatedString(parametersOnLastCheck.gamma); str += " , ";
+				str += buff.getFormatedString(parametersOnLastCheck.mu); str += " , ";
+				str += buff.getFormatedString(parametersOnLastCheck.a0); str += " , ";
+
+				str += buff.getFormatedString(density); str += " , ";
+				str += buff.getFormatedString(densityChange); str += " , ";
+				str += buff.getFormatedString(absChangeRms); str += " , ";
+				str += buff.getFormatedString(absChangeStdDev); str += " , ";
+
+				str += buff.getFormatedString(area); str += " , ";
+				str += buff.getFormatedString(interfaceArea); str += " , ";
+
+				str += buff.getFormatedString(proportionBelow0); str += " , ";
+				str += buff.getFormatedString(proportionOutside); str += " , ";
+				str += buff.getFormatedString(proportionInterface); str += " , ";				
+				str += buff.getFormatedString(proportionInside); str += " , ";
+				str += buff.getFormatedString(proportionAbove1);
+				
+				str += "\n";
+			break;
+
+			default:
+				str += "Bad Format Version \n";
+			break;
+			}
 
 			return str;
 		}
@@ -403,7 +558,7 @@ namespace PFM {
 		bool acceptBulkData(coordinate_t startingPoint, std::vector<double> newData);
 
 		//If the fields don't have the exact same size, returns false.
-		//If either of the field are not yet initialized or allocated, also returns false.
+		//If either of the fields are not yet initialized or allocated, also returns false.
 		bool mirrorAllDataFrom(PeriodicDoublesLattice2D* otherField_ptr);
 
 		const std::vector<checkData_t>* getCheckVectorConstPtr() const;
