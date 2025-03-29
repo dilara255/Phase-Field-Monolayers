@@ -466,7 +466,7 @@ namespace PFM {
 
 			switch (version) {
 
-			case 0:
+			case 0: {
 				//Format v0: 
 				//step, totalTime, lastDt, [lastParams], 
 				//density, densityChange, absChangeRms, absChangeStdDev, 
@@ -479,6 +479,8 @@ namespace PFM {
 					str += format;
 					break;
 				}
+
+				str += buff.getFormatedString(version); str += ",";
 
 				str += buff.getFormatedString(step); str += ",";
 				str += buff.getFormatedString(totalTime); str += ",";
@@ -502,12 +504,13 @@ namespace PFM {
 				str += buff.getFormatedString(proportionInterface); str += ",";
 				str += buff.getFormatedString(proportionInside); str += ",";
 				str += buff.getFormatedString(proportionAbove1);
-				
-				str += "\n";
-			break;
 
-			default:
+				str += "\n";
+				break;
+			}
+			default: {
 				str += "Bad Format Version \n";
+			}
 			break;
 			}
 
