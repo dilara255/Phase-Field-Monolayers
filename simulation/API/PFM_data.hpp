@@ -459,7 +459,7 @@ namespace PFM {
 			return str;
 		}
 
-		inline const std::string getCSVchecksString(int version) const {
+		inline const std::string getCSVchecksString(int version, bool getJustFormat = false) const {
 
 			StringFmtBuffer buff(10);
 			std::string str = std::to_string(version) + " , ";
@@ -473,27 +473,34 @@ namespace PFM {
 				//area, interfaceArea, 
 				//[proportions]\n
 
-				str += buff.getFormatedString(step); str += " , ";
-				str += buff.getFormatedString(totalTime); str += " , ";
-				str += buff.getFormatedString(lastDt); str += " , ";
+				const char* format = "version,step,totalTime,lasDT,lambda,gamma,mu,a0,density,densityChange,absChangeRms,absChangeStdDev,area,interfaceArea,proportionBelow0,proportionOutside,proportionInterface,proportionInside,proportionAbove1\n";
 
-				str += buff.getFormatedString(parametersOnLastCheck.lambda); str += " , ";
-				str += buff.getFormatedString(parametersOnLastCheck.gamma); str += " , ";
-				str += buff.getFormatedString(parametersOnLastCheck.mu); str += " , ";
-				str += buff.getFormatedString(parametersOnLastCheck.a0); str += " , ";
+				if (getJustFormat) {
+					str += format;
+					break;
+				}
 
-				str += buff.getFormatedString(density); str += " , ";
-				str += buff.getFormatedString(densityChange); str += " , ";
-				str += buff.getFormatedString(absChangeRms); str += " , ";
-				str += buff.getFormatedString(absChangeStdDev); str += " , ";
+				str += buff.getFormatedString(step); str += ",";
+				str += buff.getFormatedString(totalTime); str += ",";
+				str += buff.getFormatedString(lastDt); str += ",";
 
-				str += buff.getFormatedString(area); str += " , ";
-				str += buff.getFormatedString(interfaceArea); str += " , ";
+				str += buff.getFormatedString(parametersOnLastCheck.lambda); str += ",";
+				str += buff.getFormatedString(parametersOnLastCheck.gamma); str += ",";
+				str += buff.getFormatedString(parametersOnLastCheck.mu); str += ",";
+				str += buff.getFormatedString(parametersOnLastCheck.a0); str += ",";
 
-				str += buff.getFormatedString(proportionBelow0); str += " , ";
-				str += buff.getFormatedString(proportionOutside); str += " , ";
-				str += buff.getFormatedString(proportionInterface); str += " , ";				
-				str += buff.getFormatedString(proportionInside); str += " , ";
+				str += buff.getFormatedString(density); str += ",";
+				str += buff.getFormatedString(densityChange); str += ",";
+				str += buff.getFormatedString(absChangeRms); str += ",";
+				str += buff.getFormatedString(absChangeStdDev); str += ",";
+
+				str += buff.getFormatedString(area); str += ",";
+				str += buff.getFormatedString(interfaceArea); str += ",";
+
+				str += buff.getFormatedString(proportionBelow0); str += ",";
+				str += buff.getFormatedString(proportionOutside); str += ",";
+				str += buff.getFormatedString(proportionInterface); str += ",";
+				str += buff.getFormatedString(proportionInside); str += ",";
 				str += buff.getFormatedString(proportionAbove1);
 				
 				str += "\n";
