@@ -314,7 +314,7 @@ namespace PFM {
 		
 		double absoluteChangePerElementPerStep = 0;
 		double absChangeRms = 0;
-		double absChangeVariance = 0;
+		double absChangeStdDev = 0;
 
 		double lastDensityChange = 0;
 		double lastDt = 0;
@@ -343,7 +343,7 @@ namespace PFM {
 		                                      substepsLastStep = 0; 
 		}
 		inline void clearPerStepAccumulators() { accumulatingInterfaceArea = 0; accumulatingProportions.clear(); }
-		inline void clearPerSaveAccumulators() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; 
+		inline void clearAccumulators() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; 
 		                                  substepsLastCheck = 0; totalAbsoluteChangeSinceLastSave = 0; 
 										  elementsSubstepedLastCheck = 0; 
 		}
@@ -353,7 +353,7 @@ namespace PFM {
 								accumulatingInterfaceArea = 0;
 								timeAtLastcheck = 0; timeDuringLastCheckPeriod = 0;
 								absoluteChangePerElementPerStep = 0; absChangeRms = 0;
-								absChangeVariance = 0;  lastDensityChange = 0; lastDt = 0; 
+								absChangeStdDev = 0;  lastDensityChange = 0; lastDt = 0; 
 								stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
 		                        referenceDt = 0; substepsLastStep = 0; substepsLastCheck = 0;
@@ -439,10 +439,10 @@ namespace PFM {
 			str += fmtValsBuffer;
 			str += ")\n";
 
-			str += "Variance: ";
+			str += "Std Dev: ";
 			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
 			else {
-				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeVariance);
+				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeStdDev);
 				str += fmtValsBuffer;
 				str += " (RMS: ";
 				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeRms);
@@ -521,11 +521,11 @@ namespace PFM {
 			case 0: {
 				//Format v0: 
 				//step, totalTime, lastDt, [lastParams], 
-				//density, densityChange, absChangeRms, absChangeVariance, 
+				//density, densityChange, absChangeRms, absChangeStdDev, 
 				//area, interfaceArea, 
 				//[proportions]\n
 
-				const char* format = "version,step,totalTime,lasDT,lambda,gamma,mu,a0,density,densityChange,absChangeRms,absChangeVariance,area,interfaceArea,proportionBelow0,proportionOutside,proportionInterface,proportionInside,proportionAbove1\n";
+				const char* format = "version,step,totalTime,lasDT,lambda,gamma,mu,a0,density,densityChange,absChangeRms,absChangeStdDev,area,interfaceArea,proportionBelow0,proportionOutside,proportionInterface,proportionInside,proportionAbove1\n";
 
 				if (getJustFormat) {
 					str += format;
@@ -546,7 +546,7 @@ namespace PFM {
 				str += buff.getFormatedString(density); str += ",";
 				str += buff.getFormatedString(densityChange); str += ",";
 				str += buff.getFormatedString(absChangeRms); str += ",";
-				str += buff.getFormatedString(absChangeVariance); str += ",";
+				str += buff.getFormatedString(absChangeStdDev); str += ",";
 
 				str += buff.getFormatedString(area); str += ",";
 				str += buff.getFormatedString(lastStepInterfaceArea); str += ",";

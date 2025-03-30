@@ -264,48 +264,59 @@ void PFM::PeriodicDoublesLattice2D::addFieldCheckData(PFM::checkData_t checkData
 	 return (const std::vector<checkData_t>*)&m_fieldChecks;
  }
 
- class StringFmtBuffer {
+ PFM::StringFmtBuffer::StringFmtBuffer(const size_t precision) {
+	m_precision = precision;
+	m_fmtValsBuffer_ptr = (char*)malloc(2 * precision + 1);
+}
 
- public:
-	 StringFmtBuffer(const size_t precision) {
-		 m_precision = precision;
-		 m_fmtValsBuffer_ptr = (char*)malloc(2 * precision + 1);
-	 }
+ PFM::StringFmtBuffer::~StringFmtBuffer() {
+	free(m_fmtValsBuffer_ptr);
+	m_fmtValsBuffer_ptr = nullptr;
+}
 
-	 ~StringFmtBuffer() {
-		 free(m_fmtValsBuffer_ptr);
-		 m_fmtValsBuffer_ptr = nullptr;
-	 }
+template <typename T>
+const char* PFM::StringFmtBuffer::getFormatedString(const T value) {
+	write(value);
+	return read();
+}
+template const char* PFM::StringFmtBuffer::getFormatedString<int64_t>(const int64_t param);
+template const char* PFM::StringFmtBuffer::getFormatedString<uint64_t>(const uint64_t param);
+template const char* PFM::StringFmtBuffer::getFormatedString<int>(const int param);
+template const char* PFM::StringFmtBuffer::getFormatedString<unsigned int>(const unsigned int param);
+template const char* PFM::StringFmtBuffer::getFormatedString<double>(const double param);
+template const char* PFM::StringFmtBuffer::getFormatedString<float>(const float param);
 
-	 template <typename T>
-	 const char* getFormatedString(const T value) {
-		 write(value);
-		 return read();
-	 }
 
-	 const char* read() {
-		 if (m_fmtValsBuffer_ptr == nullptr) { return "Bad Buffer!\n"; }
-		 return (const char*)m_fmtValsBuffer_ptr;
-	 }
+const char* PFM::StringFmtBuffer::read() {
+	if (m_fmtValsBuffer_ptr == nullptr) { return "Bad Buffer!\n"; }
+	return (const char*)m_fmtValsBuffer_ptr;
+}
 
-	 //same as sprintif, except you don't pass the buffer
-	 void write(const int64_t value) {
-		 if (m_fmtValsBuffer_ptr == nullptr) { return; }
-		 sprintf(m_fmtValsBuffer_ptr, "%*lld", (int)m_precision, value);
-	 }
+//same as sprintif, except you don't pass the buffer
+void PFM::StringFmtBuffer::write(const int64_t value) {
+	if (m_fmtValsBuffer_ptr == nullptr) { return; }
+	sprintf(m_fmtValsBuffer_ptr, "%*lld", (int)m_precision, value);
+}
 
-	 void write(const uint64_t value) {
-		 if (m_fmtValsBuffer_ptr == nullptr) { return; }
-		 sprintf(m_fmtValsBuffer_ptr, "%*llu", (int)m_precision, value);
-	 }
+void PFM::StringFmtBuffer::write(const int value) {
+	write(static_cast<int64_t>(value));
+}
 
-	 void write(const double value) {
-		 if (m_fmtValsBuffer_ptr == nullptr) { return; }
-		 sprintf(m_fmtValsBuffer_ptr, "%.*f", (int)m_precision, value);
-	 }
+void PFM::StringFmtBuffer::write(const uint64_t value) {
+	if (m_fmtValsBuffer_ptr == nullptr) { return; }
+	sprintf(m_fmtValsBuffer_ptr, "%*llu", (int)m_precision, value);
+}
 
- private:
-	 char* m_fmtValsBuffer_ptr;
-	 size_t m_precision;
- };
+void PFM::StringFmtBuffer::write(const unsigned int value) {
+	write(static_cast<uint64_t>(value));
+}
+
+void PFM::StringFmtBuffer::write(const double value) {
+	if (m_fmtValsBuffer_ptr == nullptr) { return; }
+	sprintf(m_fmtValsBuffer_ptr, "%.*f", (int)m_precision, value);
+}
+
+void PFM::StringFmtBuffer::write(const float value) {
+	write(static_cast<double>(value));
+}
  

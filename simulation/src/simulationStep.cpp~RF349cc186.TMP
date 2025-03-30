@@ -381,7 +381,8 @@ void updatedAndSaveChecks(PFM::SimulationControl* controller_ptr,  PFM::checkDat
 		}
 		
 		checks_ptr->absChangeRms = std::sqrt(changeMeanSquare);
-		checks_ptr->absChangeVariance = changeMeanSquare - squaredMeanChange;
+		const double sigma2 = changeMeanSquare - squaredMeanChange;
+		checks_ptr->absChangeStdDev = std::sqrt(changeMeanSquare - squaredMeanChange);
 
 		PFM::getActiveFieldPtr()->addFieldCheckData(*checks_ptr);
 		PFM::saveFieldDataAccordingToController();

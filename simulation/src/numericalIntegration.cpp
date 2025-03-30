@@ -50,7 +50,11 @@ double N_INT::rungeKutaKnBcoef(rungeKuttaOrder order, int n) {
 	else { assert(false); return 0.0; }
 }
 
-void updateChecksPerElement(PFM::checkData_t* checks_ptr, const double change) {
+void updateChecksPerElement(PFM::checkData_t* checks_ptr, const double change, 
+	                        const double phi, const int totalElements) {
+
+	checks_ptr->addToProportions(phi, totalElements);
+	checks_ptr->addTointerfaceArea(phi);
 
 	checks_ptr->densityChange += change;
 	checks_ptr->absoluteChangeLastStep += std::abs(change);
@@ -62,6 +66,11 @@ void updateChecksPerFieldStep(PFM::checkData_t* checks_ptr, const double newArea
 
 	checks_ptr->areaLastStep = checks_ptr->area;
 	checks_ptr->area = newArea;
+
+	checks_ptr->lastStepProportions = checks_ptr->accumulatingProportions;
+	checks_ptr->lastStepInterfaceArea = checks_ptr->accumulatingInterfaceArea;
+
+	checks_ptr->clearPerStepAccumulators();
 }
 
 namespace N_INT { namespace TD { namespace CH { 
@@ -141,8 +150,9 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 			if (!maySubstep) {
 				//We update the field and the checks:
 				phiField->incrementDataPoint(centerPoint, delta);
-				*area_ptr += phiField->getDataPoint(centerPoint) * phiField->getDataPoint(centerPoint);
-				updateChecksPerElement(checks_ptr, delta);
+				const double phi = phiField->getDataPoint(centerPoint);
+				*area_ptr += phi * phi;
+				updateChecksPerElement(checks_ptr, delta, phi, phiField->getNumberOfActualElements());
 			}
 			else {
 				//TODO: TAKE THIS OFF?
@@ -154,7 +164,7 @@ void N_INT::TD::CH::ftcsStep(PFM::PeriodicDoublesLattice2D* phiField,
 					//We accept the step and update the checks and dPhis:
 					substepAuxField->writeDataPoint(centerPoint, dPhi);
 					phiField->incrementDataPoint(centerPoint, delta);
-					updateChecksPerElement(checks_ptr, delta);
+					updateChecksPerElement(checks_ptr, delta, phi, phiField->getNumberOfActualElements());
 				}
 				else {				
 					//The step was too large, so we'll have to sub-step this
@@ -439,8 +449,9 @@ void N_INT::TD::CH::ftcsStepWithSubsteps(PFM::PeriodicDoublesLattice2D* phiField
 		//For the checks, we need to account both for the final delta phi and for the effect on the neighbors.
 		const double deltaPhi = g_substepVector.at(i).currentPhi - g_substepVector.at(i).initialPhi;
 		const double effectiveNeighborChange = actualDifferenceForNeighbors;
-		updateChecksPerElement(checks_ptr, deltaPhi + effectiveNeighborChange);
-		//note that this "final" dPhi may actually be final, since neighbors may change it here as well.
+		//This call is ignoring propotions calculation, since that needs access to the actual final value
+		updateChecksPerElement(checks_ptr, deltaPhi + effectiveNeighborChange, 0.0, 1);
+		//note that this "final" dPhi may not actually be final, since neighbors may change it here as well.
 	}
 
 	//Of course we need yet one more, final, pass, to actually restore the balance between substeped neighbors:

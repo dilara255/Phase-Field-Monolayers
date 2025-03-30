@@ -244,7 +244,6 @@ namespace PFM {
 		StringFmtBuffer(const size_t precision);
 		~StringFmtBuffer();
 
-		//When imported, expects int, uint, int64_t, uint64_t, float or double
 		template <typename T>
 		const char* getFormatedString(const T value);
 
@@ -252,40 +251,12 @@ namespace PFM {
 
 		//same as sprintif, except you don't pass the buffer
 		void write(const int64_t value);
-		void write(const int value);
 		void write(const uint64_t value);
-		void write(const unsigned int value);
 		void write(const double value);
-		void write(const float value);
 
 	private:
 		char* m_fmtValsBuffer_ptr;
 		size_t m_precision;
-	};
-
-	struct proportions_st {
-		static constexpr double extremesMargin = 0.1;
-		static constexpr double marginTowardsInterface = 0.1;
-
-		static constexpr double effectiveBelow0 = 0 - extremesMargin;
-		static constexpr double effectiveAbove1 = 1 + extremesMargin;
-
-		static constexpr double minInside = 1 - marginTowardsInterface;
-		static constexpr double maxOutside = 0 + marginTowardsInterface;
-
-		double proportionBelow0 = 0;
-		double proportionOutside = 0;
-		double proportionInterface = 0;
-		double proportionInside = 0;
-		double proportionAbove1 = 0;
-
-		void clear() {
-			proportionBelow0 = 0;
-			proportionOutside = 0;
-			proportionInterface = 0;
-			proportionInside = 0;
-			proportionAbove1 = 0;
-		}
 	};
 
 	//Note when taking rates that in some cases some values may be zero
@@ -307,18 +278,20 @@ namespace PFM {
 		double densityChange = 0;
 		double absoluteChange = 0;
 		double sumOfsquaresOfChanges = 0;
-		proportions_st accumulatingProportions;
+		double proportionBelow0 = 0;
+		double proportionOutside = 0;
+		double proportionInterface = 0;
+		double proportionInside = 0;
+		double proportionAbove1 = 0;
 		double area = 0;
-		double lastStepInterfaceArea = 0;
-		double accumulatingInterfaceArea = 0;
+		double interfaceArea = 0;
 		
 		double absoluteChangePerElementPerStep = 0;
 		double absChangeRms = 0;
-		double absChangeVariance = 0;
+		double absChangeStdDev = 0;
 
 		double lastDensityChange = 0;
 		double lastDt = 0;
-		proportions_st lastStepProportions;
 
 		uint64_t stepsAtLastCheck = 0;
 		int stepsDuringLastCheckPeriod = 0;
@@ -337,23 +310,34 @@ namespace PFM {
 		double totalAbsoluteChange = 0;
 		
 		simParameters_t parametersOnLastCheck;
+
+		const double extremesMargin = 0.1;
+		const double marginTowardsInterface = 0.1;
+
+		const double effectiveBelow0 = 0 - extremesMargin;
+		const double effectiveAbove1 = 1 + extremesMargin;
+
+		const double minInside = 1 - marginTowardsInterface;
+		const double maxOutside = 0 + marginTowardsInterface;
 		
 		//TODO: also improve the naming of these
+		inline void resetProportions() { proportionBelow0 = 0; proportionOutside = 0; 
+										 proportionInterface = 0; proportionInside = 0; 
+										 proportionAbove1 = 0;
+		}
 		inline void clearLastStepsChanges() { absoluteChangeLastStep = 0; sumOfsquaresOfChangesLastStep = 0; 
 		                                      substepsLastStep = 0; 
 		}
-		inline void clearPerStepAccumulators() { accumulatingInterfaceArea = 0; accumulatingProportions.clear(); }
-		inline void clearPerSaveAccumulators() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; 
+		inline void clearAccumulators() { densityChange = 0; absoluteChange = 0; sumOfsquaresOfChanges = 0; 
 		                                  substepsLastCheck = 0; totalAbsoluteChangeSinceLastSave = 0; 
-										  elementsSubstepedLastCheck = 0; 
+										  elementsSubstepedLastCheck = 0; interfaceArea = 0;
 		}
 		inline void zeroOut() { step = 0; totalChangeFromStart = 0; absoluteChangeLastStep = 0; 
 							    sumOfsquaresOfChangesLastStep = 0; areaLastStep = 0; density = 0; densityChange = 0;
-								absoluteChange = 0; sumOfsquaresOfChanges = 0; area = 0; lastStepInterfaceArea = 0;
-								accumulatingInterfaceArea = 0;
+								absoluteChange = 0; sumOfsquaresOfChanges = 0; area = 0; interfaceArea = 0;
 								timeAtLastcheck = 0; timeDuringLastCheckPeriod = 0;
 								absoluteChangePerElementPerStep = 0; absChangeRms = 0;
-								absChangeVariance = 0;  lastDensityChange = 0; lastDt = 0; 
+								absChangeStdDev = 0;  lastDensityChange = 0; lastDt = 0; 
 								stepsAtLastCheck = 0;
 		                        totalTime = 0; totalAbsoluteChangeSinceLastSave = 0;
 		                        referenceDt = 0; substepsLastStep = 0; substepsLastCheck = 0;
@@ -364,32 +348,32 @@ namespace PFM {
 
 			double perElementDensity = 1.0 / totalElements;
 
-			if (phi < accumulatingProportions.effectiveBelow0) {
-				accumulatingProportions.proportionBelow0 += perElementDensity;
-				accumulatingProportions.proportionOutside += perElementDensity;
+			if (phi < effectiveBelow0) {
+				proportionBelow0 += perElementDensity;
+				proportionOutside += perElementDensity;
 			}
-			else if (phi < accumulatingProportions.maxOutside) {
-				accumulatingProportions.proportionOutside += perElementDensity;
+			else if (phi < maxOutside) {
+				proportionOutside += perElementDensity;
 			}
-			else if (phi < accumulatingProportions.minInside) {
-				accumulatingProportions.proportionInterface += perElementDensity;
+			else if (phi < minInside) {
+				proportionInterface += perElementDensity;
 			}
-			else if (phi < accumulatingProportions.effectiveAbove1) {
-				accumulatingProportions.proportionInside += perElementDensity;
+			else if (phi < effectiveAbove1) {
+				proportionInside += perElementDensity;
 			}
 			else {
-				accumulatingProportions.proportionInside += perElementDensity;
-				accumulatingProportions.proportionAbove1 += perElementDensity;
+				proportionInside += perElementDensity;
+				proportionAbove1 += perElementDensity;
 			}	
 		}
 
 		inline void addTointerfaceArea(double phi) {
 			const double effectivePhi = std::clamp(phi, 0., 1.);
 			double impact = 1 - 2 * abs(effectivePhi - 0.5);
-			accumulatingInterfaceArea += impact * impact * phi * phi;
+			interfaceArea += impact * impact;
 		}
 		
-		const std::string getChecksStr() const {
+		inline const std::string getChecksStr() const {
 			
 			assert(stepsDuringLastCheckPeriod >= 0 && "Bad number of steps on last Check");
 			
@@ -421,7 +405,7 @@ namespace PFM {
 			sprintf(fmtValsBuffer, "%.*f", (int)precision, area - areaLastStep);
 			str += fmtValsBuffer;
 			str += " | interface: ";
-			sprintf(fmtValsBuffer, "%.*f", (int)precision, lastStepInterfaceArea);
+			sprintf(fmtValsBuffer, "%.*f", (int)precision, interfaceArea);
 			str += fmtValsBuffer;
 			str += " )\n";
 
@@ -439,10 +423,10 @@ namespace PFM {
 			str += fmtValsBuffer;
 			str += ")\n";
 
-			str += "Variance: ";
+			str += "Std Dev: ";
 			if(timeDuringLastCheckPeriod == 0) { str += "------"; }
 			else {
-				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeVariance);
+				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeStdDev);
 				str += fmtValsBuffer;
 				str += " (RMS: ";
 				sprintf(fmtValsBuffer, "%.*f", (int)precision, absChangeRms);
@@ -451,42 +435,34 @@ namespace PFM {
 			}
 			str += "\n";
 
-			const size_t proportionsPrecision = (size_t)std::max(precision / 2, 2ULL);
-			StringFmtBuffer buff(proportionsPrecision);
+			const size_t proportionsPrecision = (int)std::max(precision / 2, 2ULL);
 
-			str += "Proportions: < ";
-			str += buff.getFormatedString(lastStepProportions.effectiveBelow0);
-			str += ": ";
-			str += buff.getFormatedString(lastStepProportions.proportionBelow0);
+			str += "Proportions: < " + std::to_string(effectiveBelow0) + ": ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision/2, proportionBelow0);
+			str += fmtValsBuffer;
 
-			str += " | < ";
-			str += buff.getFormatedString(lastStepProportions.maxOutside);
-			str += ": ";
-			str += buff.getFormatedString(lastStepProportions.proportionOutside);
+			str += " | < " + std::to_string(maxOutside) + ": ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision / 2, proportionOutside);
+			str += fmtValsBuffer;
 			
-			str += " | ";
-			str += buff.getFormatedString(lastStepProportions.maxOutside);
-			str += " to ";
-			str += buff.getFormatedString(lastStepProportions.minInside);
-			str += ": ";
-			str += buff.getFormatedString(lastStepProportions.proportionInterface);
+			str += " | " + std::to_string(maxOutside) + " to " + std::to_string(minInside) + ": ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision / 2, proportionInterface);
+			str += fmtValsBuffer;
 
-			str += " | > ";
-			str += buff.getFormatedString(lastStepProportions.minInside);
-			str += ": ";
-			str += buff.getFormatedString(lastStepProportions.proportionInside);
+			str += " | > " + std::to_string(minInside) + ": ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision / 2, proportionInside);
+			str += fmtValsBuffer;
 
-			str += " | > ";
-			str += buff.getFormatedString(lastStepProportions.effectiveAbove1);
-			str += ": ";
-			str += buff.getFormatedString(lastStepProportions.proportionAbove1);
+			str += " | > " + std::to_string(effectiveAbove1) + ": ";
+			sprintf(fmtValsBuffer, "%.*f", (int)precision / 2, proportionAbove1);
+			str += fmtValsBuffer;
 
 			str += "\n";
 
 			return str;
 		}
 
-		const std::string getParametersLastUpdateStr() const {
+		inline const std::string getParametersLastUpdateStr() const {
 
 			const size_t precision = 10;
 			char fmtValsBuffer[2*precision + 1];
@@ -511,7 +487,7 @@ namespace PFM {
 			return str;
 		}
 
-		const std::string getCSVchecksString(int version, bool getJustFormat = false) const {
+		inline const std::string getCSVchecksString(int version, bool getJustFormat = false) const {
 
 			StringFmtBuffer buff(10);
 			std::string str = std::to_string(version) + " , ";
@@ -521,11 +497,11 @@ namespace PFM {
 			case 0: {
 				//Format v0: 
 				//step, totalTime, lastDt, [lastParams], 
-				//density, densityChange, absChangeRms, absChangeVariance, 
+				//density, densityChange, absChangeRms, absChangeStdDev, 
 				//area, interfaceArea, 
 				//[proportions]\n
 
-				const char* format = "version,step,totalTime,lasDT,lambda,gamma,mu,a0,density,densityChange,absChangeRms,absChangeVariance,area,interfaceArea,proportionBelow0,proportionOutside,proportionInterface,proportionInside,proportionAbove1\n";
+				const char* format = "version,step,totalTime,lasDT,lambda,gamma,mu,a0,density,densityChange,absChangeRms,absChangeStdDev,area,interfaceArea,proportionBelow0,proportionOutside,proportionInterface,proportionInside,proportionAbove1\n";
 
 				if (getJustFormat) {
 					str += format;
@@ -546,16 +522,16 @@ namespace PFM {
 				str += buff.getFormatedString(density); str += ",";
 				str += buff.getFormatedString(densityChange); str += ",";
 				str += buff.getFormatedString(absChangeRms); str += ",";
-				str += buff.getFormatedString(absChangeVariance); str += ",";
+				str += buff.getFormatedString(absChangeStdDev); str += ",";
 
 				str += buff.getFormatedString(area); str += ",";
-				str += buff.getFormatedString(lastStepInterfaceArea); str += ",";
+				str += buff.getFormatedString(interfaceArea); str += ",";
 
-				str += buff.getFormatedString(lastStepProportions.proportionBelow0); str += ",";
-				str += buff.getFormatedString(lastStepProportions.proportionOutside); str += ",";
-				str += buff.getFormatedString(lastStepProportions.proportionInterface); str += ",";
-				str += buff.getFormatedString(lastStepProportions.proportionInside); str += ",";
-				str += buff.getFormatedString(lastStepProportions.proportionAbove1);
+				str += buff.getFormatedString(proportionBelow0); str += ",";
+				str += buff.getFormatedString(proportionOutside); str += ",";
+				str += buff.getFormatedString(proportionInterface); str += ",";
+				str += buff.getFormatedString(proportionInside); str += ",";
+				str += buff.getFormatedString(proportionAbove1);
 
 				str += "\n";
 				break;
