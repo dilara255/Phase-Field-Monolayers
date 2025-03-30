@@ -97,6 +97,8 @@ namespace PFM {
         void setGammaUsed(double newGamma);
         //Strenght of the area term
         void setMuUsed(double newMu);
+        //Returns -1 in case the field is not found
+        double calculateAreaOfActiveField();
         //A0 will be set so the target area (sum of phi squared) is the current area
         void setA0fromActiveField();
         //Set desired A0 manually

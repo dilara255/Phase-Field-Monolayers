@@ -62,6 +62,7 @@ namespace PFM {
 	PFM_API double getLambdaFromKandA(double k, double A);
 	PFM_API double getGammaFromKandA(double k, double A);
 	PFM_API parameterBounds_t calculateParameterBounds(double k, double A, double dt, uint64_t steps);
+	PFM_API double calculateCurrentArea();
 
 	//Note: this uses data from the last available check provided 
 	//Making sure it's properly updated is a responsability of the client

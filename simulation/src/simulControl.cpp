@@ -364,11 +364,9 @@ void PFM::SimulationControl::setMuUsed(double newMu) {
 	m_simParameters.mu = newMu;
 }
 
-//A0 will be set so the target area (sum of phi squared) is the current area
-//TODO: should the actual calculation actually be here?
-void PFM::SimulationControl::setA0fromActiveField() {
+double PFM::SimulationControl::calculateAreaOfActiveField() {
 	auto active_p = getActiveFieldConstPtr();
-	if (active_p == nullptr) { return; }
+	if (active_p == nullptr) { return -1; }
 
 	int elements = active_p->getNumberOfActualElements();
 
@@ -377,7 +375,14 @@ void PFM::SimulationControl::setA0fromActiveField() {
 		newA0 += active_p->getElement(i) * active_p->getElement(i);
 	}
 
-	m_simParameters.a0 = newA0;
+	return newA0;
+}
+
+//A0 will be set so the target area (sum of phi squared) is the current area
+//TODO: should the actual calculation actually be here?
+void PFM::SimulationControl::setA0fromActiveField() {
+
+	m_simParameters.a0 = calculateAreaOfActiveField();
 }
 
 //Set desired A0 manually
@@ -673,6 +678,10 @@ PFM::parameterBounds_t PFM::calculateParameterBounds(double k, double A, double 
 	assert(bounds.maxDt > 0 && "Max dt should always be larger than zero");
 	
 	return bounds;
+}
+
+double PFM::calculateCurrentArea() {
+	return g_controller.calculateAreaOfActiveField();
 }
 
 #define M_PI_ (3.14159265358979323846) //TODO: usar da biblioteca, entender pq não foi
